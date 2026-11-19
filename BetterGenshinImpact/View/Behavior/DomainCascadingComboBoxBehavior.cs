@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -147,7 +148,8 @@ public static class DomainCascadingComboBoxBehavior
             return;
 
         comboBox.SetValue(LastCommittedItemProperty, item);
-        comboBox.SetValue(LastCommittedTextProperty, item!.Tag as string ?? string.Empty);
+        // Tag 为保存用的中文秘境名，展示时按界面语言翻译。
+        comboBox.SetValue(LastCommittedTextProperty, I18nService.Instance.Translate(item!.Tag as string ?? string.Empty));
     }
 
     private static void ApplySelectedPreviewBinding(CascadingComboBox comboBox)

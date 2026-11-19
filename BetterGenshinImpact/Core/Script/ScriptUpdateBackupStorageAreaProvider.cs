@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BetterGenshinImpact.Infrastructure.Storage;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -11,11 +12,11 @@ public sealed class ScriptUpdateBackupStorageAreaProvider : IStorageAreaProvider
     /// <inheritdoc />
     public IEnumerable<StorageArea> GetAreas()
     {
-        yield return new StorageArea("user:script-update-backup", "脚本更新备份", StorageGroup.UserData,
+        yield return new StorageArea("user:script-update-backup", I18nService.Key("脚本更新备份"), StorageGroup.UserData,
             [ScriptRepoUpdater.ScriptUpdateBackupPath])
         {
-            Description = "订阅脚本更新中断或未能恢复时保留的脚本数据",
-            CleanupEffect = "删除后无法再从备份中找回这些文件",
+            Description = I18nService.Key("订阅脚本更新中断或未能恢复时保留的脚本数据"),
+            CleanupEffect = I18nService.Key("删除后无法再从备份中找回这些文件"),
             RequiresConfirmation = true,
             IncludedInQuickCleanup = false,
         };

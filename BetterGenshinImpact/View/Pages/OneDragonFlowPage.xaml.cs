@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Script.Group;
 using System;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.View.Pages;
 
@@ -17,7 +18,7 @@ public partial class OneDragonFlowPage
     
     private readonly Dictionary<CheckBox, string> _checkBoxMappings;
     
-    public static readonly List<string> SereniteaPotSchedule = new List<string> { "每天重复", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日" };
+    public static readonly List<string> SereniteaPotSchedule = new List<string> { I18nService.Key("每天重复"), I18nService.Key("星期一"), I18nService.Key("星期二"), I18nService.Key("星期三"), I18nService.Key("星期四"), I18nService.Key("星期五"), I18nService.Key("星期六"), I18nService.Key("星期日") };
 
     public OneDragonFlowPage(OneDragonFlowViewModel viewModel)
     {
@@ -62,7 +63,7 @@ public partial class OneDragonFlowPage
             // 检查是否有ScriptGroups
             if (ViewModel.ScriptGroups == null || !ViewModel.ScriptGroups.Any())
             {
-                Toast.Warning("没有找到配置组");
+                Toast.Warning(I18nService.Instance.Translate("没有找到配置组"));
                 return;
             }
             
@@ -93,7 +94,7 @@ public partial class OneDragonFlowPage
         }
         catch (Exception ex)
         {
-            Toast.Error($"添加任务组时出错: {ex.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("添加任务组时出错: {0}"), ex.Message));
         }
     }
     

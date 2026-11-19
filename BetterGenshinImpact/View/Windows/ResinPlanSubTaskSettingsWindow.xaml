@@ -1,6 +1,7 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.ResinPlanSubTaskSettingsWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="{Binding Title, Mode=OneWay}" Width="600" Height="680" MinWidth="480" MinHeight="360"
                  WindowStartupLocation="CenterOwner" WindowBackdropType="Auto" ExtendsContentIntoTitleBar="True"
@@ -50,9 +51,9 @@
                            Text="{Binding ValidationMessage, Mode=OneWay}"
                            Foreground="{DynamicResource SystemFillColorCautionBrush}" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <ui:Button Content="确定" Style="{StaticResource ResinPlanDialogButton}" Appearance="Primary" IsDefault="True"
+                    <ui:Button Content="{i18n:T 确定}" Style="{StaticResource ResinPlanDialogButton}" Appearance="Primary" IsDefault="True"
                                Click="Confirm_Click" Margin="0,0,8,0" />
-                    <ui:Button Content="取消" Style="{StaticResource ResinPlanDialogButton}" IsCancel="True" Click="Cancel_Click" />
+                    <ui:Button Content="{i18n:T 取消}" Style="{StaticResource ResinPlanDialogButton}" IsCancel="True" Click="Cancel_Click" />
                 </StackPanel>
             </Grid>
         </Border>

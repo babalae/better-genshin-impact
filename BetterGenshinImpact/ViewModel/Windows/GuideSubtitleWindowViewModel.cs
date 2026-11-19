@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Guide;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -14,7 +15,7 @@ public partial class GuideSubtitleWindowViewModel : ObservableObject, IViewModel
     /// <summary>
     /// 调整模式下没有字幕时显示的示例文本
     /// </summary>
-    private const string PreviewText = "字幕位置预览：拖动移动位置，拖右侧边缘调整宽度，Ctrl+滚轮调整字号";
+    private static string PreviewText => I18nService.Instance.Translate("字幕位置预览：拖动移动位置，拖右侧边缘调整宽度，Ctrl+滚轮调整字号");
 
     private readonly IGuideWindowService _service;
 

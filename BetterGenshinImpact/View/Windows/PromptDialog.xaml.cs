@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,7 +19,7 @@ public class PromptDialogConfig
     /// <summary>
     /// 左下角按钮的文本
     /// </summary>
-    public string LeftButtonText { get; set; } = "左下角按钮";
+    public string LeftButtonText { get; set; } = I18nService.Instance.Translate("左下角按钮");
 
     /// <summary>
     /// 左下角按钮的点击事件

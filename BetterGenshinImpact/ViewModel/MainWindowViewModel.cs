@@ -10,6 +10,7 @@ using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Remote;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
@@ -348,8 +349,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
             _logger.LogWarning(exception, "唤起子实例失败：{Instance}", item.DisplayName);
             RefreshConnectedChildInstances();
             ThemedMessageBox.Warning(
-                $"无法唤起「{item.DisplayName}」，该实例可能已经离线。",
-                "实例不可用");
+                string.Format(I18nService.Instance.Translate("无法唤起「{0}」，该实例可能已经离线。"), item.DisplayName),
+                I18nService.Instance.Translate("实例不可用"));
         }
     }
 
@@ -380,12 +381,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         {
             _logger.LogWarning(exception, "关闭子实例失败：{Instance}", item.DisplayName);
             RefreshConnectedChildInstances();
-            var action = item.Endpoint.InstanceType == BetterGiInstanceType.ChildSession
-                ? "关闭并注销"
-                : "关闭";
+            var format = item.Endpoint.InstanceType == BetterGiInstanceType.ChildSession
+                ? I18nService.Instance.Translate("无法关闭并注销「{0}」：{1}")
+                : I18nService.Instance.Translate("无法关闭「{0}」：{1}");
             ThemedMessageBox.Warning(
-                $"无法{action}「{item.DisplayName}」：{exception.GetBaseException().Message}",
-                "实例不可用");
+                string.Format(format, item.DisplayName, exception.GetBaseException().Message),
+                I18nService.Instance.Translate("实例不可用"));
         }
     }
 
@@ -526,8 +527,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         }
 
         var result = await ThemedMessageBox.QuestionAsync(
-            $"剪贴板中有 B 站视频链接：\n{link.Url}\n\n要在悬浮小窗中打开吗？\n\n可以在“悬浮小窗”设置页关闭这个提示。",
-            "悬浮小窗");
+            string.Format(I18nService.Instance.Translate("剪贴板中有 B 站视频链接：\n{0}\n\n要在悬浮小窗中打开吗？\n\n可以在“悬浮小窗”设置页关闭这个提示。"), link.Url),
+            I18nService.Instance.Translate("悬浮小窗"));
         if (result == System.Windows.MessageBoxResult.Yes)
         {
             _guideWindowService.Open(new GuideOpenRequest(link.Url, GuideOpenSource.Clipboard));
@@ -665,8 +666,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         {
             e.Cancel = true;
             ThemedMessageBox.Warning(
-                "WebView2 云原神实例仍在运行，请先关闭所有 WebView2 实例，再关闭主窗口。",
-                "WebView2 实例未关闭");
+                I18nService.Instance.Translate("WebView2 云原神实例仍在运行，请先关闭所有 WebView2 实例，再关闭主窗口。"),
+                I18nService.Instance.Translate("WebView2 实例未关闭"));
             return;
         }
 
@@ -674,8 +675,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         {
             e.Cancel = true;
             ThemedMessageBox.Warning(
-                "桌面分身仍在运行，请先关闭桌面分身，再关闭主窗口。",
-                "桌面分身未关闭");
+                I18nService.Instance.Translate("桌面分身仍在运行，请先关闭桌面分身，再关闭主窗口。"),
+                I18nService.Instance.Translate("桌面分身未关闭"));
             return;
         }
 
@@ -858,11 +859,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
             var backupPath = ScriptRepoUpdater.ScriptUpdateBackupPath;
             _logger.LogWarning("发现 {Count} 份未恢复的脚本数据备份：{Path}", backups.Count, backupPath);
             var result = await ThemedMessageBox.WarningAsync(
-                $"发现 {backups.Count} 份未恢复的脚本数据备份。\n" +
-                "可能是上次订阅脚本更新中途中断，或新版本脚本不再保留这些文件。\n\n" +
-                $"备份位于：{backupPath}\n" +
-                "确认不再需要后删除该目录即可不再提示。\n\n是否打开备份目录？",
-                "脚本数据备份",
+                string.Format(I18nService.Instance.Translate("发现 {0} 份未恢复的脚本数据备份。\n可能是上次订阅脚本更新中途中断，或新版本脚本不再保留这些文件。\n\n备份位于：{1}\n确认不再需要后删除该目录即可不再提示。\n\n是否打开备份目录？"),
+                    backups.Count, backupPath),
+                I18nService.Instance.Translate("脚本数据备份"),
                 System.Windows.MessageBoxButton.YesNo);
             if (result == System.Windows.MessageBoxResult.Yes)
             {
@@ -923,7 +922,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
             // 低版本才需要迁移
             if (fileVersionInfo.FileVersion != null && !Global.IsNewVersion(fileVersionInfo.FileVersion))
             {
-                var res = await ThemedMessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI",
+                var res = await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？"), "BetterGI",
                     System.Windows.MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question);
                 if (res == System.Windows.MessageBoxResult.Yes)
                 {
@@ -931,7 +930,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
                     DirectoryHelper.CopyDirectory(embeddedUserPath, Global.Absolute("User"));
                     // 删除旧目录
                     DirectoryHelper.DeleteReadOnlyDirectory(embeddedPath);
-                    await ThemedMessageBox.InformationAsync("迁移配置成功, 软件将自动退出，请手动重新启动 BetterGI！");
+                    await ThemedMessageBox.InformationAsync(I18nService.Instance.Translate("迁移配置成功, 软件将自动退出，请手动重新启动 BetterGI！"));
                     Application.Current.Shutdown();
                 }
             }
@@ -975,8 +974,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
             // 这是主窗口加载后的友好提示，不应让验证流程异常阻止软件继续使用。
             _logger.LogWarning(e, "推理引擎启动验证未完成");
             if (!_inferenceRuntime.IsStopping)
-                await ThemedMessageBox.WarningAsync("推理引擎验证未能正常完成。\r\n\r\n" +
-                                                    "软件可以继续使用；详细错误已写入日志，请在首页的“硬件加速设置”中重新检测后再试。");
+                await ThemedMessageBox.WarningAsync(I18nService.Instance.Translate("推理引擎验证未能正常完成。\r\n\r\n软件可以继续使用；详细错误已写入日志，请在首页的“硬件加速设置”中重新检测后再试。"));
         }
     }
 
@@ -1018,7 +1016,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         catch (Exception e)
         {
             if (_inferenceRuntime.IsStopping) return;
-            ThemedMessageBox.Warning("PaddleOcr预热失败，解决方案：【https://www.bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" +
+            ThemedMessageBox.Warning(I18nService.Instance.Translate("PaddleOcr预热失败，解决方案：【https://www.bettergi.com/faq.html】") + "   \r\n" + e.Source + "\r\n--" +
                                Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             Process.Start(
                 new ProcessStartInfo(

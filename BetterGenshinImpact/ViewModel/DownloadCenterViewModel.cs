@@ -7,6 +7,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
 using BetterGenshinImpact.Infrastructure.Network.Download;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -111,7 +112,7 @@ public partial class DownloadCenterViewModel : ObservableObject
     /// 标题栏按钮的提示
     /// </summary>
     [ObservableProperty]
-    private string _buttonToolTip = "下载";
+    private string _buttonToolTip = I18nService.Instance.Translate("下载");
 
     /// <summary>
     /// 退出前确认：有下载正在进行时询问，返回 true 表示继续退出。需在界面线程调用
@@ -124,8 +125,8 @@ public partial class DownloadCenterViewModel : ObservableObject
             return true;
         }
 
-        _exitConfirmed = ThemedMessageBox.Question($"有 {count} 个下载正在进行，退出后下次可以继续下载。\n确定要退出吗？",
-            "下载未完成", MessageBoxButton.OKCancel, MessageBoxResult.Cancel) == MessageBoxResult.OK;
+        _exitConfirmed = ThemedMessageBox.Question(string.Format(I18nService.Instance.Translate("有 {0} 个下载正在进行，退出后下次可以继续下载。\n确定要退出吗？"), count),
+            I18nService.Instance.Translate("下载未完成"), MessageBoxButton.OKCancel, MessageBoxResult.Cancel) == MessageBoxResult.OK;
         return _exitConfirmed;
     }
 
@@ -171,7 +172,7 @@ public partial class DownloadCenterViewModel : ObservableObject
     {
         if (item?.Source.ResultPath is not { } path || !File.Exists(path))
         {
-            Toast.Warning("文件已被移动或删除");
+            Toast.Warning(I18nService.Instance.Translate("文件已被移动或删除"));
             return;
         }
 
@@ -182,7 +183,7 @@ public partial class DownloadCenterViewModel : ObservableObject
         catch (Exception e)
         {
             _logger.LogWarning(e, "打开下载文件夹失败");
-            Toast.Error($"无法打开文件夹：{e.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("无法打开文件夹：{0}"), e.Message));
         }
     }
 
@@ -237,7 +238,7 @@ public partial class DownloadCenterViewModel : ObservableObject
             item.Update();
             if (item.State == DownloadState.Failed && previous != DownloadState.Failed)
             {
-                Toast.Error($"「{item.DisplayName}」下载失败：{item.Source.Progress.Error}");
+                Toast.Error(string.Format(I18nService.Instance.Translate("「{0}」下载失败：{1}"), item.DisplayName, item.Source.Progress.Error));
             }
         }
 
@@ -258,9 +259,9 @@ public partial class DownloadCenterViewModel : ObservableObject
         OverallProgress = known.Count > 0
             ? Math.Clamp(known.Sum(progress => progress.ReceivedBytes) * 100d / known.Sum(progress => progress.TotalBytes!.Value), 0, 100)
             : 0;
-        ButtonToolTip = HasActive ? $"下载：{active.Count} 个正在进行"
-            : HasFailed ? "下载：有下载失败"
-            : "下载：已全部完成";
+        ButtonToolTip = HasActive ? string.Format(I18nService.Instance.Translate("下载：{0} 个正在进行"), active.Count)
+            : HasFailed ? I18nService.Instance.Translate("下载：有下载失败")
+            : I18nService.Instance.Translate("下载：已全部完成");
 
         _timer.IsEnabled = HasActive;
         if (!HasItems)

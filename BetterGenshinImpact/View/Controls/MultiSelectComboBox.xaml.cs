@@ -13,6 +13,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.View.Controls;
 
@@ -104,7 +105,7 @@ public partial class MultiSelectComboBox : UserControl
         nameof(PlaceholderText),
         typeof(string),
         typeof(MultiSelectComboBox),
-        new PropertyMetadata("请选择"));
+        new PropertyMetadata(I18nService.Instance.Translate("请选择")));
 
     public string SearchPlaceholderText
     {
@@ -116,7 +117,7 @@ public partial class MultiSelectComboBox : UserControl
         nameof(SearchPlaceholderText),
         typeof(string),
         typeof(MultiSelectComboBox),
-        new PropertyMetadata("搜索选项"));
+        new PropertyMetadata(I18nService.Instance.Translate("搜索选项")));
 
     public string SelectionText
     {
@@ -128,7 +129,7 @@ public partial class MultiSelectComboBox : UserControl
         nameof(SelectionText),
         typeof(string),
         typeof(MultiSelectComboBox),
-        new PropertyMetadata("请选择"));
+        new PropertyMetadata(I18nService.Instance.Translate("请选择")));
 
     public static readonly DependencyProperty SelectionTextProperty = SelectionTextPropertyKey.DependencyProperty;
 
@@ -312,7 +313,7 @@ public partial class MultiSelectComboBox : UserControl
 
         if (SelectionCountTextBlock is not null)
         {
-            SelectionCountTextBlock.Text = $"已选 {selectedTexts.Count} 项";
+            SelectionCountTextBlock.Text = string.Format(I18nService.Instance.Translate("已选 {0} 项"), selectedTexts.Count);
         }
     }
 

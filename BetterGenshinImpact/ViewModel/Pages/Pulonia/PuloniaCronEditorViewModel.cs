@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -38,8 +39,8 @@ public partial class PuloniaCronEditorViewModel : ObservableObject
     /// <summary>周期单位选项。</summary>
     public IReadOnlyDictionary<string, string> PeriodUnits { get; } = new Dictionary<string, string>
     {
-        ["minute"] = "分钟",
-        ["hour"] = "小时"
+        ["minute"] = I18nService.Instance.Translate("分钟"),
+        ["hour"] = I18nService.Instance.Translate("小时")
     };
 
     /// <summary>分钟周期选项，只提供能整除 60 的值以保持跨小时节奏一致。</summary>
@@ -51,34 +52,34 @@ public partial class PuloniaCronEditorViewModel : ObservableObject
     /// <summary>固定时间类型选项。</summary>
     public IReadOnlyDictionary<string, string> FixedFrequencies { get; } = new Dictionary<string, string>
     {
-        ["daily"] = "每天",
-        ["weekdays"] = "工作日",
-        ["weekly"] = "每周",
-        ["monthly"] = "每月"
+        ["daily"] = I18nService.Instance.Translate("每天"),
+        ["weekdays"] = I18nService.Instance.Translate("工作日"),
+        ["weekly"] = I18nService.Instance.Translate("每周"),
+        ["monthly"] = I18nService.Instance.Translate("每月")
     };
 
     /// <summary>星期选项。</summary>
     public IReadOnlyDictionary<int, string> Weekdays { get; } = new Dictionary<int, string>
     {
-        [1] = "周一",
-        [2] = "周二",
-        [3] = "周三",
-        [4] = "周四",
-        [5] = "周五",
-        [6] = "周六",
-        [0] = "周日"
+        [1] = I18nService.Instance.Translate("周一"),
+        [2] = I18nService.Instance.Translate("周二"),
+        [3] = I18nService.Instance.Translate("周三"),
+        [4] = I18nService.Instance.Translate("周四"),
+        [5] = I18nService.Instance.Translate("周五"),
+        [6] = I18nService.Instance.Translate("周六"),
+        [0] = I18nService.Instance.Translate("周日")
     };
 
     /// <summary>可以直接写入表达式的常用 Cron 预设。</summary>
     public IReadOnlyDictionary<string, string> Presets { get; } = new Dictionary<string, string>
     {
-        ["每 5 分钟"] = "*/5 * * * *",
-        ["每 15 分钟"] = "*/15 * * * *",
-        ["每小时"] = "0 * * * *",
-        ["每天 04:00"] = "0 4 * * *",
-        ["工作日 09:00"] = "0 9 * * 1-5",
-        ["每周一 04:00"] = "0 4 * * 1",
-        ["每月 1 日 04:00"] = "0 4 1 * *"
+        [I18nService.Instance.Translate("每 5 分钟")] = "*/5 * * * *",
+        [I18nService.Instance.Translate("每 15 分钟")] = "*/15 * * * *",
+        [I18nService.Instance.Translate("每小时")] = "0 * * * *",
+        [I18nService.Instance.Translate("每天 04:00")] = "0 4 * * *",
+        [I18nService.Instance.Translate("工作日 09:00")] = "0 9 * * 1-5",
+        [I18nService.Instance.Translate("每周一 04:00")] = "0 4 * * 1",
+        [I18nService.Instance.Translate("每月 1 日 04:00")] = "0 4 1 * *"
     };
 
     /// <summary>小时选项。</summary>
@@ -108,14 +109,14 @@ public partial class PuloniaCronEditorViewModel : ObservableObject
     /// <summary>当前快捷选项的语义说明。</summary>
     public string GeneratedDescription => GeneratorTabIndex == 0
         ? PeriodUnit == "minute"
-            ? $"每 {MinuteInterval} 分钟执行"
-            : $"每 {HourInterval} 小时的第 {HourStartMinute:D2} 分执行"
+            ? string.Format(I18nService.Instance.Translate("每 {0} 分钟执行"), MinuteInterval)
+            : string.Format(I18nService.Instance.Translate("每 {0} 小时的第 {1:D2} 分执行"), HourInterval, HourStartMinute)
         : FixedFrequency switch
         {
-            "weekdays" => $"每个工作日 {FixedHour:D2}:{FixedMinute:D2} 执行",
-            "weekly" => $"每{Weekdays[FixedWeekday]} {FixedHour:D2}:{FixedMinute:D2} 执行",
-            "monthly" => $"每月 {FixedMonthDay} 日 {FixedHour:D2}:{FixedMinute:D2} 执行",
-            _ => $"每天 {FixedHour:D2}:{FixedMinute:D2} 执行"
+            "weekdays" => string.Format(I18nService.Instance.Translate("每个工作日 {0:D2}:{1:D2} 执行"), FixedHour, FixedMinute),
+            "weekly" => string.Format(I18nService.Instance.Translate("每{0} {1:D2}:{2:D2} 执行"), Weekdays[FixedWeekday], FixedHour, FixedMinute),
+            "monthly" => string.Format(I18nService.Instance.Translate("每月 {0} 日 {1:D2}:{2:D2} 执行"), FixedMonthDay, FixedHour, FixedMinute),
+            _ => string.Format(I18nService.Instance.Translate("每天 {0:D2}:{1:D2} 执行"), FixedHour, FixedMinute)
         };
 
     /// <summary>使用已有表达式建立编辑器。</summary>

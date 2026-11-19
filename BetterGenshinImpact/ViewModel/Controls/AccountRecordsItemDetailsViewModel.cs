@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Service.AccountRecords.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Controls;
 
@@ -27,10 +28,10 @@ public sealed class AccountRecordsItemDetailsViewModel : ObservableObject
     {
         Item = item;
         Records = item.Recent.Select((record, index) => new AccountRecordsSourceRecord(
-            index == 0 ? "当前库存" : "最近来源记录", record.Quantity,
+            index == 0 ? I18nService.Instance.Translate("当前库存") : I18nService.Instance.Translate("最近来源记录"), record.Quantity,
             record.RecordedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
             readable && sources.TryGetValue(record.Source, out var source) && !string.IsNullOrWhiteSpace(source.DisplayName) ? source.DisplayName : record.Source,
             record.Source, record.Expirations is not { Count: > 0 } ? null : string.Join("\n", record.Expirations.Select(batch =>
-                $"{batch.Quantity} 个：{batch.Time.ToLocalTime():yyyy-MM-dd HH:mm:ss zzz}")))).ToArray();
+                string.Format(I18nService.Instance.Translate("{0} 个：{1:yyyy-MM-dd HH:mm:ss zzz}"), batch.Quantity, batch.Time.ToLocalTime()))))).ToArray();
     }
 }

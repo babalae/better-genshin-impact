@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.IO;
 using System.ComponentModel;
@@ -72,7 +73,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     /// <summary>页面是否正在接收运行事件。</summary>
     private bool _isListening;
     /// <summary>当前配置运行摘要。</summary>
-    [ObservableProperty] private string _executionStatusText = "尚未执行";
+    [ObservableProperty] private string _executionStatusText = I18nService.Instance.Translate("尚未执行");
     /// <summary>是否有可停止的请求。</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StopCurrentRunCommand))]
@@ -143,7 +144,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         if (!_isListening || !IsReady) return;
         // 每次进入都重新读取账户目录：账户可能刚在账户页或其他实例中修改
         try { await RefreshGenshinAccountsAsync(); }
-        catch (Exception ex) { AccountMessage = "账户目录读取失败，运行前请修复：" + ex.Message; }
+        catch (Exception ex) { AccountMessage = I18nService.Instance.Translate("账户目录读取失败，运行前请修复：") + ex.Message; }
         await RefreshExecutionStatusAsync();
         try { await Session.RefreshResourceVersionsAsync(ct); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -209,7 +210,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         _activeRunId = null;
         _activeRunIsDispatched = false;
         HasActiveRun = false;
-        ExecutionStatusText = value is null ? "尚未选择配置" : "正在读取运行状态…";
+        ExecutionStatusText = value is null ? I18nService.Instance.Translate("尚未选择配置") : I18nService.Instance.Translate("正在读取运行状态…");
         QueueStatusRefresh();
     }
     /// <summary>撤销或重新载入重建节点时同步平面清单，避免持有已脱离文档的节点。</summary>
@@ -240,8 +241,9 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     [RelayCommand]
     private void NewConfiguration()
     {
-        var name = "新一条龙配置"; var suffix = 1;
-        while (Configurations.Any(d => d.Name == name)) name = "新一条龙配置 " + ++suffix;
+        // 默认名称作为配置名保存，保持中文原值，只标记为 i18n Key，界面通过 TBinding 翻译展示
+        var name = I18nService.Key("新一条龙配置"); var suffix = 1;
+        while (Configurations.Any(d => d.Name == name)) name = I18nService.Key("新一条龙配置") + " " + ++suffix;
         SelectedConfiguration = Session.CreateOneDragonConfiguration(name);
     }
     /// <summary>重命名当前配置，保持计划与任务身份。</summary>
@@ -249,7 +251,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     private void RenameConfiguration()
     {
         if (SelectedConfiguration is not { } document) return;
-        var name = PromptDialog.Prompt("请输入配置名称。", "重命名一条龙配置", document.Name).Trim();
+        var name = PromptDialog.Prompt(I18nService.Instance.Translate("请输入配置名称。"), I18nService.Instance.Translate("重命名一条龙配置"), document.Name).Trim();
         if (!string.IsNullOrWhiteSpace(name)) document.Name = name;
     }
     /// <summary>复用会话的串行删除和引用检查，成功后选中剩余配置。</summary>
@@ -292,7 +294,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             Session.InsertOneDragonTask(document, SelectedTask, result.Task);
             SelectedTask = document.SelectedNode;
         }
-        catch (Exception ex) { ThemedMessageBox.Error("无法添加任务：" + ex.Message, "一条龙"); }
+        catch (Exception ex) { ThemedMessageBox.Error(I18nService.Instance.Translate("无法添加任务：") + ex.Message, I18nService.Instance.Translate("新一条龙")); }
     }
 
     /// <summary>
@@ -313,7 +315,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     {
         if (SelectedConfiguration is not { } document) return;
         var picker = new System.Windows.Controls.ComboBox { ItemsSource = Session.Documents, DisplayMemberPath = "Name", MinWidth = 260, SelectedIndex = 0 };
-        var dialog = new PromptDialog("选择要引用的任务计划；之后修改该计划会同步影响这里。", "引用已有任务计划", picker, null) { Owner = Application.Current.MainWindow };
+        var dialog = new PromptDialog(I18nService.Instance.Translate("选择要引用的任务计划；之后修改该计划会同步影响这里。"), I18nService.Instance.Translate("引用已有任务计划"), picker, null) { Owner = Application.Current.MainWindow };
         if (dialog.ShowDialog() != true || picker.SelectedItem is not PuloniaTaskPlanDocumentViewModel target) return;
         try
         {
@@ -321,7 +323,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             // 保存目标期间用户可能切换配置；只更新仍在显示的来源配置，不能把它的节点选到另一份计划。
             if (ReferenceEquals(SelectedConfiguration, document)) SelectedTask = document.SelectedNode;
         }
-        catch (Exception ex) { await ThemedMessageBox.ErrorAsync(ex.Message, "无法引用任务计划"); }
+        catch (Exception ex) { await ThemedMessageBox.ErrorAsync(ex.Message, I18nService.Instance.Translate("无法引用任务计划")); }
     }
     /// <summary>删除当前行，原文档负责撤销与自动保存。</summary>
     [RelayCommand]
@@ -355,7 +357,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         if (SelectedConfiguration is not { } document) return;
         // 窗口专属的触发配置视图模型直接编辑共享文档，关闭时解除订阅；不复制页面或编辑会话。
         using var triggers = new PuloniaPlanTriggersViewModel(Session, _triggerHost, _triggerInstances) { Document = document };
-        new PromptDialog("", "一条龙触发设置", new PuloniaTaskTriggerView { DataContext = triggers }, null)
+        new PromptDialog("", I18nService.Instance.Translate("一条龙触发设置"), new PuloniaTaskTriggerView { DataContext = triggers }, null)
         { Owner = Application.Current.MainWindow, Width = 1000, Height = 720, SizeToContent = SizeToContent.Manual }.ShowDialog();
     }
     /// <summary>次级入口展示当前配置的运行历史；窗口使用自己的记录实例，不改写任务计划页的记录范围。</summary>
@@ -369,7 +371,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             PlanFilterId = SelectedConfiguration?.Id
         };
         await history.RefreshAsync();
-        new PromptDialog("", "一条龙执行记录", new PuloniaOneDragonHistoryView { DataContext = history }, null)
+        new PromptDialog("", I18nService.Instance.Translate("一条龙执行记录"), new PuloniaOneDragonHistoryView { DataContext = history }, null)
         { Owner = Application.Current.MainWindow, Width = 1100, Height = 750, SizeToContent = SizeToContent.Manual }.ShowDialog();
     }
     /// <summary>高级参数和来源保留为次级窗口，主配置使用老样式卡片。</summary>
@@ -449,7 +451,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
                 HasActiveRun = remote.CanCancel;
                 foreach (var node in TaskList) node.UpdateOneDragonStatus(null);
                 ExecutionStatusText = $"[{remote.InstanceName}] " + (remote.IsDisconnected
-                    ? "连接断开，状态未知"
+                    ? I18nService.Instance.Translate("连接断开，状态未知")
                     : PuloniaTaskHistoryText.Status(remote.Status) + " · " + remote.Message);
             }
             else
@@ -468,17 +470,17 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
                 var instancePrefix = latest is not null && latest.Instance != localKey
                     ? $"[{tracked?.InstanceName ?? PuloniaInstanceKey.Describe(latest.Instance)}] " : "";
                 ExecutionStatusText = latest is null
-                    ? "尚未执行"
+                    ? I18nService.Instance.Translate("尚未执行")
                     // 未归档的下发运行在连接断开后可能已变化，读到的运行状态只作参考
                     : tracked is { IsDisconnected: true }
-                        ? instancePrefix + "连接断开，状态未知"
+                        ? instancePrefix + I18nService.Instance.Translate("连接断开，状态未知")
                         : instancePrefix + new PuloniaTaskRunItemViewModel(latest).StatusText + " · " + latest.Message;
             }
             // 运行状态变化时同步首领累计，子实例落盘的结果也能在当前设置页看到。
             if (FixedSettings is AutoBossSettingsViewModel boss && boss.RefreshProgressCommand.CanExecute(null))
                 await boss.RefreshProgressCommand.ExecuteAsync(null);
         }
-        catch (Exception ex) { if (_isListening) ExecutionStatusText = "状态读取失败：" + ex.Message; }
+        catch (Exception ex) { if (_isListening) ExecutionStatusText = I18nService.Instance.Translate("状态读取失败：") + ex.Message; }
     }
     /// <summary>
     /// 停止当前配置的明确请求：本实例的运行等待执行器释放资源；下发到子实例的运行请求子实例停止，最终状态随后上报。
@@ -495,7 +497,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
                 await _service.CancelAsync(runId);
             await RefreshExecutionStatusAsync();
         }
-        catch (Exception ex) { await ThemedMessageBox.ErrorAsync("停止失败：" + ex.Message, "一条龙"); }
+        catch (Exception ex) { await ThemedMessageBox.ErrorAsync(I18nService.Instance.Translate("停止失败：") + ex.Message, I18nService.Instance.Translate("新一条龙")); }
     }
     /// <summary>拖拽仅允许当前根清单内的任务排序。</summary>
     public void DragOver(IDropInfo dropInfo)
@@ -519,7 +521,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     [RelayCommand]
     private async Task ImportLegacyAsync()
     {
-        var picker = new OpenFileDialog { Title = "导入旧配置组、一条龙或 d-v3 计划", Filter = "JSON 配置|*.json", Multiselect = true, InitialDirectory = Global.Absolute("User") };
+        var picker = new OpenFileDialog { Title = I18nService.Instance.Translate("导入旧配置组、一条龙或 d-v3 计划"), Filter = I18nService.Instance.Translate("JSON 配置") + "|*.json", Multiselect = true, InitialDirectory = Global.Absolute("User") };
         if (picker.ShowDialog(Application.Current.MainWindow) != true) return;
         PuloniaTaskImportResult? result = null;
         try
@@ -533,12 +535,12 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             await Session.ImportPreparedAsync(result);
             SelectedConfiguration = Configurations.LastOrDefault();
             result.Differences.Add("写入完成：" + DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss zzz"));
-            Session.ReportStatus($"已导入 {result.Plans.Count} 个计划；原文件保留，差异报告可从导入按钮旁打开。");
+            Session.ReportStatus(string.Format(I18nService.Instance.Translate("已导入 {0} 个计划；原文件保留，差异报告可从导入按钮旁打开。"), result.Plans.Count));
         }
         catch (Exception ex)
         {
             result?.Differences.Add("写入未全部完成：" + ex.Message + "；已保存的计划保留在列表中，原文件不变。");
-            await ThemedMessageBox.ErrorAsync("导入未全部完成：" + ex.Message, "导入旧数据");
+            await ThemedMessageBox.ErrorAsync(I18nService.Instance.Translate("导入未全部完成：") + ex.Message, I18nService.Instance.Translate("导入旧数据"));
         }
         finally
         {
@@ -549,7 +551,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
                     var directory = Path.Combine(_store.RootDirectory, "imports"); Directory.CreateDirectory(directory);
                     ImportReportPath = await WriteImportReportAsync(directory, result.Report);
                 }
-                catch (Exception ex) { Session.ReportStatus("导入报告保存失败：" + ex.Message); ImportReportPath = null; }
+                catch (Exception ex) { Session.ReportStatus(I18nService.Instance.Translate("导入报告保存失败：") + ex.Message); ImportReportPath = null; }
             }
         }
     }
@@ -583,6 +585,6 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         if (ImportReportPath is null || !File.Exists(ImportReportPath)) return;
         var text = new System.Windows.Controls.TextBox { Text = File.ReadAllText(ImportReportPath), IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
             VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto };
-        new PromptDialog("", "导入差异报告", text, null) { Owner = Application.Current.MainWindow, Width = 850, Height = 650, SizeToContent = SizeToContent.Manual }.ShowDialog();
+        new PromptDialog("", I18nService.Instance.Translate("导入差异报告"), text, null) { Owner = Application.Current.MainWindow, Width = 850, Height = 650, SizeToContent = SizeToContent.Manual }.ShowDialog();
     }
 }

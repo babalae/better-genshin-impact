@@ -10,6 +10,7 @@ using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.I18n;
 using LibGit2Sharp.Handlers;
 
 namespace BetterGenshinImpact.Pulonia.Services;
@@ -103,7 +104,7 @@ public sealed class PuloniaRepositoryManagementService
         var kind = ClassifyLocalSource(path);
         path = Path.GetFullPath(path);
         if (kind == PuloniaLocalRepositorySourceKind.Zip) return ImportLocalZipAsync(path, progress, ct);
-        progress?.Invoke(0, "正在校验目录中的 repo.json…");
+        progress?.Invoke(0, I18nService.Instance.Translate("正在校验目录中的 repo.json…"));
         return Repositories.AddRepositoryAsync(path, ct);
     }
 
@@ -111,7 +112,7 @@ public sealed class PuloniaRepositoryManagementService
     public async Task<ScriptRepositoryRegistration> ImportLocalZipAsync(string zipFilePath,
         Action<int, string>? progress = null, CancellationToken ct = default)
     {
-        progress?.Invoke(0, "正在校验 ZIP 中的 repo.json…");
+        progress?.Invoke(0, I18nService.Instance.Translate("正在校验 ZIP 中的 repo.json…"));
         await Repositories.ValidateRepositoryZipAsync(zipFilePath, ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         var directory = await ScriptRepoUpdater.Instance.ImportLocalRepoZip(zipFilePath, progress).ConfigureAwait(false);

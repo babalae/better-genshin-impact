@@ -1744,12 +1744,12 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
-                        <ui:TextBlock FontTypography="Body" Text="树脂使用" TextWrapping="Wrap" />
+                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 树脂使用}" TextWrapping="Wrap" />
                         <ContentControl Content="{Binding DomainResin, Mode=OneWay}" ContentTemplate="{StaticResource ResinUsageSummaryTemplate}"
                                         Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                         HorizontalContentAlignment="Stretch" Focusable="False" />
                     </StackPanel>
-                    <ui:Button Grid.Column="1" Content="设置" MinWidth="88" Margin="0,0,36,0" VerticalAlignment="Center"
+                    <ui:Button Grid.Column="1" Content="{i18n:T 设置}" MinWidth="88" Margin="0,0,36,0" VerticalAlignment="Center"
                                Command="{Binding DomainResin.EditCommand, Mode=OneWay}" AutomationProperties.Name="设置树脂使用"
                                ToolTip="{Binding DomainResin.Summary, Mode=OneWay}" />
                 </Grid>
@@ -2092,12 +2092,12 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
-                        <ui:TextBlock FontTypography="Body" Text="树脂使用" TextWrapping="Wrap" />
+                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 树脂使用}" TextWrapping="Wrap" />
                         <ContentControl Content="{Binding BossResin, Mode=OneWay}" ContentTemplate="{StaticResource ResinUsageSummaryTemplate}"
                                         Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                         HorizontalContentAlignment="Stretch" Focusable="False" />
                     </StackPanel>
-                    <ui:Button Grid.Column="1" Content="设置" MinWidth="88" Margin="0,0,36,0" VerticalAlignment="Center"
+                    <ui:Button Grid.Column="1" Content="{i18n:T 设置}" MinWidth="88" Margin="0,0,36,0" VerticalAlignment="Center"
                                Command="{Binding BossResin.EditCommand, Mode=OneWay}" AutomationProperties.Name="设置树脂使用"
                                ToolTip="{Binding BossResin.Summary, Mode=OneWay}" />
                 </Grid>
@@ -2391,12 +2391,12 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
-                        <ui:TextBlock FontTypography="Body" Text="树脂使用" TextWrapping="Wrap" />
+                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 树脂使用}" TextWrapping="Wrap" />
                         <ContentControl Content="{Binding StygianResin, Mode=OneWay}" ContentTemplate="{StaticResource ResinUsageSummaryTemplate}"
                                         Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                         HorizontalContentAlignment="Stretch" Focusable="False" />
                     </StackPanel>
-                    <ui:Button Grid.Column="1" Content="设置" MinWidth="88" Margin="0,0,36,0" VerticalAlignment="Center"
+                    <ui:Button Grid.Column="1" Content="{i18n:T 设置}" MinWidth="88" Margin="0,0,36,0" VerticalAlignment="Center"
                                Command="{Binding StygianResin.EditCommand, Mode=OneWay}" AutomationProperties.Name="设置树脂使用"
                                ToolTip="{Binding StygianResin.Summary, Mode=OneWay}" />
                 </Grid>
@@ -2579,7 +2579,13 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding AutoMusicLevelList}"
                               SelectedItem="{Binding Config.AutoFishingConfig.XXXXX, Mode=TwoWay}" 
-                              SelectedIndex="0" />
+                              SelectedIndex="0">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{i18n:TBinding}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>-->
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -2760,7 +2766,13 @@
                               Width="150"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
-                              SelectedItem="{Binding Config.AutoLeyLineOutcropConfig.LeyLineOutcropType, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.AutoLeyLineOutcropConfig.LeyLineOutcropType, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{i18n:TBinding}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -2786,7 +2798,13 @@
                               Width="120"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
-                              SelectedItem="{Binding Config.AutoLeyLineOutcropConfig.Country, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.AutoLeyLineOutcropConfig.Country, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{i18n:TBinding}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -3042,12 +3060,12 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
-                        <ui:TextBlock FontTypography="Body" Text="树脂使用" TextWrapping="Wrap" />
+                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 树脂使用}" TextWrapping="Wrap" />
                         <ContentControl Content="{Binding LeyLineResin, Mode=OneWay}" ContentTemplate="{StaticResource ResinUsageSummaryTemplate}"
                                         Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                         HorizontalContentAlignment="Stretch" Focusable="False" />
                     </StackPanel>
-                    <ui:Button Grid.Column="1" Content="设置" MinWidth="88" Margin="0,0,36,0" VerticalAlignment="Center"
+                    <ui:Button Grid.Column="1" Content="{i18n:T 设置}" MinWidth="88" Margin="0,0,36,0" VerticalAlignment="Center"
                                Command="{Binding LeyLineResin.EditCommand, Mode=OneWay}" AutomationProperties.Name="设置树脂使用"
                                ToolTip="{Binding LeyLineResin.Summary, Mode=OneWay}" />
                 </Grid>
@@ -3323,7 +3341,13 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding AutoMusicLevelList}"
                               SelectedItem="{Binding Config.AutoMusicGameConfig.MusicLevel, Mode=TwoWay}"
-                              SelectedIndex="0" />
+                              SelectedIndex="0">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{i18n:TBinding}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -3462,14 +3486,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动连招（实验）"
+                                  Text="{i18n:T 自动连招（实验）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        启动本任务后识别队伍，构建连招行为树
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap" Text="{i18n:T 启动本任务后识别队伍，构建连招行为树}" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
@@ -3518,7 +3540,7 @@
                         <ComboBoxItem Tag="{x:Static combobuild:AutoComboLlmProvider.OpenAiCompatible}"
                                       Content="{i18n:T OpenAI 兼容}" />
                         <ComboBoxItem Tag="{x:Static combobuild:AutoComboLlmProvider.FishRelief}"
-                                      Content="FishRelief 发鱼站" />
+                                      Content="{i18n:T FishRelief 发鱼站}" />
                         <ComboBoxItem Tag="{x:Static combobuild:AutoComboLlmProvider.Anthropic}"
                                       Content="Anthropic" />
                     </ComboBox>
@@ -3537,13 +3559,11 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  TextWrapping="Wrap">
-                        决策LLM服务地址
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap" Text="{i18n:T 决策LLM服务地址}" />
                     <ui:TextBlock Grid.Row="2"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="必须使用 HTTPS 地址，否则密钥会明文传输；本机地址（localhost/127.0.0.1）除外；Anthropic 可留空使用官方地址，填写时不要带 /v1"
+                                  Text="{i18n:T 必须使用 HTTPS 地址，否则密钥会明文传输；本机地址（localhost/127.0.0.1）除外；Anthropic 可留空使用官方地址，填写时不要带 /v1}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="3"
@@ -3566,9 +3586,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  TextWrapping="Wrap">
-                        LLM模型名
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap" Text="{i18n:T LLM模型名}" />
                     <!-- 下拉与按钮放在同一个固定宽度的容器里：容器与其余各行的值控件对齐，
                          内部用 * 吸收按钮宽度的变化，避免按钮文字长度反过来把下拉挤扁。 -->
                     <Grid Grid.Row="0"
@@ -3608,13 +3626,11 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  TextWrapping="Wrap">
-                        LLM服务密钥
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap" Text="{i18n:T LLM服务密钥}" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="注意保护好密钥"
+                                  Text="{i18n:T 注意保护好密钥}"
                                   TextWrapping="Wrap" />
                     <ui:PasswordBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -3637,13 +3653,11 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  TextWrapping="Wrap">
-                        额外提示词
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap" Text="{i18n:T 额外提示词}" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="追加给 LLM 的自定义要求，如“使用芭芭拉重击来输出”；留空则不注入"
+                                  Text="{i18n:T 追加给 LLM 的自定义要求，如“使用芭芭拉重击来输出”；留空则不注入}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -3671,13 +3685,11 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  TextWrapping="Wrap">
-                        主建树提示词
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap" Text="{i18n:T 主建树提示词}" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="“当前队伍”“元素反应”等小节由程序自动追加，无需填写；留空使用默认正文"
+                                  Text="{i18n:T “当前队伍”“元素反应”等小节由程序自动追加，无需填写；留空使用默认正文}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -3705,13 +3717,11 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  TextWrapping="Wrap">
-                        兜底建树提示词
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap" Text="{i18n:T 兜底建树提示词}" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="“当前队伍”小节由程序自动追加，无需填写；留空使用默认正文"
+                                  Text="{i18n:T “当前队伍”小节由程序自动追加，无需填写；留空使用默认正文}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -3734,19 +3744,17 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <ui:TextBlock FontTypography="Body"
-                                      TextWrapping="Wrap">
-                            角色提示词覆盖
-                        </ui:TextBlock>
+                                      TextWrapping="Wrap" Text="{i18n:T 角色提示词覆盖}" />
                         <ui:TextBlock Margin="0,4,0,0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="自定义角色的战术描述，未覆盖的角色使用内置描述；删除行即恢复内置描述；如重复只取第一个"
+                                      Text="{i18n:T 自定义角色的战术描述，未覆盖的角色使用内置描述；删除行即恢复内置描述；如重复只取第一个}"
                                       TextWrapping="Wrap" />
                     </StackPanel>
                     <ui:Button Grid.Column="1"
                                Margin="12,0,36,0"
                                VerticalAlignment="Center"
                                Command="{Binding AddAvatarDescriptionOverrideCommand}"
-                               Content="添加角色" />
+                               Content="{i18n:T 添加角色}" />
                 </Grid>
                 <ItemsControl Margin="16,0,36,16"
                               Visibility="{Binding IsAutoComboFishRelief, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
@@ -3762,7 +3770,14 @@
                                 <ComboBox Grid.Column="0"
                                           VerticalAlignment="Center"
                                           ItemsSource="{x:Static pages:TaskSettingsPageViewModel.CombatAvatarNameList}"
-                                          SelectedItem="{Binding Name, Mode=TwoWay}" />
+                                          SelectedItem="{Binding Name, Mode=TwoWay}">
+                                    <!-- 配置中保存中文角色名，只翻译展示 -->
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{i18n:TBinding}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <TextBox Grid.Column="1"
                                          Height="44"
                                          Margin="8,0,0,0"
@@ -3776,7 +3791,7 @@
                                            VerticalAlignment="Center"
                                            Command="{Binding DataContext.RemoveAvatarDescriptionOverrideCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                            CommandParameter="{Binding}"
-                                           Content="删除" />
+                                           Content="{i18n:T 删除}" />
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

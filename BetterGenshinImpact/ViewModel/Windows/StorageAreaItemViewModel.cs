@@ -3,6 +3,7 @@ using System.Linq;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Infrastructure.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
@@ -29,7 +30,7 @@ public partial class StorageAreaItemViewModel : ObservableObject
     /// <summary>
     /// 展示名称
     /// </summary>
-    public string DisplayName => Area.DisplayName;
+    public string DisplayName => I18nService.Instance.Translate(Area.DisplayName);
 
     /// <summary>
     /// 打开窗口时区域不能清理的原因；为 null 表示可以清理
@@ -40,7 +41,13 @@ public partial class StorageAreaItemViewModel : ObservableObject
     /// 说明文字：先说明内容，再说明清理影响；不能清理时直接写明原因
     /// </summary>
     public string DetailText => string.Join(" · ", new[] { Area.Description, BusyReason ?? Area.CleanupEffect }
-        .Where(text => !string.IsNullOrWhiteSpace(text)));
+        .Where(text => !string.IsNullOrWhiteSpace(text))
+        .Select(text => I18nService.Instance.Translate(text)));
+
+    /// <summary>
+    /// 按界面语言显示的清理影响说明，用于清除确认
+    /// </summary>
+    public string CleanupEffectText => I18nService.Instance.Translate(Area.CleanupEffect);
 
     /// <summary>
     /// “打开”按钮打开的目录；区域内没有已存在的目录时为 null
@@ -60,7 +67,9 @@ public partial class StorageAreaItemViewModel : ObservableObject
     /// <summary>
     /// 清理按钮文字；会丢失用户数据的操作带省略号，表示会先确认
     /// </summary>
-    public string CleanButtonText => Area.RequiresConfirmation ? "清除…" : "清理";
+    public string CleanButtonText => Area.RequiresConfirmation
+        ? I18nService.Instance.Translate("清除…")
+        : I18nService.Instance.Translate("清理");
 
     /// <summary>
     /// 是否参与一键清理
@@ -120,11 +129,11 @@ public partial class StorageAreaItemViewModel : ObservableObject
         {
             if (SizeBytes is not { } bytes)
             {
-                return IsMeasuring ? "计算中…" : "—";
+                return IsMeasuring ? I18nService.Instance.Translate("计算中…") : "—";
             }
 
             var text = ByteSizeFormatter.Format(bytes);
-            return IsPending ? $"{text} · 待清理" : text;
+            return IsPending ? string.Format(I18nService.Instance.Translate("{0} · 待清理"), text) : text;
         }
     }
 

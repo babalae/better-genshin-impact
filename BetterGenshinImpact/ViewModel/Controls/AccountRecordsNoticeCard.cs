@@ -4,6 +4,7 @@ using System.Linq;
 using BetterGenshinImpact.Service.AccountRecords;
 using BetterGenshinImpact.Service.AccountRecords.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Controls;
 
@@ -60,21 +61,22 @@ public sealed class AccountRecordsNoticeCard : ObservableObject
                     ? descriptor.DisplayName : source;
                 var label = first.State switch
                 {
-                    "Error" => "错误", "Warning" => "提醒", "Completed" => "已完成",
-                    "Pending" when first.Kind == "ExpirationCheck" => "过期批次待核实",
-                    "Pending" when first.Kind == "Delta" => "增减待核实", "Pending" => "待核实", _ => "其他事项"
+                    "Error" => I18nService.Instance.Translate("错误"), "Warning" => I18nService.Instance.Translate("提醒"), "Completed" => I18nService.Instance.Translate("已完成"),
+                    "Pending" when first.Kind == "ExpirationCheck" => I18nService.Instance.Translate("过期批次待核实"),
+                    "Pending" when first.Kind == "Delta" => I18nService.Instance.Translate("增减待核实"), "Pending" => I18nService.Instance.Translate("待核实"), _ => I18nService.Instance.Translate("其他事项")
                 };
-                var details = "来源：" + string.Join("、", items.Select(item => SourceName(item.Source)).Distinct());
+                var details = string.Format(I18nService.Instance.Translate("来源：{0}"),
+                    string.Join(I18nService.Instance.Translate("、"), items.Select(item => SourceName(item.Source)).Distinct()));
                 if (first.Kind == "Delta" && first.State is not ("Error" or "Warning"))
-                    details += $"；累计变动：{items.Sum(item => (decimal)item.Quantity):+0;-0;±0}";
+                    details += string.Format(I18nService.Instance.Translate("；累计变动：{0:+0;-0;±0}"), items.Sum(item => (decimal)item.Quantity));
                 if (first.State == "Completed" && first.Kind == "Delta")
-                    details += $"；包含 {items.Select(item => item.VerificationId).Distinct().Count()} 轮核实，详见事件记录";
+                    details += string.Format(I18nService.Instance.Translate("；包含 {0} 轮核实，详见事件记录"), items.Select(item => item.VerificationId).Distinct().Count());
                 return new AccountRecordsNoticeCard
                 {
                     Uid = data.Uid, Name = name, State = first.State, Kind = group.Key.Kind,
                     EventIds = items.Select(item => item.Id).ToArray(), ErrorId = first.State == "Error" ? error?.Id : null,
                     EventVersions = items.ToDictionary(item => item.Id, item => item.ContentVersion),
-                    Title = $"{name} · {label}（{items.Length} 条）",
+                    Title = string.Format(I18nService.Instance.Translate("{0} · {1}（{2} 条）"), name, label, items.Length),
                     Message = string.Join("\n", items.Select(item => AccountRecordsErrorMessages.ForDisplay(item.Message)).Distinct()),
                     Details = details,
                     CanArchive = first.State == "Warning" || first.State == "Error" && error == null ||

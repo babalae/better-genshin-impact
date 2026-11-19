@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using BetterGenshinImpact.Service.AccountRecords;
+using BetterGenshinImpact.Service.I18n;
 using Microsoft.Win32;
 using Newtonsoft.Json.Linq;
 using System.Windows;
@@ -44,7 +45,7 @@ public partial class AccountRecordsImportViewModel : ObservableObject
     /// <summary>用户可编辑的目标 UID；默认沿用文件中的 UID。</summary>
     [ObservableProperty] private string _targetUid = "";
     /// <summary>当前文件摘要。</summary>
-    [ObservableProperty] private string _summary = "请选择 AccountRecords JSON 文件。目前支持单个账户的当前库存。";
+    [ObservableProperty] private string _summary = I18nService.Instance.Translate("请选择 AccountRecords JSON 文件。目前支持单个账户的当前库存。");
     /// <summary>导入反馈或读取错误。</summary>
     [ObservableProperty] private string _message = "";
     /// <summary>是否允许用文件中的分类补充本地字典空缺。</summary>
@@ -71,7 +72,7 @@ public partial class AccountRecordsImportViewModel : ObservableObject
     [RelayCommand]
     private async Task ChooseFile()
     {
-        var dialog = new OpenFileDialog { Filter = "狛荷屋库存 JSON|*.json", Title = "选择狛荷屋库存文件", CheckFileExists = true };
+        var dialog = new OpenFileDialog { Filter = I18nService.Instance.Translate("狛荷屋库存 JSON|*.json"), Title = I18nService.Instance.Translate("选择狛荷屋库存文件"), CheckFileExists = true };
         if (dialog.ShowDialog() != true) return;
         IsBusy = true;
         _package = null;
@@ -89,12 +90,12 @@ public partial class AccountRecordsImportViewModel : ObservableObject
             var count = ((JObject)account.Value["inventory"]!).Count;
             foreach (var item in ((JObject)_package["itemDefinitions"]!).Properties())
                 Definitions.Add($"{item.Name}：{item.Value["category"]}");
-            Summary = $"{Path.GetFileName(dialog.FileName)}\n文件 UID：{account.Name} · 库存 {count} 项 · 字典补充 {Definitions.Count} 项";
-            if (account.Value["deltas"] is JArray { Count: > 0 } deltas) Summary += $"\n包含 {deltas.Count} 条开发测试增量，导入前需要确认。";
+            Summary = Path.GetFileName(dialog.FileName) + "\n" + string.Format(I18nService.Instance.Translate("文件 UID：{0} · 库存 {1} 项 · 字典补充 {2} 项"), account.Name, count, Definitions.Count);
+            if (account.Value["deltas"] is JArray { Count: > 0 } deltas) Summary += "\n" + string.Format(I18nService.Instance.Translate("包含 {0} 条开发测试增量，导入前需要确认。"), deltas.Count);
             if (_package["note"]?.Type == JTokenType.String) Summary += "\n" + (string?)_package["note"];
             HasPackage = true;
         }
-        catch (Exception ex) { Summary = "文件未载入。"; Message = AccountRecordsErrorMessages.Describe(ex); }
+        catch (Exception ex) { Summary = I18nService.Instance.Translate("文件未载入。"); Message = AccountRecordsErrorMessages.Describe(ex); }
         finally { IsBusy = false; }
     }
 
@@ -111,8 +112,8 @@ public partial class AccountRecordsImportViewModel : ObservableObject
         try
         {
             var hasDeltas = ((JObject)_package["accounts"]!).Properties().Any(account => account.Value["deltas"] is JArray { Count: > 0 });
-            if (hasDeltas && await ThemedMessageBox.ShowAsync("此文件包含库存增量测试数据，仅供开发调试与报错验证，不代表正式开放。是否继续导入？",
-                "开发测试操作", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            if (hasDeltas && await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("此文件包含库存增量测试数据，仅供开发调试与报错验证，不代表正式开放。是否继续导入？"),
+                I18nService.Instance.Translate("开发测试操作"), MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
             var uid = TargetUid.Trim();
             if (!InventoryStore.IsValidUid(uid)) throw new ArgumentException("目标 UID 须为首位非零的 9～10 位数字。");
             // 狛荷屋只显示账户目录中的 UID：目标不在目录中时先确认并建账户（在人工操作门禁外进行），取消则不导入。
@@ -120,13 +121,13 @@ public partial class AccountRecordsImportViewModel : ObservableObject
             {
                 if (!await _ensureAccountAsync(uid))
                 {
-                    Message = "已取消导入，没有创建账户。";
+                    Message = I18nService.Instance.Translate("已取消导入，没有创建账户。");
                     return;
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                Message = $"未能创建账户，没有导入：{AccountRecordsErrorMessages.Describe(ex)}";
+                Message = string.Format(I18nService.Instance.Translate("未能创建账户，没有导入：{0}"), AccountRecordsErrorMessages.Describe(ex));
                 return;
             }
             // 导入按批次保存，异常不代表没有写入；关闭后必须刷新这次实际操作的目标。
@@ -137,14 +138,14 @@ public partial class AccountRecordsImportViewModel : ObservableObject
             DuplicateCount = result.DuplicateCount;
             DuplicateErrorCount = result.DuplicateErrorCount;
             HasImportErrors = RejectedCount > 0 || DuplicateErrorCount > 0;
-            CompletionSummary = $"接受 {AcceptedCount} 项，忽略重复 {DuplicateCount} 项（已有异常 {DuplicateErrorCount} 项），新增异常 {RejectedCount} 项，分类提醒 {result.Warnings.Count} 项。";
+            CompletionSummary = string.Format(I18nService.Instance.Translate("接受 {0} 项，忽略重复 {1} 项（已有异常 {2} 项），新增异常 {3} 项，分类提醒 {4} 项。"), AcceptedCount, DuplicateCount, DuplicateErrorCount, RejectedCount, result.Warnings.Count);
             if (result.Warnings.Count > 0)
-                Message = $"分类提醒 {result.Warnings.Count} 项：已保留本地分类，数量独立处理。关闭窗口后可在库存中查看橘灯详情。\n{CompletionSummary}";
+                Message = string.Format(I18nService.Instance.Translate("分类提醒 {0} 项：已保留本地分类，数量独立处理。关闭窗口后可在库存中查看橘灯详情。"), result.Warnings.Count) + "\n" + CompletionSummary;
             closeAfterImport = !HasImportErrors && result.Warnings.Count == 0;
             HasPackage = false;
             _package = null;
         }
-        catch (Exception ex) { Message = $"导入未完成：{AccountRecordsErrorMessages.Describe(ex)}\n已经成功保存的批次会保留。"; }
+        catch (Exception ex) { Message = string.Format(I18nService.Instance.Translate("导入未完成：{0}\n已经成功保存的批次会保留。"), AccountRecordsErrorMessages.Describe(ex)); }
         finally { IsBusy = false; }
         if (closeAfterImport) CloseRequested?.Invoke();
     }

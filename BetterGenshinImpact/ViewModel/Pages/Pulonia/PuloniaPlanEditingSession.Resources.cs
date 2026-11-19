@@ -9,6 +9,7 @@ using System.Windows.Threading;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -78,8 +79,9 @@ public partial class PuloniaPlanEditingSession
                 node.ApprovedDeclaredVersion = null;
                 node.CurrentDeclaredVersion = null;
                 node.ResourceCheckError = snapshot.Resource is not null || snapshot.Source?.Resource is not null
-                    ? (ex is FileNotFoundException or DirectoryNotFoundException ? "来源中已移除：" : "检查失败：")
-                        + ex.Message + "；仍可使用已确认缓存。" : ex.Message;
+                    // “来源中已移除：”前缀被 PuloniaTaskNodeViewModel.ResourceUpdateText 用 StartsWith 判断，暂保持中文原文
+                    ? (ex is FileNotFoundException or DirectoryNotFoundException ? "来源中已移除：" : I18nService.Instance.Translate("检查失败："))
+                        + ex.Message + I18nService.Instance.Translate("；仍可使用已确认缓存。") : ex.Message;
             }
             UpdateResourceSummaries(documents);
         }
@@ -118,12 +120,13 @@ public partial class PuloniaPlanEditingSession
 
                 if (oldVersion == newVersion)
                 {
-                    ReportStatus($"“{node.Name}”的资源版本没有变化。");
+                    ReportStatus(string.Format(I18nService.Instance.Translate("“{0}”的资源版本没有变化。"), I18nService.Instance.Translate(node.Name)));
                     return;
                 }
                 var result = await ThemedMessageBox.ShowAsync(
-                    $"资源“{node.Name}”已经变化。\n\n{FormatVersionChange(reviewed)}\n\n确认后只影响之后的运行，已有执行记录不变。",
-                    "更新任务资源", MessageBoxButton.YesNo,
+                    string.Format(I18nService.Instance.Translate("资源“{0}”已经变化。\n\n{1}\n\n确认后只影响之后的运行，已有执行记录不变。"),
+                        I18nService.Instance.Translate(node.Name), FormatVersionChange(reviewed)),
+                    I18nService.Instance.Translate("更新任务资源"), MessageBoxButton.YesNo,
                     ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.No);
                 if (result != MessageBoxResult.Yes)
                     return;
@@ -156,14 +159,14 @@ public partial class PuloniaPlanEditingSession
             node.NotifyResourceVersionChanged();
             if (!await SaveDocumentAsync(node.Document)) return;
             await RefreshResourceVersionsAsync();
-            ReportStatus($"已更新“{node.Name}”的任务使用版本。");
+            ReportStatus(string.Format(I18nService.Instance.Translate("已更新“{0}”的任务使用版本。"), I18nService.Instance.Translate(node.Name)));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException
             or LibGit2Sharp.LibGit2SharpException or System.Text.Json.JsonException or Newtonsoft.Json.JsonException)
         {
-            var message = "更新任务资源失败：" + ex.Message;
+            var message = I18nService.Instance.Translate("更新任务资源失败：") + ex.Message;
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "无法更新任务资源");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("无法更新任务资源"));
         }
     }
 
@@ -173,8 +176,8 @@ public partial class PuloniaPlanEditingSession
         if (!string.IsNullOrWhiteSpace(state.ApprovedDeclaredVersion)
             && !string.IsNullOrWhiteSpace(state.CurrentDeclaredVersion)
             && state.ApprovedDeclaredVersion != state.CurrentDeclaredVersion)
-            return $"版本：{state.ApprovedDeclaredVersion} → {state.CurrentDeclaredVersion}";
-        return "内容已经变化，但资源没有可显示的版本号变化。";
+            return string.Format(I18nService.Instance.Translate("版本：{0} → {1}"), state.ApprovedDeclaredVersion, state.CurrentDeclaredVersion);
+        return I18nService.Instance.Translate("内容已经变化，但资源没有可显示的版本号变化。");
     }
 
     /// <summary>卡片目标必须有已完成检查的更新且没有资源读取错误，不依赖当前选中计划。</summary>
@@ -197,13 +200,13 @@ public partial class PuloniaPlanEditingSession
         try
         {
             var targets = GetReferencedDocuments(document, GetResourceDocuments()).ToArray();
-            await UpdateResourceBatchAsync(targets, $"“{document.Name}”", true);
+            await UpdateResourceBatchAsync(targets, $"“{I18nService.Instance.Translate(document.Name)}”", true);
         }
         catch (Exception ex)
         {
-            var message = "更新任务资源失败：" + ex.Message;
+            var message = I18nService.Instance.Translate("更新任务资源失败：") + ex.Message;
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "无法更新此计划资源");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("无法更新此计划资源"));
         }
     }
 
@@ -213,13 +216,13 @@ public partial class PuloniaPlanEditingSession
     {
         try
         {
-            await UpdateResourceBatchAsync(GetResourceDocuments(), "全部 Pulonia 任务计划", true);
+            await UpdateResourceBatchAsync(GetResourceDocuments(), I18nService.Instance.Translate("全部 Pulonia 任务计划"), true);
         }
         catch (Exception ex)
         {
-            var message = "更新所有任务计划失败：" + ex.Message;
+            var message = I18nService.Instance.Translate("更新所有任务计划失败：") + ex.Message;
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "无法更新所有任务计划");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("无法更新所有任务计划"));
         }
     }
 
@@ -235,9 +238,9 @@ public partial class PuloniaPlanEditingSession
             .Distinct(StringComparer.Ordinal)
             .ToArray();
         var result = await ThemedMessageBox.ShowAsync(
-            $"将同步或刷新 {repositoryIds.Length} 个任务实际引用的仓库，然后更新全部 Pulonia 任务计划中的可用资源。\n"
-            + "同步失败但本机副本仍可用时，将继续使用本机内容；失败资源保持原版本。",
-            "一键同步并更新", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
+            string.Format(I18nService.Instance.Translate("将同步或刷新 {0} 个任务实际引用的仓库，然后更新全部 Pulonia 任务计划中的可用资源。\n同步失败但本机副本仍可用时，将继续使用本机内容；失败资源保持原版本。"),
+                repositoryIds.Length),
+            I18nService.Instance.Translate("一键同步并更新"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
         if (result != MessageBoxResult.Yes) return;
 
         IsBusy = true;
@@ -252,8 +255,8 @@ public partial class PuloniaPlanEditingSession
                 {
                     var repository = await ResourceCatalog.Repositories.GetRepositoryAsync(id);
                     ReportStatus(repository.IsRemote
-                        ? $"正在同步仓库（{index + 1}/{repositoryIds.Length}）：{repository.Name}"
-                        : $"正在刷新本地仓库（{index + 1}/{repositoryIds.Length}）：{repository.Name}");
+                        ? string.Format(I18nService.Instance.Translate("正在同步仓库（{0}/{1}）：{2}"), index + 1, repositoryIds.Length, repository.Name)
+                        : string.Format(I18nService.Instance.Translate("正在刷新本地仓库（{0}/{1}）：{2}"), index + 1, repositoryIds.Length, repository.Name));
                     if (repository.IsRemote)
                         await _repositoryManagementService.UpdateAsync(id, null);
                     else
@@ -268,37 +271,37 @@ public partial class PuloniaPlanEditingSession
                     try
                     {
                         using var local = await ResourceCatalog.Repositories.OpenCurrentAsync(id);
-                        fallback = "；本机副本仍可用，已继续检查，但它可能不是远端最新版本";
+                        fallback = I18nService.Instance.Translate("；本机副本仍可用，已继续检查，但它可能不是远端最新版本");
                     }
                     catch (Exception localError) when (localError is IOException or UnauthorizedAccessException
                                                            or InvalidOperationException or ArgumentException
                                                            or LibGit2Sharp.LibGit2SharpException)
                     {
-                        fallback = "；没有可用的本机副本，对应资源将跳过";
+                        fallback = I18nService.Instance.Translate("；没有可用的本机副本，对应资源将跳过");
                     }
                     syncFailures.Add(id + "：" + ex.Message + fallback);
                 }
             }
 
-            ReportStatus("正在检查本机仓库与任务使用版本…");
-            var updateResult = await UpdateResourceBatchAsync(documents, "全部 Pulonia 任务计划", false,
+            ReportStatus(I18nService.Instance.Translate("正在检查本机仓库与任务使用版本…"));
+            var updateResult = await UpdateResourceBatchAsync(documents, I18nService.Instance.Translate("全部 Pulonia 任务计划"), false,
                 CancellationToken.None, false);
             var syncResult = new PuloniaBatchOperationResult(syncSucceeded, syncFailures);
-            var summary = $"仓库同步/刷新成功 {syncResult.Succeeded} 个、失败 {syncResult.Failed} 个；"
-                          + $"任务资源更新成功 {updateResult.Succeeded} 项、失败 {updateResult.Failed} 项。";
+            var summary = string.Format(I18nService.Instance.Translate("仓库同步/刷新成功 {0} 个、失败 {1} 个；任务资源更新成功 {2} 项、失败 {3} 项。"),
+                syncResult.Succeeded, syncResult.Failed, updateResult.Succeeded, updateResult.Failed);
             ReportStatus(summary);
-            var failureReasons = syncResult.FailureReasons.Select(item => "仓库：" + item)
-                .Concat(updateResult.FailureReasons.Select(item => "资源：" + item)).ToArray();
+            var failureReasons = syncResult.FailureReasons.Select(item => I18nService.Instance.Translate("仓库：") + item)
+                .Concat(updateResult.FailureReasons.Select(item => I18nService.Instance.Translate("资源：") + item)).ToArray();
             if (failureReasons.Length > 0)
                 await ThemedMessageBox.WarningAsync(summary + "\n\n"
                     + string.Join("\n", failureReasons.Take(10).Select(item => "• " + item))
-                    + (failureReasons.Length > 10 ? "\n…" : ""), "一键同步并更新已完成");
+                    + (failureReasons.Length > 10 ? "\n…" : ""), I18nService.Instance.Translate("一键同步并更新已完成"));
         }
         catch (Exception ex)
         {
-            var message = "一键同步并更新失败：" + ex.Message;
+            var message = I18nService.Instance.Translate("一键同步并更新失败：") + ex.Message;
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "无法完成一键同步并更新");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("无法完成一键同步并更新"));
         }
         finally
         {
@@ -319,23 +322,26 @@ public partial class PuloniaPlanEditingSession
             .Select(node => (Document: document, Node: node))).ToArray();
         var initialErrors = targets.SelectMany(document => document.EnumerateNodes()
             .Where(node => node.CanUpdateResourceVersion && node.ResourceCheckError is not null)
-            .Select(node => $"{document.Name} / {node.Name}：{node.ResourceCheckError}")).ToList();
+            .Select(node => $"{I18nService.Instance.Translate(document.Name)} / {I18nService.Instance.Translate(node.Name)}：{node.ResourceCheckError}")).ToList();
         if (updates.Length == 0)
         {
             ReportStatus(initialErrors.Count == 0
-                ? $"{scopeName}的任务资源已是本机仓库当前版本。"
-                : $"{scopeName}没有可更新资源，{initialErrors.Count} 项检查失败。");
+                ? string.Format(I18nService.Instance.Translate("{0}的任务资源已是本机仓库当前版本。"), scopeName)
+                : string.Format(I18nService.Instance.Translate("{0}没有可更新资源，{1} 项检查失败。"), scopeName, initialErrors.Count));
             return new PuloniaBatchOperationResult(0, initialErrors);
         }
         if (requestConfirmation)
         {
             var result = await ThemedMessageBox.ShowAsync(
-                $"更新{scopeName}中的 {updates.Length} 项任务资源？\n"
-                + string.Join("\n", updates.Take(12).Select(item => "• " + item.Document.Name + " / " + item.Node.Name))
+                string.Format(I18nService.Instance.Translate("更新{0}中的 {1} 项任务资源？"), scopeName, updates.Length) + "\n"
+                + string.Join("\n", updates.Take(12).Select(item => "• " + I18nService.Instance.Translate(item.Document.Name)
+                    + " / " + I18nService.Instance.Translate(item.Node.Name)))
                 + (updates.Length > 12 ? "\n…" : "")
-                + (initialErrors.Count > 0 ? $"\n另有 {initialErrors.Count} 项检查失败，将保持原版本。" : "")
-                + "\n成功项会保存新的任务使用版本；参数、开关与已有执行记录保持不变。",
-                "更新任务资源", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
+                + (initialErrors.Count > 0
+                    ? "\n" + string.Format(I18nService.Instance.Translate("另有 {0} 项检查失败，将保持原版本。"), initialErrors.Count)
+                    : "")
+                + "\n" + I18nService.Instance.Translate("成功项会保存新的任务使用版本；参数、开关与已有执行记录保持不变。"),
+                I18nService.Instance.Translate("更新任务资源"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
             if (result != MessageBoxResult.Yes) return new PuloniaBatchOperationResult(0, initialErrors);
             // 对话框期间本机仓库或编辑树可能变化，更新前重新检查每个候选项。
             await RefreshResourceVersionsAsync(ct);
@@ -356,12 +362,14 @@ public partial class PuloniaPlanEditingSession
             foreach (var update in updates)
             {
                 ct.ThrowIfCancellationRequested();
-                ReportStatus($"正在更新任务资源（{++processed}/{updates.Length}）：{update.Node.Name}");
+                ReportStatus(string.Format(I18nService.Instance.Translate("正在更新任务资源（{0}/{1}）：{2}"), ++processed, updates.Length,
+                    I18nService.Instance.Translate(update.Node.Name)));
                 var node = update.Node;
                 var version = node.CurrentResourceVersion;
                 if (version is null || node.ResourceCheckError is not null)
                 {
-                    failures.Add($"{update.Document.Name} / {node.Name}：资源检查结果不可用");
+                    failures.Add(string.Format(I18nService.Instance.Translate("{0} / {1}：资源检查结果不可用"),
+                        I18nService.Instance.Translate(update.Document.Name), I18nService.Instance.Translate(node.Name)));
                     continue;
                 }
                 var snapshot = PuloniaTaskJson.Read<PuloniaTask>(PuloniaTaskJson.Write(node.Model));
@@ -400,17 +408,18 @@ public partial class PuloniaPlanEditingSession
                 if (await SaveDocumentAsync(group.Key)) updated += group.Count();
                 else
                     foreach (var item in group)
-                        failures.Add($"{group.Key.Name} / {item.Node.Name}：计划保存失败，更新保留在未保存的修改中，可撤销");
+                        failures.Add(string.Format(I18nService.Instance.Translate("{0} / {1}：计划保存失败，更新保留在未保存的修改中，可撤销"),
+                            I18nService.Instance.Translate(group.Key.Name), I18nService.Instance.Translate(item.Node.Name)));
             }
             UpdateResourceSummaries(GetResourceDocuments());
             var summary = failures.Count == 0
-                ? $"已更新{scopeName}中的 {updated} 项任务资源。"
-                : $"已更新 {updated} 项任务资源，{failures.Count} 项失败并保持原版本。";
+                ? string.Format(I18nService.Instance.Translate("已更新{0}中的 {1} 项任务资源。"), scopeName, updated)
+                : string.Format(I18nService.Instance.Translate("已更新 {0} 项任务资源，{1} 项失败并保持原版本。"), updated, failures.Count);
             ReportStatus(summary);
             if (failures.Count > 0 && displayFailureDialog)
                 await ThemedMessageBox.WarningAsync(summary + "\n\n"
                     + string.Join("\n", failures.Take(10).Select(item => "• " + item))
-                    + (failures.Count > 10 ? "\n…" : ""), "部分任务资源未更新");
+                    + (failures.Count > 10 ? "\n…" : ""), I18nService.Instance.Translate("部分任务资源未更新"));
             return new PuloniaBatchOperationResult(updated, failures);
         }
         finally
@@ -461,8 +470,8 @@ public partial class PuloniaPlanEditingSession
         {
             var target = documents.FirstOrDefault(item => item.Id == node.Model.Source!.PlanId);
             node.ReferencedResourceUpdateCount = target?.ResourceUpdateCount ?? 0;
-            node.ResourceCheckError = target is null ? "引用计划不存在，无法检查资源。"
-                : target.ResourceErrorCount > 0 ? "引用计划中存在无法读取的资源，请打开该计划检查。" : null;
+            node.ResourceCheckError = target is null ? I18nService.Instance.Translate("引用计划不存在，无法检查资源。")
+                : target.ResourceErrorCount > 0 ? I18nService.Instance.Translate("引用计划中存在无法读取的资源，请打开该计划检查。") : null;
         }
         NotifyResourceCommands();
     }

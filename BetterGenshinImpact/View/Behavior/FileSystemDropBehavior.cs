@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Input;
+using BetterGenshinImpact.Service.I18n;
 using Microsoft.Xaml.Behaviors;
 
 namespace BetterGenshinImpact.View.Behavior;
@@ -78,7 +79,7 @@ public sealed class FileSystemDropBehavior : Behavior<FrameworkElement>
         // 多项拖入显示禁止光标时不会产生 Drop，因此在悬停阶段直接说明拒绝原因。
         if (AssociatedObject.IsEnabled && paths is { Length: > 1 })
         {
-            const string message = "一次只能添加一个仓库目录或 ZIP 压缩包。";
+            var message = I18nService.Instance.Translate("一次只能添加一个仓库目录或 ZIP 压缩包。");
             if (RejectedCommand?.CanExecute(message) == true) RejectedCommand.Execute(message);
         }
         IsDraggingOver = accepted;

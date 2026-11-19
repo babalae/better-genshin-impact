@@ -7,6 +7,7 @@ using System.Windows;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -47,7 +48,7 @@ public partial class PuloniaPlanTriggersViewModel : ObservableObject, IDisposabl
     /// <summary>当前可修改的独立草稿。</summary>
     [ObservableProperty] private PuloniaTaskTriggerEditorViewModel? _triggerEditor;
     /// <summary>程序内调度、热键注册和错误反馈。</summary>
-    [ObservableProperty] private string _triggerStatus = "定时与快捷键只在 BGI 运行时生效。";
+    [ObservableProperty] private string _triggerStatus = I18nService.Instance.Translate("定时与快捷键只在 BGI 运行时生效。");
     /// <summary>最近一次保存、启用或删除的结果。</summary>
     [ObservableProperty] private string _message = "";
     /// <summary>正在保存触发配置，期间禁用触发器界面。</summary>
@@ -125,7 +126,7 @@ public partial class PuloniaPlanTriggersViewModel : ObservableObject, IDisposabl
     /// <summary>在 UI 线程合并最新的平台状态和当前计划的触发反馈。</summary>
     private void UpdateTriggerStatus()
     {
-        TriggerStatus = _triggerHost?.Status ?? "调度服务不可用，定时与快捷键暂不会执行。";
+        TriggerStatus = _triggerHost?.Status ?? I18nService.Instance.Translate("调度服务不可用，定时与快捷键暂不会执行。");
         var local = _instances.CurrentInstanceKey;
         foreach (var item in Triggers)
         {
@@ -136,7 +137,7 @@ public partial class PuloniaPlanTriggersViewModel : ObservableObject, IDisposabl
             item.Update(_triggerHost?.Statuses.FirstOrDefault(status => status.PlanId == Document?.Id && status.TriggerId == trigger.Id),
                 handledHere, DescribeOtherInstances(trigger, local));
             if (Document?.LastSaveError is { } error)
-                item.RuntimeText = "配置尚未保存，仍按上次保存的设置执行：" + error;
+                item.RuntimeText = I18nService.Instance.Translate("配置尚未保存，仍按上次保存的设置执行：") + error;
         }
         // 其他实例的在线状态与游标按较长间隔读取
         if (_otherInstancesReadAt is not { } readAt || DateTimeOffset.UtcNow - readAt >= OtherInstancesRefreshInterval)
@@ -160,20 +161,21 @@ public partial class PuloniaPlanTriggersViewModel : ObservableObject, IDisposabl
             var name = PuloniaInstanceKey.Describe(key);
             if (!_instances.Exists(key))
             {
-                lines.Add(name + "：执行实例不存在，没有实例会检查这个定时。");
+                lines.Add(string.Format(I18nService.Instance.Translate("{0}：执行实例不存在，没有实例会检查这个定时。"), name));
                 continue;
             }
             if (!_otherInstances.TryGetValue(key, out var info))
             {
-                lines.Add(name + "：正在读取状态…");
+                lines.Add(string.Format(I18nService.Instance.Translate("{0}：正在读取状态…"), name));
                 continue;
             }
             var cursor = info.Cursors.FirstOrDefault(item => item.PlanId == document.Id && item.TriggerId == trigger.Id
                                                              && item.TriggerActivatedAtUtc == trigger.ActivatedAtUtc);
             var processed = cursor?.LastOccurrenceUtc is { } last
-                ? "已处理到 " + last.ToOffset(PuloniaTaskSchedule.GetUtcOffset(trigger.ServerTimeZone)).ToString("MM-dd HH:mm")
-                : "尚未处理过";
-            lines.Add(info.Online ? $"{name}：在线，{processed}" : $"{name}：未运行（{processed}，启动后按补触发规则处理）");
+                ? string.Format(I18nService.Instance.Translate("已处理到 {0}"), last.ToOffset(PuloniaTaskSchedule.GetUtcOffset(trigger.ServerTimeZone)).ToString("MM-dd HH:mm"))
+                : I18nService.Instance.Translate("尚未处理过");
+            lines.Add(info.Online ? string.Format(I18nService.Instance.Translate("{0}：在线，{1}"), name, processed)
+                : string.Format(I18nService.Instance.Translate("{0}：未运行（{1}，启动后按补触发规则处理）"), name, processed));
         }
         return lines;
     }
@@ -274,8 +276,8 @@ public partial class PuloniaPlanTriggersViewModel : ObservableObject, IDisposabl
             trigger.ActivatedAtUtc = DateTimeOffset.UtcNow;
             if (trigger.Enabled && trigger.BusyPolicy == PuloniaTaskBusyPolicy.StopCurrent)
             {
-                var answer = await ThemedMessageBox.ShowAsync("该触发器会停止当前任务，并在清理完成后执行新请求。确认启用？",
-                    "停止当前任务策略", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
+                var answer = await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("该触发器会停止当前任务，并在清理完成后执行新请求。确认启用？"),
+                    I18nService.Instance.Translate("停止当前任务策略"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
                 if (answer != MessageBoxResult.Yes) return;
             }
             // 使用已保存字段构建候选；即使当前编辑草稿无效，也不会被开关操作带入计划。
@@ -287,10 +289,12 @@ public partial class PuloniaPlanTriggersViewModel : ObservableObject, IDisposabl
                 document.Plan.Triggers[document.Plan.Triggers.FindIndex(value => value.Id == trigger.Id)] = trigger,
                 document.SelectedNode);
             if (await _session.SaveDocumentAsync(document))
-                Message = $"触发器“{trigger.DisplayText}”已{(trigger.Enabled ? "启用" : "停用")}。右侧未保存的修改仍保留。";
+                Message = trigger.Enabled
+                    ? string.Format(I18nService.Instance.Translate("触发器“{0}”已启用。右侧未保存的修改仍保留。"), trigger.DisplayText)
+                    : string.Format(I18nService.Instance.Translate("触发器“{0}”已停用。右侧未保存的修改仍保留。"), trigger.DisplayText);
             Refresh();
         }
-        catch (Exception ex) { await ThemedMessageBox.ErrorAsync(ex.Message, "无法切换触发器状态"); }
+        catch (Exception ex) { await ThemedMessageBox.ErrorAsync(ex.Message, I18nService.Instance.Translate("无法切换触发器状态")); }
         finally
         {
             _preserveTriggerDraft = false;
@@ -311,17 +315,17 @@ public partial class PuloniaPlanTriggersViewModel : ObservableObject, IDisposabl
             var trigger = editor.CreateTrigger();
             if (trigger.BusyPolicy == PuloniaTaskBusyPolicy.StopCurrent && trigger.Enabled)
             {
-                var answer = await ThemedMessageBox.ShowAsync("该触发器到点会停止当前任务，并在清理完成后执行新请求。确认启用此策略？",
-                    "停止当前任务策略", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
+                var answer = await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("该触发器到点会停止当前任务，并在清理完成后执行新请求。确认启用此策略？"),
+                    I18nService.Instance.Translate("停止当前任务策略"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
                 if (answer != MessageBoxResult.Yes) return;
             }
             // 执行实例的账户检查（统筹设计 4.5、9.5）：有问题时说明，用户可以坚持保存
             if (await FindInstanceAccountProblemsAsync(document.Plan, trigger) is { Count: > 0 } problems)
             {
-                var answer = await ThemedMessageBox.ShowAsync("保存前发现以下情况，到点时相关的运行可能进入待处理：\n\n"
-                        + string.Join("\n", problems.Select(problem => "• " + problem))
-                        + "\n\n仍然保存吗？可以先在标题栏或账户页修改这些实例的当前账户。",
-                    "检查执行实例", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
+                var answer = await ThemedMessageBox.ShowAsync(string.Format(
+                        I18nService.Instance.Translate("保存前发现以下情况，到点时相关的运行可能进入待处理：\n\n{0}\n\n仍然保存吗？可以先在标题栏或账户页修改这些实例的当前账户。"),
+                        string.Join("\n", problems.Select(problem => "• " + problem))),
+                    I18nService.Instance.Translate("检查执行实例"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
                 if (answer != MessageBoxResult.Yes) return;
             }
             IsBusy = true;
@@ -339,10 +343,10 @@ public partial class PuloniaPlanTriggersViewModel : ObservableObject, IDisposabl
             {
                 Refresh();
                 SelectedTrigger = Triggers.FirstOrDefault(item => item.Trigger.Id == trigger.Id);
-                Message = trigger.Enabled ? "触发器已保存，稍后开始生效。" : "触发器已保存；使用列表卡片上的开关启用。";
+                Message = trigger.Enabled ? I18nService.Instance.Translate("触发器已保存，稍后开始生效。") : I18nService.Instance.Translate("触发器已保存；使用列表卡片上的开关启用。");
             }
         }
-        catch (Exception ex) { await ThemedMessageBox.ErrorAsync(ex.Message, "触发配置无效"); }
+        catch (Exception ex) { await ThemedMessageBox.ErrorAsync(ex.Message, I18nService.Instance.Translate("触发配置无效")); }
         finally { IsBusy = false; }
     }
 
@@ -361,7 +365,7 @@ public partial class PuloniaPlanTriggersViewModel : ObservableObject, IDisposabl
         try
         {
             var accounts = (await _instances.Accounts.LoadAccountsAsync()).Accounts;
-            string Name(string? id) => accounts.FirstOrDefault(account => account.Id == id)?.Name ?? "未确定";
+            string Name(string? id) => accounts.FirstOrDefault(account => account.Id == id)?.Name ?? I18nService.Instance.Translate("未确定");
             var currents = new List<(string Key, string? AccountId)>();
             foreach (var key in keys)
                 currents.Add((key, await _instances.Accounts.GetCurrentAccountIdAsync(key)));
@@ -371,18 +375,20 @@ public partial class PuloniaPlanTriggersViewModel : ObservableObject, IDisposabl
             {
                 foreach (var group in currents.Where(item => item.AccountId is not null)
                              .GroupBy(item => item.AccountId!, StringComparer.Ordinal).Where(group => group.Count() > 1))
-                    problems.Add($"{string.Join("、", group.Select(item => PuloniaInstanceKey.Describe(item.Key)))}的当前账户都是“{Name(group.Key)}”，"
-                                 + "同一账户不能同时在两个实例运行，后开始的会进入待处理。请为每个实例设置不同的当前账户。");
+                    problems.Add(string.Format(
+                        I18nService.Instance.Translate("{0}的当前账户都是“{1}”，同一账户不能同时在两个实例运行，后开始的会进入待处理。请为每个实例设置不同的当前账户。"),
+                        string.Join(I18nService.Instance.Translate("、"), group.Select(item => PuloniaInstanceKey.Describe(item.Key))), Name(group.Key)));
                 foreach (var item in currents.Where(item => item.AccountId is null))
-                    problems.Add($"{PuloniaInstanceKey.Describe(item.Key)}的当前账户未确定，到点时会进入待处理。");
+                    problems.Add(string.Format(I18nService.Instance.Translate("{0}的当前账户未确定，到点时会进入待处理。"), PuloniaInstanceKey.Describe(item.Key)));
             }
             // 2. 指定账户、执行实例是云原神：云原神实例不能切换账户，到点时需要该实例登录着这个账户
             else
             {
                 foreach (var item in currents.Where(item => item.Key.StartsWith(PuloniaInstanceKey.WebViewPrefix, StringComparison.Ordinal)
                                                             && item.AccountId != plan.AccountId))
-                    problems.Add($"云原神实例不能切换账户，到点时需要{PuloniaInstanceKey.Describe(item.Key)}登录着“{Name(plan.AccountId)}”"
-                                 + $"（它现在的当前账户是“{Name(item.AccountId)}”）。");
+                    problems.Add(string.Format(
+                        I18nService.Instance.Translate("云原神实例不能切换账户，到点时需要{0}登录着“{1}”（它现在的当前账户是“{2}”）。"),
+                        PuloniaInstanceKey.Describe(item.Key), Name(plan.AccountId), Name(item.AccountId)));
             }
             return problems;
         }
@@ -403,12 +409,12 @@ public partial class PuloniaPlanTriggersViewModel : ObservableObject, IDisposabl
         var target = item is null ? SelectedTrigger : Triggers.Contains(item) ? item : null;
         var trigger = target?.Trigger;
         if (document is null || trigger is null || IsBusy || _session.IsBusy) return;
-        var answer = await ThemedMessageBox.ShowAsync($"删除触发器“{trigger.DisplayText}”？已保存的执行记录不会删除。",
-            "删除触发器", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
+        var answer = await ThemedMessageBox.ShowAsync(string.Format(I18nService.Instance.Translate("删除触发器“{0}”？已保存的执行记录不会删除。"), trigger.DisplayText),
+            I18nService.Instance.Translate("删除触发器"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes) return;
         document.ApplyMutation(() => document.Plan.Triggers.RemoveAll(saved => saved.Id == trigger.Id), document.SelectedNode);
         if (await _session.SaveDocumentAsync(document))
-            Message = $"已删除触发器“{trigger.DisplayText}”。";
+            Message = string.Format(I18nService.Instance.Translate("已删除触发器“{0}”。"), trigger.DisplayText);
         Refresh();
     }
 

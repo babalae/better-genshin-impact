@@ -1,6 +1,7 @@
 <UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaRunTargetsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}">
@@ -22,8 +23,8 @@
                    HorizontalContentAlignment="Stretch"
                    Command="{Binding OpenCommand, Mode=OneWay}"
                    IsHitTestVisible="{Binding IsOpen, Mode=OneWay, Converter={StaticResource RunTargetsInverse}}"
-                   ToolTip="选择执行这份计划的实例；子实例使用它自己的当前账户运行，运行记录在执行记录页查看"
-                   AutomationProperties.Name="运行于">
+                   ToolTip="{i18n:T 选择执行这份计划的实例；子实例使用它自己的当前账户运行，运行记录在执行记录页查看}"
+                   AutomationProperties.Name="{i18n:T 运行于}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -55,7 +56,7 @@
             <StackPanel MinWidth="300" MaxWidth="460">
                 <TextBlock Margin="0,0,0,4"
                            FontWeight="SemiBold"
-                           Text="运行于" />
+                           Text="{i18n:T 运行于}" />
                 <TextBlock Margin="0,0,0,8"
                            FontSize="12"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -96,7 +97,7 @@
                                               ItemsSource="{Binding AccountChoices, Mode=OneWay}"
                                               SelectedValue="{Binding SelectedAccountId, Mode=TwoWay}"
                                               SelectedValuePath="Key"
-                                              ToolTip="该实例的当前账户：修改立即保存，正在运行的任务不受影响，下一次运行开始时生效"
+                                              ToolTip="{i18n:T 该实例的当前账户：修改立即保存，正在运行的任务不受影响，下一次运行开始时生效}"
                                               Visibility="{Binding CanChangeAccount, Mode=OneWay, Converter={StaticResource RunTargetsVisibility}}"
                                               AutomationProperties.Name="{Binding InstanceName, Mode=OneWay, StringFormat={}{0} 的当前账户}" />
                                     <TextBlock VerticalAlignment="Center"

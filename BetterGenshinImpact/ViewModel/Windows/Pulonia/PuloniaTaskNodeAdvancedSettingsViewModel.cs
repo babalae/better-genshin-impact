@@ -7,6 +7,7 @@ using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -68,7 +69,7 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
     public bool HasSource => Node.Model.Source is not null;
 
     /// <summary>任务参数编辑框的标题。</summary>
-    public string ParameterEditorTitle => "任务参数（JSON 对象，只属于本任务）";
+    public string ParameterEditorTitle => I18nService.Instance.Translate("任务参数（JSON 对象，只属于本任务）");
 
     /// <summary>
     /// 当前节点是否提供共享设置：分组、计划根和引用总是提供；叶子只有能力使用共享设置时提供。
@@ -92,11 +93,11 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
         get
         {
             if (!CanEditScriptSettings) return string.Empty;
-            if (IsLoadingScriptSettings) return "正在读取脚本设置…";
+            if (IsLoadingScriptSettings) return I18nService.Instance.Translate("正在读取脚本设置…");
             var count = (Document.GetOneDragonParameters(Node)["settings"] as JObject)?.Count ?? 0;
             return count > 0
-                ? $"已保存 {count} 项设置，确认后立即生效"
-                : "尚未保存设置，脚本按自身默认值运行；确认后立即生效";
+                ? string.Format(I18nService.Instance.Translate("已保存 {0} 项设置，确认后立即生效"), count)
+                : I18nService.Instance.Translate("尚未保存设置，脚本按自身默认值运行；确认后立即生效");
         }
     }
 
@@ -171,12 +172,12 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
         try
         {
             Document.ApplyRawParameters(Node, ParameterJson);
-            Message = "任务参数已应用，将自动保存。";
+            Message = I18nService.Instance.Translate("任务参数已应用，将自动保存。");
         }
         catch (Exception ex) when (ex is JsonException or PuloniaTaskValidationException or InvalidOperationException)
         {
-            Message = "参数未应用：" + ex.Message;
-            ThemedMessageBox.Error(Message, "参数格式错误");
+            Message = string.Format(I18nService.Instance.Translate("参数未应用：{0}"), ex.Message);
+            ThemedMessageBox.Error(Message, I18nService.Instance.Translate("参数格式错误"));
         }
     }
 
@@ -187,12 +188,12 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
         try
         {
             Document.ApplyRawSettings(Node, SettingsJson);
-            Message = "共享设置已应用，将自动保存。";
+            Message = I18nService.Instance.Translate("共享设置已应用，将自动保存。");
         }
         catch (Exception ex) when (ex is JsonException or PuloniaTaskValidationException or InvalidOperationException)
         {
-            Message = "共享设置未应用：" + ex.Message;
-            ThemedMessageBox.Error(Message, "共享设置格式错误");
+            Message = string.Format(I18nService.Instance.Translate("共享设置未应用：{0}"), ex.Message);
+            ThemedMessageBox.Error(Message, I18nService.Instance.Translate("共享设置格式错误"));
         }
     }
 
@@ -203,12 +204,12 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
         try
         {
             Document.ApplyRawPolicy(Node, PolicyJson);
-            Message = "执行策略已应用，将自动保存。";
+            Message = I18nService.Instance.Translate("执行策略已应用，将自动保存。");
         }
         catch (Exception ex) when (ex is JsonException or PuloniaTaskValidationException or InvalidOperationException)
         {
-            Message = "执行策略未应用：" + ex.Message;
-            ThemedMessageBox.Error(Message, "执行策略格式错误");
+            Message = string.Format(I18nService.Instance.Translate("执行策略未应用：{0}"), ex.Message);
+            ThemedMessageBox.Error(Message, I18nService.Instance.Translate("执行策略格式错误"));
         }
     }
 
@@ -219,12 +220,12 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
         try
         {
             Document.ApplyRawSource(Node, SourceJson);
-            Message = "引用来源已应用，将自动保存。";
+            Message = I18nService.Instance.Translate("引用来源已应用，将自动保存。");
         }
         catch (Exception ex) when (ex is JsonException or PuloniaTaskValidationException or InvalidOperationException)
         {
-            Message = "引用来源未应用：" + ex.Message;
-            ThemedMessageBox.Error(Message, "引用来源格式错误");
+            Message = string.Format(I18nService.Instance.Translate("引用来源未应用：{0}"), ex.Message);
+            ThemedMessageBox.Error(Message, I18nService.Instance.Translate("引用来源格式错误"));
         }
     }
 
@@ -257,7 +258,7 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             // 清单缺失、仓库版本不可用或路径无效时只提示，不修改任务
-            ThemedMessageBox.Error("无法读取脚本设置：" + ex.Message, "脚本自定义设置");
+            ThemedMessageBox.Error(string.Format(I18nService.Instance.Translate("无法读取脚本设置：{0}"), ex.Message), I18nService.Instance.Translate("脚本自定义设置"));
             return;
         }
         finally
@@ -278,21 +279,21 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
                 if (reason is null) return;
                 if (preview.JavaScriptSettingItems.Count == 0)
                 {
-                    ThemedMessageBox.Error("无法打开脚本设置页面：" + reason, "脚本自定义设置");
+                    ThemedMessageBox.Error(string.Format(I18nService.Instance.Translate("无法打开脚本设置页面：{0}"), reason), I18nService.Instance.Translate("脚本自定义设置"));
                     return;
                 }
-                ThemedMessageBox.Warning($"无法打开脚本设置页面：{reason}\n将改用基础设置表单。", "脚本自定义设置");
+                ThemedMessageBox.Warning(string.Format(I18nService.Instance.Translate("无法打开脚本设置页面：{0}\n将改用基础设置表单。"), reason), I18nService.Instance.Translate("脚本自定义设置"));
             }
 
             var items = preview.JavaScriptSettingItems;
             if (preview.JavaScriptSettingsError is { } error)
             {
-                ThemedMessageBox.Error(error, "脚本自定义设置");
+                ThemedMessageBox.Error(error, I18nService.Instance.Translate("脚本自定义设置"));
                 return;
             }
             if (items.Count == 0)
             {
-                ThemedMessageBox.Information("此脚本未提供自定义设置。", "脚本自定义设置");
+                ThemedMessageBox.Information(I18nService.Instance.Translate("此脚本未提供自定义设置。"), I18nService.Instance.Translate("脚本自定义设置"));
                 return;
             }
 
@@ -302,11 +303,11 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
                 var current = Document.GetOneDragonParameters(node)["settings"] as JObject;
                 var viewModel = new PuloniaJsScriptSettingsDialogViewModel(node.Name, items, current, isCreation: false);
                 if (_dialogs.EditJavaScriptSettings(viewModel) is not { } settings) return;
-                Message = Document.ApplyJavaScriptSettings(node, settings) ? "脚本设置已应用，将自动保存。" : "脚本设置没有变化。";
+                Message = Document.ApplyJavaScriptSettings(node, settings) ? I18nService.Instance.Translate("脚本设置已应用，将自动保存。") : I18nService.Instance.Translate("脚本设置没有变化。");
             }
             catch (Exception ex) when (ex is PuloniaTaskValidationException or InvalidOperationException)
             {
-                ThemedMessageBox.Error("脚本设置未应用：" + ex.Message, "脚本自定义设置");
+                ThemedMessageBox.Error(string.Format(I18nService.Instance.Translate("脚本设置未应用：{0}"), ex.Message), I18nService.Instance.Translate("脚本自定义设置"));
             }
         }
     }
@@ -319,7 +320,7 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
     {
         try
         {
-            Message = Document.ApplyJavaScriptSettings(Node, settings) ? "脚本设置已应用，将自动保存。" : "脚本设置没有变化。";
+            Message = Document.ApplyJavaScriptSettings(Node, settings) ? I18nService.Instance.Translate("脚本设置已应用，将自动保存。") : I18nService.Instance.Translate("脚本设置没有变化。");
         }
         catch (PuloniaTaskValidationException ex)
         {

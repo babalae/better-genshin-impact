@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.View;
 
@@ -25,9 +26,9 @@ public partial class PathingConfigViewModel : ObservableObject, IViewModel
     [ObservableProperty]
     private ObservableCollection<KeyValuePair<RecoverTiming, string>> _recoverTimingSource = new()
     {
-        new KeyValuePair<RecoverTiming, string>(RecoverTiming.AnyWaypoint, "任何路径点"),
-        new KeyValuePair<RecoverTiming, string>(RecoverTiming.OnlyTeleport, "只在传送点"),
-        new KeyValuePair<RecoverTiming, string>(RecoverTiming.Never, "不回复"),
+        new KeyValuePair<RecoverTiming, string>(RecoverTiming.AnyWaypoint, I18nService.Instance.Translate("任何路径点")),
+        new KeyValuePair<RecoverTiming, string>(RecoverTiming.OnlyTeleport, I18nService.Instance.Translate("只在传送点")),
+        new KeyValuePair<RecoverTiming, string>(RecoverTiming.Never, I18nService.Instance.Translate("不回复")),
     };
 
     [RelayCommand]
@@ -50,7 +51,7 @@ public partial class PathingConfigViewModel : ObservableObject, IViewModel
     {
         Config.PathingConditionConfig.AvatarConditions.Add(new Condition
         {
-            Subject = "队伍中角色"
+            Subject = I18nService.Key("队伍中角色")
         });
     }
 

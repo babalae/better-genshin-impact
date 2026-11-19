@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -108,8 +109,8 @@ public partial class PuloniaSharedSettingRowViewModel : ObservableObject
 
     /// <summary>来源图标的悬停说明：来源文字，节点上另附沿设置链的每一层取值。</summary>
     public string SourceToolTip => string.IsNullOrEmpty(HistoryText)
-        ? "来源：" + SourceText
-        : "来源：" + SourceText + "\n\n值的来历：\n" + HistoryText;
+        ? I18nService.Instance.Translate("来源：") + SourceText
+        : I18nService.Instance.Translate("来源：") + SourceText + "\n\n" + I18nService.Instance.Translate("值的来历：") + "\n" + HistoryText;
 
     /// <summary>编辑对象自身覆盖了这一项。</summary>
     [ObservableProperty]
@@ -136,7 +137,7 @@ public partial class PuloniaSharedSettingRowViewModel : ObservableObject
     public bool HasHistory => !string.IsNullOrEmpty(HistoryText);
 
     /// <summary>恢复按钮的说明：节点上为恢复继承，方案中为移除。</summary>
-    public string ResetToolTip => _owner.ShowsInheritance ? "恢复继承（移除本节点的这项修改）" : "从方案中移除这一项";
+    public string ResetToolTip => _owner.ShowsInheritance ? I18nService.Instance.Translate("恢复继承（移除本节点的这项修改）") : I18nService.Instance.Translate("从方案中移除这一项");
 
     /// <summary>跨项约束或格式提示。</summary>
     [ObservableProperty]
@@ -232,7 +233,7 @@ public partial class PuloniaSharedSettingRowViewModel : ObservableObject
             if (AllowsNull())
                 Commit(JValue.CreateNull());
             else
-                Warning = "请填写数值，空值不会生效。";
+                Warning = I18nService.Instance.Translate("请填写数值，空值不会生效。");
             return;
         }
         Commit(Definition.Editor == PuloniaSettingEditorKind.Integer

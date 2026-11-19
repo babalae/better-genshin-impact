@@ -12,6 +12,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Infrastructure.Network.Download;
 
@@ -361,11 +362,12 @@ public sealed partial class DownloadService : IDownloadService, IDownloadMonitor
             areas.Add(new StorageArea($"download:{category.Id}", category.DisplayName, StorageGroup.Download, [directory])
             {
                 Description = partialCount > 0
-                    ? $"含 {partialCount} 个未完成的下载，可继续。{category.Description}"
+                    ? string.Format(I18nService.Instance.Translate("含 {0} 个未完成的下载，可继续。{1}"), partialCount,
+                        I18nService.Instance.Translate(category.Description))
                     : category.Description,
                 CleanupEffect = partialCount > 0
-                    ? "未完成的下载需要从头重新下载，正在下载的文件会跳过"
-                    : "需要时重新下载",
+                    ? I18nService.Key("未完成的下载需要从头重新下载，正在下载的文件会跳过")
+                    : I18nService.Key("需要时重新下载"),
             });
         }
 
@@ -374,10 +376,10 @@ public sealed partial class DownloadService : IDownloadService, IDownloadMonitor
         var unused = ListEntries(_root).Where(path => !known.Contains(Path.GetFileName(path))).ToList();
         if (unused.Count > 0)
         {
-            areas.Add(new StorageArea("download:unused", "已不再使用的下载", StorageGroup.Download, unused)
+            areas.Add(new StorageArea("download:unused", I18nService.Key("已不再使用的下载"), StorageGroup.Download, unused)
             {
-                Description = "旧功能留下的下载文件",
-                CleanupEffect = "不影响现有功能",
+                Description = I18nService.Key("旧功能留下的下载文件"),
+                CleanupEffect = I18nService.Key("不影响现有功能"),
             });
         }
 

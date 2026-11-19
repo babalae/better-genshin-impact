@@ -1,5 +1,6 @@
 <UserControl x:Class="BetterGenshinImpact.View.Controls.MultiSelectComboBox"
              x:Name="Root"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -160,13 +161,13 @@
                         <Button Padding="8,3"
                                 AutomationProperties.Name="全选筛选结果"
                                 Click="SelectAllButton_Click"
-                                Content="全选" />
+                                Content="{i18n:T 全选}" />
                         <Button Grid.Column="1"
                                 Margin="4,0,0,0"
                                 Padding="8,3"
                                 AutomationProperties.Name="清空选择"
                                 Click="ClearSelectionButton_Click"
-                                Content="清空" />
+                                Content="{i18n:T 清空}" />
                         <TextBlock x:Name="SelectionCountTextBlock"
                                    Grid.Column="3"
                                    Margin="8,0,2,0"
@@ -213,7 +214,7 @@
                                        VerticalAlignment="Center"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        IsHitTestVisible="False"
-                                       Text="没有匹配的选项"
+                                       Text="{i18n:T 没有匹配的选项}"
                                        Visibility="Collapsed" />
                         </Grid>
                     </Border>

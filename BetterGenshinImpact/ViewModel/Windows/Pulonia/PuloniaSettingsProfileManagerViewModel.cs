@@ -10,6 +10,7 @@ using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
 
@@ -72,19 +73,19 @@ public partial class PuloniaSettingsProfileManagerViewModel : ObservableObject, 
 
     /// <summary>新建空方案并立即保存。</summary>
     [RelayCommand]
-    private Task NewAsync() => CreateAsync("新建设置方案", "新方案", new JObject());
+    private Task NewAsync() => CreateAsync(I18nService.Instance.Translate("新建设置方案"), I18nService.Instance.Translate("新方案"), new JObject());
 
     /// <summary>复制选中方案（含未保存的草稿内容）为新方案。</summary>
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private Task DuplicateAsync()
         => _draftTarget is null ? Task.CompletedTask
-            : CreateAsync("复制设置方案", _draftTarget.Draft.Name + " 副本", _draftTarget.Draft.Settings);
+            : CreateAsync(I18nService.Instance.Translate("复制设置方案"), string.Format(I18nService.Instance.Translate("{0} 副本"), _draftTarget.Draft.Name), _draftTarget.Draft.Settings);
 
     /// <summary>按当前全局自动战斗与地图追踪条件配置创建方案，便于把旧的全局设置带到任务计划。</summary>
     [RelayCommand]
     private Task CreateFromGlobalAsync()
         => _createFromGlobal is null ? Task.CompletedTask
-            : CreateAsync("从全局配置创建方案", "全局配置", _createFromGlobal());
+            : CreateAsync(I18nService.Instance.Translate("从全局配置创建方案"), I18nService.Instance.Translate("全局配置"), _createFromGlobal());
 
     /// <summary>修改草稿名称，保存后生效。</summary>
     [RelayCommand(CanExecute = nameof(HasSelection))]
@@ -92,12 +93,12 @@ public partial class PuloniaSettingsProfileManagerViewModel : ObservableObject, 
     {
         if (_draftTarget is null)
             return;
-        var name = PromptDialog.Prompt("请输入新的方案名称。", "重命名设置方案", _draftTarget.Draft.Name).Trim();
+        var name = PromptDialog.Prompt(I18nService.Instance.Translate("请输入新的方案名称。"), I18nService.Instance.Translate("重命名设置方案"), _draftTarget.Draft.Name).Trim();
         if (string.IsNullOrWhiteSpace(name) || name == _draftTarget.Draft.Name)
             return;
         _draftTarget.Draft.Name = name;
         _draftTarget.NotifyRenamed();
-        Message = "名称已修改，点击“保存”后生效。";
+        Message = I18nService.Instance.Translate("名称已修改，点击“保存”后生效。");
     }
 
     /// <summary>删除选中方案；仍被使用时拒绝并列出位置。</summary>
@@ -106,18 +107,18 @@ public partial class PuloniaSettingsProfileManagerViewModel : ObservableObject, 
     {
         if (SelectedProfile is not { } item || _session.Profiles.FirstOrDefault(profile => profile.Id == item.Id) is not { } profile)
             return;
-        if (await ThemedMessageBox.QuestionAsync($"确定删除方案「{profile.Name}」吗？此操作不能撤销。", "删除设置方案") != MessageBoxResult.Yes)
+        if (await ThemedMessageBox.QuestionAsync(string.Format(I18nService.Instance.Translate("确定删除方案「{0}」吗？此操作不能撤销。"), profile.Name), I18nService.Instance.Translate("删除设置方案")) != MessageBoxResult.Yes)
             return;
         try
         {
             await _session.DeleteProfileAsync(profile);
             IsDirty = false;
             ReloadList(null);
-            Message = $"已删除方案「{profile.Name}」。";
+            Message = string.Format(I18nService.Instance.Translate("已删除方案「{0}」。"), profile.Name);
         }
         catch (Exception ex) when (ex is InvalidOperationException or PuloniaTaskValidationException or System.IO.IOException)
         {
-            await ThemedMessageBox.WarningAsync(ex.Message, "无法删除设置方案");
+            await ThemedMessageBox.WarningAsync(ex.Message, I18nService.Instance.Translate("无法删除设置方案"));
         }
     }
 
@@ -130,10 +131,10 @@ public partial class PuloniaSettingsProfileManagerViewModel : ObservableObject, 
         var usages = _session.GetProfileUsages(_draftTarget.Draft.Id);
         if (usages.Count > 0)
         {
-            var shown = string.Join("\n", usages.Take(10)) + (usages.Count > 10 ? $"\n… 另有 {usages.Count - 10} 处" : string.Empty);
+            var shown = string.Join("\n", usages.Take(10)) + (usages.Count > 10 ? string.Format(I18nService.Instance.Translate("\n… 另有 {0} 处"), usages.Count - 10) : string.Empty);
             if (await ThemedMessageBox.QuestionAsync(
-                    $"保存后将影响 {usages.Count} 个节点：\n{shown}\n\n已排队和正在运行的任务不受影响。确定保存吗？",
-                    "保存设置方案") != MessageBoxResult.Yes)
+                    string.Format(I18nService.Instance.Translate("保存后将影响 {0} 个节点：\n{1}\n\n已排队和正在运行的任务不受影响。确定保存吗？"), usages.Count, shown),
+                    I18nService.Instance.Translate("保存设置方案")) != MessageBoxResult.Yes)
                 return;
         }
         try
@@ -141,12 +142,12 @@ public partial class PuloniaSettingsProfileManagerViewModel : ObservableObject, 
             var saved = await _session.SaveProfileAsync(_draftTarget.Draft);
             IsDirty = false;
             ReloadList(saved.Id);
-            Message = $"已保存方案「{saved.Name}」。";
+            Message = string.Format(I18nService.Instance.Translate("已保存方案「{0}」。"), saved.Name);
         }
         catch (Exception ex) when (ex is PuloniaTaskValidationException or InvalidOperationException or System.IO.IOException)
         {
             // 修订冲突或校验失败时保留草稿，用户可以放弃后重新编辑
-            Message = "保存失败：" + ex.Message;
+            Message = string.Format(I18nService.Instance.Translate("保存失败：{0}"), ex.Message);
         }
     }
 
@@ -156,7 +157,7 @@ public partial class PuloniaSettingsProfileManagerViewModel : ObservableObject, 
     {
         IsDirty = false;
         LoadDraft(SelectedProfile?.Id);
-        Message = "已放弃未保存的修改。";
+        Message = I18nService.Instance.Translate("已放弃未保存的修改。");
     }
 
     /// <summary>
@@ -164,7 +165,7 @@ public partial class PuloniaSettingsProfileManagerViewModel : ObservableObject, 
     /// </summary>
     /// <returns>可以关闭时返回 true。</returns>
     public bool ConfirmClose()
-        => !IsDirty || ThemedMessageBox.Question("当前方案有未保存的修改，关闭后将丢失。确定关闭吗？", "设置方案",
+        => !IsDirty || ThemedMessageBox.Question(I18nService.Instance.Translate("当前方案有未保存的修改，关闭后将丢失。确定关闭吗？"), I18nService.Instance.Translate("设置方案"),
             MessageBoxButton.YesNo, MessageBoxResult.No) == MessageBoxResult.Yes;
 
     /// <summary>切换方案前确认是否放弃未保存的修改；不放弃时回到原选择。</summary>
@@ -173,7 +174,7 @@ public partial class PuloniaSettingsProfileManagerViewModel : ObservableObject, 
     {
         if (_isSwitching)
             return;
-        if (IsDirty && ThemedMessageBox.Question("当前方案有未保存的修改，切换后将丢失。确定切换吗？", "设置方案",
+        if (IsDirty && ThemedMessageBox.Question(I18nService.Instance.Translate("当前方案有未保存的修改，切换后将丢失。确定切换吗？"), I18nService.Instance.Translate("设置方案"),
                 MessageBoxButton.YesNo, MessageBoxResult.No) != MessageBoxResult.Yes)
         {
             // 回到原选择；在当前绑定更新结束后再改，避免列表控件状态错乱
@@ -192,10 +193,10 @@ public partial class PuloniaSettingsProfileManagerViewModel : ObservableObject, 
     /// <summary>输入名称后建立并保存新方案，然后选中它。</summary>
     private async Task CreateAsync(string title, string defaultName, JObject settings)
     {
-        if (IsDirty && ThemedMessageBox.Question("当前方案有未保存的修改，继续将丢失。确定继续吗？", "设置方案",
+        if (IsDirty && ThemedMessageBox.Question(I18nService.Instance.Translate("当前方案有未保存的修改，继续将丢失。确定继续吗？"), I18nService.Instance.Translate("设置方案"),
                 MessageBoxButton.YesNo, MessageBoxResult.No) != MessageBoxResult.Yes)
             return;
-        var name = PromptDialog.Prompt("请输入方案名称。", title, defaultName).Trim();
+        var name = PromptDialog.Prompt(I18nService.Instance.Translate("请输入方案名称。"), title, defaultName).Trim();
         if (string.IsNullOrWhiteSpace(name))
             return;
         try
@@ -203,11 +204,11 @@ public partial class PuloniaSettingsProfileManagerViewModel : ObservableObject, 
             var saved = await _session.SaveProfileAsync(new PuloniaSettingsProfile { Name = name, Settings = (JObject)settings.DeepClone() });
             IsDirty = false;
             ReloadList(saved.Id);
-            Message = $"已创建方案「{saved.Name}」（{saved.Settings.Count} 项）。";
+            Message = string.Format(I18nService.Instance.Translate("已创建方案「{0}」（{1} 项）。"), saved.Name, saved.Settings.Count);
         }
         catch (Exception ex) when (ex is PuloniaTaskValidationException or InvalidOperationException or System.IO.IOException)
         {
-            Message = "创建失败：" + ex.Message;
+            Message = string.Format(I18nService.Instance.Translate("创建失败：{0}"), ex.Message);
         }
     }
 

@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
 using BetterGenshinImpact.Infrastructure.Cache;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using System.Threading;
 using System.Threading.Tasks;
@@ -262,7 +263,7 @@ internal sealed class MarkdownImagePresenter : Grid
         Cursor = owner.ImageCommand is null ? Cursors.Arrow : Cursors.Hand;
         ToolTip = request.Title ?? GetSourceDisplayText();
         AutomationProperties.SetName(this, string.IsNullOrWhiteSpace(request.AlternativeText)
-            ? "Markdown 图片"
+            ? I18nService.Instance.Translate("Markdown 图片")
             : request.AlternativeText);
 
         _placeholder = new Border
@@ -291,7 +292,7 @@ internal sealed class MarkdownImagePresenter : Grid
             Height = request.IsInline ? 4 : 5,
             Margin = request.IsInline ? new Thickness(0, 0, 8, 0) : new Thickness(0, 0, 0, 10)
         };
-        AutomationProperties.SetName(_progressBar, "图片加载进度");
+        AutomationProperties.SetName(_progressBar, I18nService.Instance.Translate("图片加载进度"));
         contentPanel.Children.Add(_progressBar);
 
         _statusText = new TextBlock
@@ -321,14 +322,14 @@ internal sealed class MarkdownImagePresenter : Grid
 
         _retryButton = new Button
         {
-            Content = "重新加载",
+            Content = I18nService.Instance.Translate("重新加载"),
             MinWidth = 88,
             Padding = new Thickness(12, 4, 12, 4),
             Margin = request.IsInline ? new Thickness(8, 0, 0, 0) : new Thickness(0, 12, 0, 0),
             HorizontalAlignment = HorizontalAlignment.Center,
             Visibility = Visibility.Collapsed
         };
-        AutomationProperties.SetName(_retryButton, "重新加载图片");
+        AutomationProperties.SetName(_retryButton, I18nService.Instance.Translate("重新加载图片"));
         _retryButton.Click += OnRetryButtonClick;
         contentPanel.Children.Add(_retryButton);
 
@@ -379,7 +380,7 @@ internal sealed class MarkdownImagePresenter : Grid
         }
         catch (OperationCanceledException ex)
         {
-            ShowFailureState("连接超时（15 秒），请检查网络后重试。", ex);
+            ShowFailureState(I18nService.Instance.Translate("连接超时（15 秒），请检查网络后重试。"), ex);
         }
         catch (Exception ex)
         {
@@ -429,11 +430,11 @@ internal sealed class MarkdownImagePresenter : Grid
         _retryButton.Visibility = Visibility.Collapsed;
         _sourceText.Visibility = _request.IsInline ? Visibility.Collapsed : Visibility.Visible;
         _statusText.Text = string.IsNullOrWhiteSpace(_request.AlternativeText) || _request.IsInline
-            ? "正在加载图片…"
-            : $"正在加载图片：{_request.AlternativeText}";
+            ? I18nService.Instance.Translate("正在加载图片…")
+            : string.Format(I18nService.Instance.Translate("正在加载图片：{0}"), _request.AlternativeText);
         _statusText.SetResourceReference(TextBlock.ForegroundProperty, "MarkdownSecondaryForegroundBrush");
         SetContent(_placeholder);
-        AutomationProperties.SetHelpText(this, "图片正在加载");
+        AutomationProperties.SetHelpText(this, I18nService.Instance.Translate("图片正在加载"));
     }
 
     private void ShowFailureState(string friendlyMessage, Exception exception)
@@ -443,14 +444,14 @@ internal sealed class MarkdownImagePresenter : Grid
         _retryButton.Visibility = Visibility.Visible;
         _sourceText.Visibility = _request.IsInline ? Visibility.Collapsed : Visibility.Visible;
         _statusText.Text = string.IsNullOrWhiteSpace(_request.AlternativeText) || _request.IsInline
-            ? $"图片加载失败：{friendlyMessage}"
-            : $"{_request.AlternativeText}\n图片加载失败：{friendlyMessage}";
+            ? string.Format(I18nService.Instance.Translate("图片加载失败：{0}"), friendlyMessage)
+            : _request.AlternativeText + "\n" + string.Format(I18nService.Instance.Translate("图片加载失败：{0}"), friendlyMessage);
         _statusText.SetResourceReference(TextBlock.ForegroundProperty, "MarkdownErrorBrush");
         SetContent(_placeholder);
-        AutomationProperties.SetHelpText(this, $"图片加载失败：{friendlyMessage}");
+        AutomationProperties.SetHelpText(this, string.Format(I18nService.Instance.Translate("图片加载失败：{0}"), friendlyMessage));
         _owner.ReportResourceDiagnostic(new MarkdownDiagnostic(
             MarkdownDiagnosticSeverity.Warning,
-            $"图片加载失败：{friendlyMessage}（{exception.Message}）",
+            string.Format(I18nService.Instance.Translate("图片加载失败：{0}（{1}）"), friendlyMessage, exception.Message),
             Source: _request.RawSource));
     }
 
@@ -468,7 +469,7 @@ internal sealed class MarkdownImagePresenter : Grid
     private string GetSourceDisplayText()
     {
         return _request.Source.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase)
-            ? "内嵌 data URI 图片"
+            ? I18nService.Instance.Translate("内嵌 data URI 图片")
             : _request.RawSource;
     }
 
@@ -477,15 +478,15 @@ internal sealed class MarkdownImagePresenter : Grid
         return exception switch
         {
             HttpRequestException { StatusCode: { } statusCode } =>
-                $"服务器返回 HTTP {(int)statusCode}（{statusCode}）。",
-            HttpRequestException => "网络连接失败，请检查网络、代理或图片地址后重试。",
-            FileNotFoundException => "本地图片文件不存在。",
-            UnauthorizedAccessException => "没有权限读取本地图片。",
+                string.Format(I18nService.Instance.Translate("服务器返回 HTTP {0}（{1}）。"), (int)statusCode, statusCode),
+            HttpRequestException => I18nService.Instance.Translate("网络连接失败，请检查网络、代理或图片地址后重试。"),
+            FileNotFoundException => I18nService.Instance.Translate("本地图片文件不存在。"),
+            UnauthorizedAccessException => I18nService.Instance.Translate("没有权限读取本地图片。"),
             InvalidDataException invalidDataException => invalidDataException.Message,
             NotSupportedException notSupportedException => notSupportedException.Message,
-            UriFormatException => "图片地址格式无效。",
+            UriFormatException => I18nService.Instance.Translate("图片地址格式无效。"),
             _ => string.IsNullOrWhiteSpace(exception.Message)
-                ? "发生未知错误，请重试。"
+                ? I18nService.Instance.Translate("发生未知错误，请重试。")
                 : exception.Message
         };
     }

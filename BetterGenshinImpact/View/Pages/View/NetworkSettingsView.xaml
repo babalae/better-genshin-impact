@@ -1,5 +1,6 @@
 <UserControl x:Class="BetterGenshinImpact.View.Pages.View.NetworkSettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -25,7 +26,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="代理模式" />
+            <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="{i18n:T 代理模式}" />
             <ui:TextBlock Grid.Row="1"
                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                           Text="{Binding ModeDescription, Mode=OneWay}"
@@ -54,10 +55,10 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="代理地址" />
+                <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="{i18n:T 代理地址}" />
                 <ui:TextBlock Grid.Row="1"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="支持 http:// 和 socks5://，暂不支持需要用户名和密码的代理"
+                              Text="{i18n:T 支持 http:// 和 socks5://，暂不支持需要用户名和密码的代理}"
                               TextWrapping="Wrap" />
                 <ui:TextBox Grid.Row="0"
                             Grid.RowSpan="2"
@@ -107,10 +108,10 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="不使用代理的地址" />
+                <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="{i18n:T 不使用代理的地址}" />
                 <ui:TextBlock Grid.Row="1"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="分号分隔，支持 * 通配，例如 *.mihoyo.com。国内服务可以加入这里以直连，本机地址始终直连"
+                              Text="{i18n:T 分号分隔，支持 * 通配，例如 *.mihoyo.com。国内服务可以加入这里以直连，本机地址始终直连}"
                               TextWrapping="Wrap" />
                 <ui:TextBox Grid.Row="0"
                             Grid.RowSpan="2"
@@ -144,17 +145,17 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="测试连接" />
+            <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="{i18n:T 测试连接}" />
             <ui:TextBlock Grid.Row="1"
                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                          Text="用当前设置访问 CNB、GitHub 和米游社"
+                          Text="{i18n:T 用当前设置访问 CNB、GitHub 和米游社}"
                           TextWrapping="Wrap" />
             <ui:Button Grid.Row="0"
                        Grid.RowSpan="2"
                        Grid.Column="1"
                        Margin="0,0,36,0"
                        Command="{Binding TestConnectionCommand, Mode=OneWay}"
-                       Content="测试连接"
+                       Content="{i18n:T 测试连接}"
                        Icon="{ui:SymbolIcon PlugConnected24}" />
             <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="0,8,36,0" Orientation="Horizontal">
                 <ui:ProgressRing Width="14"
@@ -192,7 +193,7 @@
         <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
         <ui:TextBlock Margin="16"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      Text="生效范围：软件内的网络请求、通知推送和 JS 脚本请求；自定义代理模式下也用于脚本仓库的 Git 拉取。网页窗口和云原神网页版跟随系统代理，更新程序不受影响。其他已打开的 BetterGI 实例需要重启后生效。"
+                      Text="{i18n:T 生效范围：软件内的网络请求、通知推送和 JS 脚本请求；自定义代理模式下也用于脚本仓库的 Git 拉取。网页窗口和云原神网页版跟随系统代理，更新程序不受影响。其他已打开的 BetterGI 实例需要重启后生效。}"
                       TextWrapping="Wrap" />
     </StackPanel>
 </UserControl>

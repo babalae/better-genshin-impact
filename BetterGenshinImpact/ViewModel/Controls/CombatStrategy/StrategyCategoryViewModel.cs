@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Controls.CombatStrategy;
@@ -13,7 +14,7 @@ public abstract partial class StrategyCategoryViewModel : ObservableObject
     /// <summary>是否属于自动选择。</summary>
     public bool IsAuto => Kind is CombatStrategyKind.AutoSelect or CombatStrategyKind.Combo;
     /// <summary>一级分组标题。</summary>
-    public string GroupName => IsAuto ? "自动选择" : "手动指定";
+    public string GroupName => IsAuto ? I18nService.Instance.Translate("自动选择") : I18nService.Instance.Translate("手动指定");
     /// <summary>类别内策略总数。</summary>
     [ObservableProperty] private int _count;
     /// <summary>搜索命中数；没有搜索时为 null。</summary>

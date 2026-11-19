@@ -2,6 +2,7 @@ using System;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Resin;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
@@ -66,7 +67,7 @@ public partial class AutoStygianOnslaughtSettingsViewModel : SoloTaskSettingsVie
     public AutoStygianOnslaughtSettingsViewModel(JObject original, IResinSettingsDialogs? dialogs = null) : base(original)
     {
         _originalResin = ResinUsageViewModelSupport.Read(Original["resin_usage"], AutoStygianOnslaughtTask.ResinCapability);
-        Resin = new("自动幽境危战", AutoStygianOnslaughtTask.ResinCapability, _originalResin, dialogs);
+        Resin = new(I18nService.Key("自动幽境危战"), AutoStygianOnslaughtTask.ResinCapability, _originalResin, dialogs);
         TrackEdits([Resin]);
         _originalStrategyNameValue = ReadString(Original, "strategy_name");
         _originalCombatScriptBagPath = ReadString(Original, "combat_script_bag_path");

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -63,38 +64,38 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     private bool UsesNcnn => NcnnSettings.UsesNcnn;
     public PaddleOcrCpuModeChoice[] OcrCpuModeChoices { get; } =
     [
-        new(PaddleOcrCpuMode.FollowGlobal, "跟随全局设置", "使用 CPU 卡片中的全局线程数。"),
-        new(PaddleOcrCpuMode.RuntimeAuto, "运行库自动调度", "不指定线程参数，由 ONNX Runtime 决定。"),
-        new(PaddleOcrCpuMode.GameplayPriority, "游戏流畅优先", "限制 OCR 的并行线程，减少游戏掉帧。"),
-        new(PaddleOcrCpuMode.Custom, "自定义设置", "分别指定文本检测、文字识别和模型节点的线程数。")
+        new(PaddleOcrCpuMode.FollowGlobal, I18nService.Instance.Translate("跟随全局设置"), I18nService.Instance.Translate("使用 CPU 卡片中的全局线程数。")),
+        new(PaddleOcrCpuMode.RuntimeAuto, I18nService.Instance.Translate("运行库自动调度"), I18nService.Instance.Translate("不指定线程参数，由 ONNX Runtime 决定。")),
+        new(PaddleOcrCpuMode.GameplayPriority, I18nService.Instance.Translate("游戏流畅优先"), I18nService.Instance.Translate("限制 OCR 的并行线程，减少游戏掉帧。")),
+        new(PaddleOcrCpuMode.Custom, I18nService.Instance.Translate("自定义设置"), I18nService.Instance.Translate("分别指定文本检测、文字识别和模型节点的线程数。"))
     ];
     public PaddleOcrCpuConfig PaddleOcrCpu { get; }
     public bool IsOcrCpuCustom => PaddleOcrCpu.Mode == PaddleOcrCpuMode.Custom;
     public bool IsOcrCpuConfigured => PaddleOcrCpu.Mode is PaddleOcrCpuMode.GameplayPriority or PaddleOcrCpuMode.Custom;
     public string OcrCpuPreview => PaddleOcrCpu.ToOptions().Describe(CpuThreads);
     public string OcrCpuApplicability => NcnnSettings.UseNcnnOcr
-        ? "OCR 当前走独立后端（ncnn），以下 ONNX Runtime 的 CPU 线程策略不生效；在 ncnn 设置区关闭「OCR 使用」开关后生效。"
+        ? I18nService.Instance.Translate("OCR 当前走独立后端（ncnn），以下 ONNX Runtime 的 CPU 线程策略不生效；在 ncnn 设置区关闭「OCR 使用」开关后生效。")
         : ForceCpuOcr || SelectedEngine?.IsCpu == true
-            ? "应用并重启后用于 PPOCR 的 CPU 检测和识别会话。"
-            : "当前选择让 OCR 跟随其他引擎；以下参数会保存，在 PPOCR 使用纯 CPU 时生效。";
-    public string OcrCpuModeHint => $"当前可用逻辑处理器数：{Environment.ProcessorCount}。" + (PaddleOcrCpu.Mode switch
+            ? I18nService.Instance.Translate("应用并重启后用于 PPOCR 的 CPU 检测和识别会话。")
+            : I18nService.Instance.Translate("当前选择让 OCR 跟随其他引擎；以下参数会保存，在 PPOCR 使用纯 CPU 时生效。");
+    public string OcrCpuModeHint => string.Format(I18nService.Instance.Translate("当前可用逻辑处理器数：{0}。"), Environment.ProcessorCount) + (PaddleOcrCpu.Mode switch
     {
-        PaddleOcrCpuMode.GameplayPriority => "文本检测使用逻辑处理器数的一半；文字识别使用四分之一并限制在 2～4 个线程。两个模型均顺序执行节点，在降低 OCR CPU 峰值的同时保留必要性能。",
-        PaddleOcrCpuMode.Custom => "可分别配置文本检测和文字识别的计算线程。0 表示由 ONNX Runtime 自动选择；模型节点线程数仅在开启节点并行时生效。",
-        PaddleOcrCpuMode.RuntimeAuto => "不指定 OCR 的线程数、执行方式和线程等待策略，完全交给 ONNX Runtime 调度；CPU 卡片中的全局线程数不会用于 OCR。",
-        _ => "OCR 与其他 CPU 模型使用相同的全局线程数；全局线程数为 0 时由 ONNX Runtime 自动选择。"
+        PaddleOcrCpuMode.GameplayPriority => I18nService.Instance.Translate("文本检测使用逻辑处理器数的一半；文字识别使用四分之一并限制在 2～4 个线程。两个模型均顺序执行节点，在降低 OCR CPU 峰值的同时保留必要性能。"),
+        PaddleOcrCpuMode.Custom => I18nService.Instance.Translate("可分别配置文本检测和文字识别的计算线程。0 表示由 ONNX Runtime 自动选择；模型节点线程数仅在开启节点并行时生效。"),
+        PaddleOcrCpuMode.RuntimeAuto => I18nService.Instance.Translate("不指定 OCR 的线程数、执行方式和线程等待策略，完全交给 ONNX Runtime 调度；CPU 卡片中的全局线程数不会用于 OCR。"),
+        _ => I18nService.Instance.Translate("OCR 与其他 CPU 模型使用相同的全局线程数；全局线程数为 0 时由 ONNX Runtime 自动选择。")
     });
     public string CurrentRuntimeText => _runtime.Current.Description;
     public string CurrentEngineName => _runtime.Current.Engine == InferenceDeviceType.Cpu ? "CPU" : _runtime.Current.Engine.ToString();
     /// <summary>首页摘要：OCR 的实际生效后端（直接问路由器，与业务路径同一解析）。</summary>
     public string CurrentOcrText => InferenceBackendRouter.ResolveOcr(PaddleOcrService.PaddleOcrModelType.V6) switch
     {
-        InferenceBackendRouter.OcrBackend.Ncnn => $"ncnn · {NcnnSettingsViewModel.SavedNcnnDeviceText(Config.Ncnn)} · PP-OCRv6（固定模型）",
+        InferenceBackendRouter.OcrBackend.Ncnn => string.Format(I18nService.Instance.Translate("ncnn · {0} · PP-OCRv6（固定模型）"), NcnnSettingsViewModel.SavedNcnnDeviceText(Config.Ncnn)),
         _ => _runtime.Current.OcrDescription,
     };
     public string CurrentValidationText => _runtime.Current.Engine == InferenceDeviceType.Cpu
-        ? "内置 CPU · 无需额外验证"
-        : _runtime.IsCurrentValidated ? "模型兼容性检查通过" : "已生效 · 尚未完成模型兼容性检查";
+        ? I18nService.Instance.Translate("内置 CPU · 无需额外验证")
+        : _runtime.IsCurrentValidated ? I18nService.Instance.Translate("模型兼容性检查通过") : I18nService.Instance.Translate("已生效 · 尚未完成模型兼容性检查");
     internal HardwareAccelerationConfig Config => _configService.Get().HardwareAccelerationConfig;
     public bool HasPendingChanges => _runtime.HasPendingRestart;
     public string PendingText
@@ -108,7 +109,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             var onnx = $"{card.Name} · {device}";
             return Config.PreferredBackend switch
             {
-                InferenceBackend.Ncnn => $"ncnn · {NcnnSettingsViewModel.SavedNcnnDeviceText(Config.Ncnn)} · ONNX Runtime 侧 {onnx}",
+                InferenceBackend.Ncnn => string.Format(I18nService.Instance.Translate("ncnn · {0} · ONNX Runtime 侧 {1}"), NcnnSettingsViewModel.SavedNcnnDeviceText(Config.Ncnn), onnx),
                 _ => Config.Ncnn.UseOcr || Config.Ncnn.UseYolo
                     ? $"{onnx} · OCR {(Config.Ncnn.UseOcr ? "ncnn" : "ONNX Runtime")} / YOLO {(Config.Ncnn.UseYolo ? "ncnn" : "ONNX Runtime")}"
                     : onnx
@@ -116,25 +117,25 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         }
     }
     public bool HasTreeImage => _diagnostics.HasDomainTreeImage;
-    public string TreeImageText => HasTreeImage ? "完整古树 Detect · 预热 1 次，测量 10 次" : "测试图片待提供";
-    public string TreeBenchmarkEmptyText => HasTreeImage ? "还没有测速结果" : "接入测试图片后可测量完整 Detect 耗时。";
+    public string TreeImageText => HasTreeImage ? I18nService.Instance.Translate("完整古树 Detect · 预热 1 次，测量 10 次") : I18nService.Instance.Translate("测试图片待提供");
+    public string TreeBenchmarkEmptyText => HasTreeImage ? I18nService.Instance.Translate("还没有测速结果") : I18nService.Instance.Translate("接入测试图片后可测量完整 Detect 耗时。");
     public string ValidationHint => HasTreeImage
-        ? "重启后将运行一次古树检测，确认所选运行库和设备能够完成真实推理；失败时自动回退 CPU。此检查不判断每个算子的实际执行设备。"
-        : "重启后将运行一次 OCR 模型，确认所选运行库和设备能够完成真实推理；失败时自动回退 CPU。此检查不判断每个算子的实际执行设备。";
+        ? I18nService.Instance.Translate("重启后将运行一次古树检测，确认所选运行库和设备能够完成真实推理；失败时自动回退 CPU。此检查不判断每个算子的实际执行设备。")
+        : I18nService.Instance.Translate("重启后将运行一次 OCR 模型，确认所选运行库和设备能够完成真实推理；失败时自动回退 CPU。此检查不判断每个算子的实际执行设备。");
     public bool CanApply => !IsBusy && SelectedEngine is { SelectedDevice: not null, IsInstalled: true }
         && !(UsesNcnn && !NcnnShimReady)
         && (HasDraftChanges || HasPendingChanges);
-    public string ApplyButtonText => HasPendingChanges && !HasDraftChanges ? "立即重启" : "应用并重启";
-    public string SelectionText => SelectedEngine == null ? "请选择推理引擎" : $"{SelectedEngine.Name} · {SelectedEngine.SelectedDevice?.Name ?? "尚无可用设备"}";
-    public string ApplyHint => IsBusy ? "请等待当前操作结束"
-        : SelectedEngine == null ? "点击卡片选择引擎"
+    public string ApplyButtonText => HasPendingChanges && !HasDraftChanges ? I18nService.Instance.Translate("立即重启") : I18nService.Instance.Translate("应用并重启");
+    public string SelectionText => SelectedEngine == null ? I18nService.Instance.Translate("请选择推理引擎") : $"{SelectedEngine.Name} · {SelectedEngine.SelectedDevice?.Name ?? I18nService.Instance.Translate("尚无可用设备")}";
+    public string ApplyHint => IsBusy ? I18nService.Instance.Translate("请等待当前操作结束")
+        : SelectedEngine == null ? I18nService.Instance.Translate("点击卡片选择引擎")
         : !SelectedEngine.IsInstalled || SelectedEngine.SelectedDevice == null ? SelectedEngine.ApplyBlockReason
-        : UsesNcnn && !NcnnShimReady ? "ncnn 运行库缺失，无法应用；请补齐 ncnn_shim.dll 或关闭对应用途的 ncnn 开关"
-        : HasDraftChanges ? "尚未应用 · 保存后可立即重启或稍后重启"
-        : HasPendingChanges ? "设置已保存 · 等待重启生效"
-        : "与当前生效设置相同";
-    public string BenchmarkHint => !_leases.IsAvailable ? "性能测试不会自动执行；任务运行中，结束任务后可手动测速。"
-        : "性能测试不会自动执行；按当前生效配置（OCR / YOLO 的后端开关生效时走对应后端）预热 1 次并连续测量 10 次。";
+        : UsesNcnn && !NcnnShimReady ? I18nService.Instance.Translate("ncnn 运行库缺失，无法应用；请补齐 ncnn_shim.dll 或关闭对应用途的 ncnn 开关")
+        : HasDraftChanges ? I18nService.Instance.Translate("尚未应用 · 保存后可立即重启或稍后重启")
+        : HasPendingChanges ? I18nService.Instance.Translate("设置已保存 · 等待重启生效")
+        : I18nService.Instance.Translate("与当前生效设置相同");
+    public string BenchmarkHint => !_leases.IsAvailable ? I18nService.Instance.Translate("性能测试不会自动执行；任务运行中，结束任务后可手动测速。")
+        : I18nService.Instance.Translate("性能测试不会自动执行；按当前生效配置（OCR / YOLO 的后端开关生效时走对应后端）预热 1 次并连续测量 10 次。");
     public InferenceBenchmarkResult? OcrResult => Results.FirstOrDefault(r => r.Scene == "OCR");
     public InferenceBenchmarkResult? TreeResult => Results.FirstOrDefault(r => r.Scene == "古树检测");
     public bool HasOcrResult => OcrResult != null;
@@ -199,7 +200,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         _isOcrAdvancedExpanded = false;
         PaddleOcrCpu.PropertyChanged += OcrCpuSettingsChanged;
         CpuThreadChoices = Enumerable.Range(0, Environment.ProcessorCount + 1)
-            .Select(i => new InferenceThreadChoice(i, i == 0 ? "自动（ORT 默认）" : i.ToString())).ToArray();
+            .Select(i => new InferenceThreadChoice(i, i == 0 ? I18nService.Instance.Translate("自动（ORT 默认）") : i.ToString())).ToArray();
         foreach (var engine in Enum.GetValues<InferenceDeviceType>().Where(engine => engine.IsSelectable()))
         {
             var card = new InferenceEngineCardViewModel(engine, Config.GetEngineSettings(engine));
@@ -290,16 +291,16 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
                 && !(card.IsCurrent && _runtime.IsCurrentValidated);
             if (card.IsCurrent && card.IsInstalled)
             {
-                card.StatusText = card.IsCpu ? "内置 · 无需安装" : (_runtime.IsCurrentValidated ? "模型验证通过" : "已生效 · 未验证");
-                if (!card.HasFailure) card.Details = "运行库已就绪。\n\n运行库目录：\n" + card.RuntimeDirectory;
+                card.StatusText = card.IsCpu ? I18nService.Instance.Translate("内置 · 无需安装") : (_runtime.IsCurrentValidated ? I18nService.Instance.Translate("模型验证通过") : I18nService.Instance.Translate("已生效 · 未验证"));
+                if (!card.HasFailure) card.Details = I18nService.Instance.Translate("运行库已就绪。\n\n运行库目录：\n") + card.RuntimeDirectory;
             }
             else if (card.HasFailure)
             {
-                card.StatusText = "上次验证未通过";
-                card.Details = Config.LastValidationError + "\n\n运行库目录：\n" + card.RuntimeDirectory;
+                card.StatusText = I18nService.Instance.Translate("上次验证未通过");
+                card.Details = Config.LastValidationError + I18nService.Instance.Translate("\n\n运行库目录：\n") + card.RuntimeDirectory;
             }
             else if (card.IsInstalled && string.IsNullOrWhiteSpace(card.ApplyBlockReason))
-                card.StatusText = Config.ValidatedEngines.Contains(card.Engine) ? "此前验证通过" : "已安装 · 尚未验证";
+                card.StatusText = Config.ValidatedEngines.Contains(card.Engine) ? I18nService.Instance.Translate("此前验证通过") : I18nService.Instance.Translate("已安装 · 尚未验证");
         }
         RefreshBackendOptions();
         RefreshAvailability();
@@ -336,8 +337,8 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             option.IsCurrent = option.Backend == Config.PreferredBackend;
             option.IsBlocked = option.Backend == InferenceBackend.Ncnn && !NcnnSettings.NcnnShimReady;
             option.StatusText = option.Backend == InferenceBackend.Ncnn
-                ? NcnnSettings.CardSummary + (option.IsCurrent && pending ? " · 待重启" : "")
-                : option.IsCurrent ? (pending ? $"{Config.InferenceDevice} · 待重启" : "当前使用") : "";
+                ? (option.IsCurrent && pending ? string.Format(I18nService.Instance.Translate("{0} · 待重启"), NcnnSettings.CardSummary) : NcnnSettings.CardSummary)
+                : option.IsCurrent ? (pending ? string.Format(I18nService.Instance.Translate("{0} · 待重启"), Config.InferenceDevice) : I18nService.Instance.Translate("当前使用")) : "";
         }
     }
 
@@ -357,18 +358,18 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     [RelayCommand]
     private async Task ShowEngineDetailsAsync(InferenceEngineCardViewModel card)
         => await ThemedMessageBox.ShowAsync($"{card.StatusText}\n\n{card.Details}\n\n{card.DeviceMessage}",
-            $"{card.Name} · 运行库信息", MessageBoxButton.OK,
+            string.Format(I18nService.Instance.Translate("{0} · 运行库信息"), card.Name), MessageBoxButton.OK,
             card.HasFailure ? ThemedMessageBox.MessageBoxIcon.Warning : ThemedMessageBox.MessageBoxIcon.Information);
 
     [RelayCommand]
-    private async Task ShowErrorAsync() => await ThemedMessageBox.ShowAsync(ErrorDetails, "操作详情", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error);
+    private async Task ShowErrorAsync() => await ThemedMessageBox.ShowAsync(ErrorDetails, I18nService.Instance.Translate("操作详情"), MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error);
 
     [RelayCommand]
     private Task RefreshAsync() => RunAsync(token => RefreshCoreAsync(token));
 
     private async Task RefreshCoreAsync(CancellationToken token, InferenceEngineCardViewModel? updatedCard = null)
     {
-        ProgressText = "正在检测运行库和设备…";
+        ProgressText = I18nService.Instance.Translate("正在检测运行库和设备…");
         // 后端资产探测交给子 ViewModel；已激活过 ncnn 配置时重新枚举设备（ncnn Vulkan）。
         NcnnSettings.ReloadAssets(NcnnSettings.IsActive || NcnnSettings.IsNcnnBackend);
         // 下载完成只刷新变更的引擎，避免其他运行库的探测拖住“应用并重启”。手动检测优先处理所选卡片。
@@ -380,49 +381,49 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             card.IsInstalled = installation.State == InferenceInstallationState.Installed;
             card.ApplyBlockReason = installation.State switch
             {
-                InferenceInstallationState.Missing => "请先下载运行库，再应用设置",
-                InferenceInstallationState.MissingDependencies => "运行库已安装，仍需点击“补齐配套依赖”",
-                _ => "正在识别支持的设备…"
+                InferenceInstallationState.Missing => I18nService.Instance.Translate("请先下载运行库，再应用设置"),
+                InferenceInstallationState.MissingDependencies => I18nService.Instance.Translate("运行库已安装，仍需点击“补齐配套依赖”"),
+                _ => I18nService.Instance.Translate("正在识别支持的设备…")
             };
             card.CanDownload = installation.State == InferenceInstallationState.Missing && !card.IsCpu;
             card.CanCompleteDependencies = installation.State == InferenceInstallationState.MissingDependencies;
             card.IsCurrent = card.Engine == _runtime.Current.Engine;
             card.HasFailure = Config.LastFailedEngine == card.Engine && Config.LastValidationError.Length > 0
                 && !(card.IsCurrent && _runtime.IsCurrentValidated);
-            card.Details = installation.Description + "\n\n运行库目录：\n" + installation.Directory;
-            card.StatusText = installation.State == InferenceInstallationState.Missing ? "DLL 未安装" : "配套依赖不完整";
+            card.Details = installation.Description + I18nService.Instance.Translate("\n\n运行库目录：\n") + installation.Directory;
+            card.StatusText = installation.State == InferenceInstallationState.Missing ? I18nService.Instance.Translate("DLL 未安装") : I18nService.Instance.Translate("配套依赖不完整");
             if (card.HasFailure)
             {
-                card.StatusText = "上次验证未通过";
-                card.Details += "\n\n上次验证结果（历史记录）：\n" + Config.LastValidationError;
+                card.StatusText = I18nService.Instance.Translate("上次验证未通过");
+                card.Details += I18nService.Instance.Translate("\n\n上次验证结果（历史记录）：\n") + Config.LastValidationError;
             }
             else if (card.IsCurrent && card.IsInstalled)
-                card.StatusText = card.IsCpu ? "内置 · 无需安装" : (_runtime.IsCurrentValidated ? "模型验证通过" : "已生效 · 未验证");
+                card.StatusText = card.IsCpu ? I18nService.Instance.Translate("内置 · 无需安装") : (_runtime.IsCurrentValidated ? I18nService.Instance.Translate("模型验证通过") : I18nService.Instance.Translate("已生效 · 未验证"));
             else if (card.IsInstalled)
-                card.StatusText = Config.ValidatedEngines.Contains(card.Engine) ? "此前验证通过" : "已安装 · 尚未验证";
+                card.StatusText = Config.ValidatedEngines.Contains(card.Engine) ? I18nService.Instance.Translate("此前验证通过") : I18nService.Instance.Translate("已安装 · 尚未验证");
             var preferred = card.SelectedDevice?.Id ?? card.Settings.DeviceId;
             try
             {
                 var found = await Task.Run(() => _devices.GetDevices(card.Engine, installation.Directory), token);
                 card.UpdateDevices(found, preferred);
-                if (card.IsInstalled) card.ApplyBlockReason = found.Count == 0 ? "未发现支持的设备，请查看卡片详情" : "";
-                card.DeviceMessage = found.Count == 0 ? (card.IsInstalled ? "未发现支持的设备，请查看详情。" : "安装完成后将自动识别设备。") : $"已发现 {found.Count} 个支持的设备";
-                if (card.IsInstalled && found.Count == 0) card.StatusText = "未发现支持的设备";
+                if (card.IsInstalled) card.ApplyBlockReason = found.Count == 0 ? I18nService.Instance.Translate("未发现支持的设备，请查看卡片详情") : "";
+                card.DeviceMessage = found.Count == 0 ? (card.IsInstalled ? I18nService.Instance.Translate("未发现支持的设备，请查看详情。") : I18nService.Instance.Translate("安装完成后将自动识别设备。")) : string.Format(I18nService.Instance.Translate("已发现 {0} 个支持的设备"), found.Count);
+                if (card.IsInstalled && found.Count == 0) card.StatusText = I18nService.Instance.Translate("未发现支持的设备");
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception e)
             {
                 card.UpdateDevices([], preferred);
-                card.ApplyBlockReason = "设备探测失败，请查看卡片详情";
+                card.ApplyBlockReason = I18nService.Instance.Translate("设备探测失败，请查看卡片详情");
                 card.HasFailure = true;
-                card.StatusText = "设备探测失败";
-                card.DeviceMessage = "请查看详情，检查设备驱动和运行库。";
-                card.Details += "\n\n设备探测错误：\n" + e;
+                card.StatusText = I18nService.Instance.Translate("设备探测失败");
+                card.DeviceMessage = I18nService.Instance.Translate("请查看详情，检查设备驱动和运行库。");
+                card.Details += I18nService.Instance.Translate("\n\n设备探测错误：\n") + e;
             }
         }
         OnPropertyChanged(nameof(HasTreeImage)); OnPropertyChanged(nameof(TreeImageText)); OnPropertyChanged(nameof(TreeBenchmarkEmptyText));
         OnPropertyChanged(nameof(ValidationHint)); OnPropertyChanged(nameof(PendingText));
-        ProgressText = "运行库与设备信息已更新。";
+        ProgressText = I18nService.Instance.Translate("运行库与设备信息已更新。");
         await Task.Run(() => _installer.CleanupInstalledDownloadsAsync(token), token);
     }
 
@@ -432,7 +433,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         if (!CanApply || SelectedEngine == null) return;
         await RunAsync(async token =>
         {
-            ProgressText = "正在保存推理设置…";
+            ProgressText = I18nService.Instance.Translate("正在保存推理设置…");
             // 后端意图与 ncnn 子配置纳入同一次 Apply，使「尚未应用 / 待重启」对所有后端一致。
             if (HasDraftChanges)
             {
@@ -441,7 +442,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
                 // 保存成功才把草稿标记为基线，失败时保留「尚未应用」状态供用户重试。
                 NcnnSettings.AcceptBaseline();
             }
-            ProgressText = "设置已保存，等待重启生效。";
+            ProgressText = I18nService.Instance.Translate("设置已保存，等待重启生效。");
             await OfferRestartAsync();
         });
     }
@@ -488,9 +489,9 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         SelectedEngine = card;
         await RunAsync(async token =>
         {
-            ProgressText = "正在获取下载清单…";
+            ProgressText = I18nService.Instance.Translate("正在获取下载清单…");
             var packages = await _installer.GetDownloadPlanAsync(card.Engine, dependencies, token);
-            if (packages.Count == 0) { await RefreshCoreAsync(token, card); ProgressText = "所需组件已经安装，设备信息已更新。"; return; }
+            if (packages.Count == 0) { await RefreshCoreAsync(token, card); ProgressText = I18nService.Instance.Translate("所需组件已经安装，设备信息已更新。"); return; }
             if (!await _interaction.ConfirmDownloadAsync(packages, dependencies)) return;
             token.ThrowIfCancellationRequested();
             var progress = new Progress<RuntimeDownloadProgress>(p =>
@@ -501,7 +502,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             // 安装、识别与按钮更新属于同一次操作，不能在 IsBusy 切换的间隙丢掉刷新。
             await RefreshCoreAsync(token, card);
             ProgressText = card.IsInstalled && card.SelectedDevice != null
-                ? $"{card.Name} 已就绪，点击“应用并重启”即可使用。"
+                ? string.Format(I18nService.Instance.Translate("{0} 已就绪，点击“应用并重启”即可使用。"), card.Name)
                 : card.ApplyBlockReason;
         });
     }
@@ -524,7 +525,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             Results.Add(result);
             OnPropertyChanged(nameof(OcrResult)); OnPropertyChanged(nameof(TreeResult));
             OnPropertyChanged(nameof(HasOcrResult)); OnPropertyChanged(nameof(HasTreeResult));
-            ProgressText = "测速完成，结果来自当前生效配置。";
+            ProgressText = I18nService.Instance.Translate("测速完成，结果来自当前生效配置。");
         });
     }
 
@@ -538,14 +539,14 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     private async Task ExecuteAsync(Func<CancellationToken, Task> action, CancellationTokenSource cancellation)
     {
         try { await action(cancellation.Token); }
-        catch (OperationCanceledException) { ProgressText = "操作已取消，已释放测试资源；下载进度保留供下次续传。"; }
-        catch (Exception e) { ProgressText = "操作失败：" + e.Message; ErrorDetails = e.ToString(); }
+        catch (OperationCanceledException) { ProgressText = I18nService.Instance.Translate("操作已取消，已释放测试资源；下载进度保留供下次续传。"); }
+        catch (Exception e) { ProgressText = I18nService.Instance.Translate("操作失败：") + e.Message; ErrorDetails = e.ToString(); }
         finally
         {
             _operationCancellation = null; cancellation.Dispose(); IsBusy = false; IsProgressIndeterminate = false;
         }
     }
-    [RelayCommand] private void Cancel() { _operationCancellation?.Cancel(); ProgressText = "正在取消，等待当前操作安全结束…"; }
+    [RelayCommand] private void Cancel() { _operationCancellation?.Cancel(); ProgressText = I18nService.Instance.Translate("正在取消，等待当前操作安全结束…"); }
 
     [RelayCommand]
     private void OpenRuntimeFolder()
@@ -555,7 +556,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             Directory.CreateDirectory(_installer.PluginsDirectory);
             using var process = Process.Start("explorer.exe", _installer.PluginsDirectory);
         }
-        catch (Exception e) { ThemedMessageBox.Show($"无法打开运行库目录：{e.Message}", "打开目录失败"); }
+        catch (Exception e) { ThemedMessageBox.Show(string.Format(I18nService.Instance.Translate("无法打开运行库目录：{0}"), e.Message), I18nService.Instance.Translate("打开目录失败")); }
     }
     [RelayCommand]
     public void OnOpenCacheFolder()

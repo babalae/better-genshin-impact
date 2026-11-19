@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -32,9 +33,9 @@ public partial class KeyBindingsSettingsPageViewModel : ViewModel
 
     public IReadOnlyList<GenshinRegistrySourceOption> RegistrySourceOptions { get; } =
     [
-        new(GenshinRegistryType.Auto, "自动判断"),
-        new(GenshinRegistryType.Chinese, "国服"),
-        new(GenshinRegistryType.Global, "国际服")
+        new(GenshinRegistryType.Auto, I18nService.Instance.Translate("自动判断")),
+        new(GenshinRegistryType.Chinese, I18nService.Instance.Translate("国服")),
+        new(GenshinRegistryType.Global, I18nService.Instance.Translate("国际服"))
     ];
 
     [ObservableProperty]
@@ -124,241 +125,241 @@ public partial class KeyBindingsSettingsPageViewModel : ViewModel
     private void BuildKeyBindingsList()
     {
         // 动作按键
-        var actionDirectory = new KeyBindingSettingModel("动作");
+        var actionDirectory = new KeyBindingSettingModel(I18nService.Instance.Translate("动作"));
 
         // 菜单按键
-        var menuDirectory = new KeyBindingSettingModel("菜单");
+        var menuDirectory = new KeyBindingSettingModel(I18nService.Instance.Translate("菜单"));
 
         // 添加动作按键的二级菜单
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "向前移动",
+                    I18nService.Instance.Translate("向前移动"),
                     nameof(_config.MoveForward),
                     _config.MoveForward
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "向后移动",
+                    I18nService.Instance.Translate("向后移动"),
                     nameof(_config.MoveBackward),
                     _config.MoveBackward
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "向左移动",
+                    I18nService.Instance.Translate("向左移动"),
                     nameof(_config.MoveLeft),
                     _config.MoveLeft
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "向右移动",
+                    I18nService.Instance.Translate("向右移动"),
                     nameof(_config.MoveRight),
                     _config.MoveRight
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换走/跑；特定操作模式下向下移动",
+                    I18nService.Instance.Translate("切换走/跑；特定操作模式下向下移动"),
                     nameof(_config.SwitchToWalkOrRun),
                     _config.SwitchToWalkOrRun
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "普通攻击",
+                    I18nService.Instance.Translate("普通攻击"),
                     nameof(_config.NormalAttack),
                     _config.NormalAttack
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "元素战技",
+                    I18nService.Instance.Translate("元素战技"),
                     nameof(_config.ElementalSkill),
                     _config.ElementalSkill
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "元素爆发",
+                    I18nService.Instance.Translate("元素爆发"),
                     nameof(_config.ElementalBurst),
                     _config.ElementalBurst
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "冲刺（键盘）",
+                    I18nService.Instance.Translate("冲刺（键盘）"),
                     nameof(_config.SprintKeyboard),
                     _config.SprintKeyboard
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "冲刺（鼠标）",
+                    I18nService.Instance.Translate("冲刺（鼠标）"),
                     nameof(_config.SprintMouse),
                     _config.SprintMouse
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换瞄准模式",
+                    I18nService.Instance.Translate("切换瞄准模式"),
                     nameof(_config.SwitchAimingMode),
                     _config.SwitchAimingMode
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "跳跃；特定操作模式下向上移动",
+                    I18nService.Instance.Translate("跳跃；特定操作模式下向上移动"),
                     nameof(_config.Jump),
                     _config.Jump
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "落下",
+                    I18nService.Instance.Translate("落下"),
                     nameof(_config.Drop),
                     _config.Drop
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "拾取/交互（自动拾取由AutoPick模块管理）",
+                    I18nService.Instance.Translate("拾取/交互（自动拾取由AutoPick模块管理）"),
                     nameof(_config.PickUpOrInteract),
                     _config.PickUpOrInteract
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "快捷使用小道具",
+                    I18nService.Instance.Translate("快捷使用小道具"),
                     nameof(_config.QuickUseGadget),
                     _config.QuickUseGadget
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "特定玩法内交互操作",
+                    I18nService.Instance.Translate("特定玩法内交互操作"),
                     nameof(_config.InteractionInSomeMode),
                     _config.InteractionInSomeMode
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "开启任务追踪",
+                    I18nService.Instance.Translate("开启任务追踪"),
                     nameof(_config.QuestNavigation),
                     _config.QuestNavigation
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "中断挑战",
+                    I18nService.Instance.Translate("中断挑战"),
                     nameof(_config.AbandonChallenge),
                     _config.AbandonChallenge
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换小队角色1",
+                    I18nService.Instance.Translate("切换小队角色1"),
                     nameof(_config.SwitchMember1),
                     _config.SwitchMember1
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换小队角色2",
+                    I18nService.Instance.Translate("切换小队角色2"),
                     nameof(_config.SwitchMember2),
                     _config.SwitchMember2
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换小队角色3",
+                    I18nService.Instance.Translate("切换小队角色3"),
                     nameof(_config.SwitchMember3),
                     _config.SwitchMember3
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换小队角色4",
+                    I18nService.Instance.Translate("切换小队角色4"),
                     nameof(_config.SwitchMember4),
                     _config.SwitchMember4
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换小队角色5",
+                    I18nService.Instance.Translate("切换小队角色5"),
                     nameof(_config.SwitchMember5),
                     _config.SwitchMember5
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "呼出快捷轮盘",
+                    I18nService.Instance.Translate("呼出快捷轮盘"),
                     nameof(_config.ShortcutWheel),
                     _config.ShortcutWheel
                 ));
 
         // 添加菜单按键的二级菜单
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开背包",
+                    I18nService.Instance.Translate("打开背包"),
                     nameof(_config.OpenInventory),
                     _config.OpenInventory
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开角色界面",
+                    I18nService.Instance.Translate("打开角色界面"),
                     nameof(_config.OpenCharacterScreen),
                     _config.OpenCharacterScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开地图",
+                    I18nService.Instance.Translate("打开地图"),
                     nameof(_config.OpenMap),
                     _config.OpenMap
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开派蒙界面",
+                    I18nService.Instance.Translate("打开派蒙界面"),
                     nameof(_config.OpenPaimonMenu),
                     _config.OpenPaimonMenu
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开冒险之证界面",
+                    I18nService.Instance.Translate("打开冒险之证界面"),
                     nameof(_config.OpenAdventurerHandbook),
                     _config.OpenAdventurerHandbook
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开多人游戏界面",
+                    I18nService.Instance.Translate("打开多人游戏界面"),
                     nameof(_config.OpenCoOpScreen),
                     _config.OpenCoOpScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开祈愿界面",
+                    I18nService.Instance.Translate("打开祈愿界面"),
                     nameof(_config.OpenWishScreen),
                     _config.OpenWishScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开纪行界面",
+                    I18nService.Instance.Translate("打开纪行界面"),
                     nameof(_config.OpenBattlePassScreen),
                     _config.OpenBattlePassScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开活动面板",
+                    I18nService.Instance.Translate("打开活动面板"),
                     nameof(_config.OpenTheEventsMenu),
                     _config.OpenTheEventsMenu
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开玩法系统界面（尘歌壶内猫尾酒馆内）",
+                    I18nService.Instance.Translate("打开玩法系统界面（尘歌壶内猫尾酒馆内）"),
                     nameof(_config.OpenTheSettingsMenu),
                     _config.OpenTheSettingsMenu
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开摆设界面（尘歌壶内）",
+                    I18nService.Instance.Translate("打开摆设界面（尘歌壶内）"),
                     nameof(_config.OpenTheFurnishingScreen),
                     _config.OpenTheFurnishingScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开星之归还（条件符合期间生效）",
+                    I18nService.Instance.Translate("打开星之归还（条件符合期间生效）"),
                     nameof(_config.OpenStellarReunion),
                     _config.OpenStellarReunion
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "开关任务菜单",
+                    I18nService.Instance.Translate("开关任务菜单"),
                     nameof(_config.OpenQuestMenu),
                     _config.OpenQuestMenu
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开通知详情",
+                    I18nService.Instance.Translate("打开通知详情"),
                     nameof(_config.OpenNotificationDetails),
                     _config.OpenNotificationDetails
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开聊天界面",
+                    I18nService.Instance.Translate("打开聊天界面"),
                     nameof(_config.OpenChatScreen),
                     _config.OpenChatScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开特殊环境说明",
+                    I18nService.Instance.Translate("打开特殊环境说明"),
                     nameof(_config.OpenSpecialEnvironmentInformation),
                     _config.OpenSpecialEnvironmentInformation
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "查看教程详情",
+                    I18nService.Instance.Translate("查看教程详情"),
                     nameof(_config.CheckTutorialDetails),
                     _config.CheckTutorialDetails
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "长按打开元素视野",
+                    I18nService.Instance.Translate("长按打开元素视野"),
                     nameof(_config.ElementalSight),
                     _config.ElementalSight
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "呼出鼠标",
+                    I18nService.Instance.Translate("呼出鼠标"),
                     nameof(_config.ShowCursor),
                     _config.ShowCursor
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开队伍配置界面",
+                    I18nService.Instance.Translate("打开队伍配置界面"),
                     nameof(_config.OpenPartySetupScreen),
                     _config.OpenPartySetupScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开好友界面",
+                    I18nService.Instance.Translate("打开好友界面"),
                     nameof(_config.OpenFriendsScreen),
                     _config.OpenFriendsScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "隐藏主界面",
+                    I18nService.Instance.Translate("隐藏主界面"),
                     nameof(_config.HideUI),
                     _config.HideUI
                 ));

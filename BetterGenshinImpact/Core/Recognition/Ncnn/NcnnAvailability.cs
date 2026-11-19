@@ -4,17 +4,18 @@ using System.IO;
 using System.Linq;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 
 /// <summary>单个 ncnn 模型产物的就绪状态。</summary>
 public sealed record NcnnAssetItem(string DisplayName, string Usage, bool Ready, string Detail);
 
-/// <summary>按用途分组的 ncnn 产物就绪状态。</summary>
+/// <summary>按用途分组的 ncnn 产物就绪状态；<see cref="Name" /> 为中文 Key（参与 OCR 前缀判断），展示时再翻译。</summary>
 public sealed record NcnnAssetGroup(string Name, int ReadyCount, int TotalCount, IReadOnlyList<NcnnAssetItem> Items)
 {
     public bool IsReady => ReadyCount == TotalCount;
-    public string Summary => $"{Name} {ReadyCount}/{TotalCount}";
+    public string Summary => $"{I18nService.Instance.Translate(Name)} {ReadyCount}/{TotalCount}";
 }
 
 /// <summary>
@@ -25,13 +26,14 @@ public sealed class NcnnAvailability
 {
     private static readonly (BgiOnnxModel Model, string Display, string Usage)[] YoloModels =
     [
-        (BgiOnnxModel.BgiWorld, "世界物体检测", "拾取 · 战斗结束检测"),
-        (BgiOnnxModel.BgiFish, "鱼类检测", "自动钓鱼"),
-        (BgiOnnxModel.BgiMine, "矿石检测", "挖矿"),
-        (BgiOnnxModel.BgiTree, "古树检测", "自动秘境"),
-        (BgiOnnxModel.BgiQClassify, "Q 技能分类", "自动战斗"),
-        (BgiOnnxModel.BgiAvatarSide, "队伍头像分类", "自动战斗"),
-        (BgiOnnxModel.BgiEClassify, "E 技能分类", "自动战斗")
+        // 名称与用途为中文 Key，在 BuildItem 中翻译展示。
+        (BgiOnnxModel.BgiWorld, I18nService.Key("世界物体检测"), I18nService.Key("拾取 · 战斗结束检测")),
+        (BgiOnnxModel.BgiFish, I18nService.Key("鱼类检测"), I18nService.Key("自动钓鱼")),
+        (BgiOnnxModel.BgiMine, I18nService.Key("矿石检测"), I18nService.Key("挖矿")),
+        (BgiOnnxModel.BgiTree, I18nService.Key("古树检测"), I18nService.Key("自动秘境")),
+        (BgiOnnxModel.BgiQClassify, I18nService.Key("Q 技能分类"), I18nService.Key("自动战斗")),
+        (BgiOnnxModel.BgiAvatarSide, I18nService.Key("队伍头像分类"), I18nService.Key("自动战斗")),
+        (BgiOnnxModel.BgiEClassify, I18nService.Key("E 技能分类"), I18nService.Key("自动战斗"))
     ];
 
     /// <summary>OCR 模型目录（绝对路径），诊断探测与装配路径共用。</summary>
@@ -55,14 +57,14 @@ public sealed class NcnnAvailability
     {
         get
         {
-            if (!ShimReady) return "ncnn 运行库缺失 · 必须补齐 ncnn_shim.dll（需含 create_ex / infer_ex 的新版本）";
+            if (!ShimReady) return I18nService.Instance.Translate("ncnn 运行库缺失 · 必须补齐 ncnn_shim.dll（需含 create_ex / infer_ex 的新版本）");
             var ocrReady = Groups.Where(group => group.Name.StartsWith("OCR", StringComparison.Ordinal)).Sum(group => group.ReadyCount);
             var ocrTotal = Groups.Where(group => group.Name.StartsWith("OCR", StringComparison.Ordinal)).Sum(group => group.TotalCount);
             var yoloReady = ReadyCount - ocrReady;
             var yoloTotal = TotalCount - ocrTotal;
             return IsReady
-                ? $"ncnn 已就绪 · OCR {ocrReady}/{ocrTotal} · YOLO {yoloReady}/{yoloTotal}"
-                : $"ncnn 部分产物缺失 · OCR {ocrReady}/{ocrTotal} · YOLO {yoloReady}/{yoloTotal}";
+                ? string.Format(I18nService.Instance.Translate("ncnn 已就绪 · OCR {0}/{1} · YOLO {2}/{3}"), ocrReady, ocrTotal, yoloReady, yoloTotal)
+                : string.Format(I18nService.Instance.Translate("ncnn 部分产物缺失 · OCR {0}/{1} · YOLO {2}/{3}"), ocrReady, ocrTotal, yoloReady, yoloTotal);
         }
     }
 
@@ -75,11 +77,11 @@ public sealed class NcnnAvailability
 
         return new NcnnAvailability(shimReady, shimText,
         [
-            BuildGroup("OCR 文本检测", [BuildItem(
-                ocrDir, "det_dyn", "文本检测 · 动态形状", "全部 OCR 文本定位")]),
-            BuildGroup("OCR 文字识别", [BuildItem(
-                ocrDir, "rec_dyn", "文字识别 · 动态形状", "OCR 结果解码")]),
-            BuildGroup("YOLO 检测与分类", YoloModels.Select(def => BuildItem(
+            BuildGroup(I18nService.Key("OCR 文本检测"), [BuildItem(
+                ocrDir, "det_dyn", I18nService.Key("文本检测 · 动态形状"), I18nService.Key("全部 OCR 文本定位"))]),
+            BuildGroup(I18nService.Key("OCR 文字识别"), [BuildItem(
+                ocrDir, "rec_dyn", I18nService.Key("文字识别 · 动态形状"), I18nService.Key("OCR 结果解码"))]),
+            BuildGroup(I18nService.Key("YOLO 检测与分类"), YoloModels.Select(def => BuildItem(
                 NcnnModelPaths.YoloModelDirectory(def.Model),
                 Path.GetFileNameWithoutExtension(def.Model.ModalPath), def.Display, def.Usage)))
         ]);
@@ -98,8 +100,9 @@ public sealed class NcnnAvailability
         var hasParam = File.Exists(paramPath);
         var hasModel = File.Exists(modelPath);
         var ready = hasParam && hasModel;
-        return new NcnnAssetItem(display, usage, ready, ready
-            ? "ncnn 已就绪"
-            : !hasParam && !hasModel ? "产物缺失" : "产物不完整");
+        // display / usage 为中文 Key，此处翻译为界面语言。
+        return new NcnnAssetItem(I18nService.Instance.Translate(display), I18nService.Instance.Translate(usage), ready, ready
+            ? I18nService.Instance.Translate("ncnn 已就绪")
+            : !hasParam && !hasModel ? I18nService.Instance.Translate("产物缺失") : I18nService.Instance.Translate("产物不完整"));
     }
 }

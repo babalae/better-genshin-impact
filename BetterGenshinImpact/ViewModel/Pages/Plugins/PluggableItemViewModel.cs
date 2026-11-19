@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using BetterGenshinImpact.Core.Plugins.Pluggables;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Plugins;
@@ -16,6 +17,22 @@ public sealed partial class PluggableItemViewModel : ObservableObject
     /// 可插拔能力注册表。
     /// </summary>
     private readonly PluggableRegistry _registry;
+
+    /// <summary>
+    /// 主程序内置的可插拔能力与内置实现的显示文字，登记为 i18n Key。
+    /// 这些文字写在 Pluggable / PluggableImpl 特性中，特性参数无法调用 <see cref="I18nService.Key"/>，
+    /// 因此在这里集中登记；新增内置能力或实现时需同步补充。插件提供的名称不翻译。
+    /// </summary>
+    private static readonly string[] BuiltinTextKeys =
+    [
+        I18nService.Key("OCR 模型"),
+        I18nService.Key("识别游戏界面文字使用的模型。"),
+        I18nService.Key("主程序内置的模型。"),
+        I18nService.Key("传送"),
+        I18nService.Key("大地图传送，以及打开大地图、切换区域、移动和缩放地图等大地图操作。"),
+        I18nService.Key("内置传送"),
+        I18nService.Key("主程序内置的传送。"),
+    ];
 
     /// <summary>
     /// 正在按注册表的状态刷新界面，期间的选择变化不写回注册表。
@@ -74,12 +91,12 @@ public sealed partial class PluggableItemViewModel : ObservableObject
     /// <summary>
     /// 显示名称。
     /// </summary>
-    public string DisplayName => Descriptor.DisplayName;
+    public string DisplayName => I18nService.Instance.Translate(Descriptor.DisplayName);
 
     /// <summary>
     /// 说明。
     /// </summary>
-    public string Description => Descriptor.Description ?? string.Empty;
+    public string Description => Descriptor.Description is { } description ? I18nService.Instance.Translate(description) : string.Empty;
 
     /// <summary>
     /// 按注册表的当前状态重建选项和选择。在界面线程调用。
@@ -95,14 +112,14 @@ public sealed partial class PluggableItemViewModel : ObservableObject
             {
                 Options.Add(new PluggableImplOption(
                     implementation.Id,
-                    $"{implementation.DisplayName} · {implementation.PluginName ?? "内置"}",
+                    $"{GetImplementationName(implementation)} · {implementation.PluginName ?? I18nService.Instance.Translate("内置")}",
                     false));
             }
 
             // 保存的实现来自未启用的插件：保留一项占位并选中，用户主动改选之前原来的选择不会丢失
             if (state is { SavedImplementationId: { } savedId, Saved: null })
             {
-                var placeholder = new PluggableImplOption(savedId, $"{savedId}（插件未启用）", true);
+                var placeholder = new PluggableImplOption(savedId, string.Format(I18nService.Instance.Translate("{0}（插件未启用）"), savedId), true);
                 Options.Add(placeholder);
                 SelectedOption = placeholder;
             }
@@ -116,8 +133,10 @@ public sealed partial class PluggableItemViewModel : ObservableObject
             FallbackText = state switch
             {
                 { IsFallback: true, SavedFailed: true } =>
-                    $"{state.Saved!.DisplayName} 加载失败，当前使用 {state.Effective.DisplayName}，原因见日志。",
-                { IsFallback: true } => $"所选实现来自未启用的插件，当前使用 {state.Effective.DisplayName}。",
+                    string.Format(I18nService.Instance.Translate("{0} 加载失败，当前使用 {1}，原因见日志。"),
+                        GetImplementationName(state.Saved!), GetImplementationName(state.Effective)),
+                { IsFallback: true } => string.Format(I18nService.Instance.Translate("所选实现来自未启用的插件，当前使用 {0}。"),
+                    GetImplementationName(state.Effective)),
                 _ => null,
             };
         }
@@ -125,6 +144,17 @@ public sealed partial class PluggableItemViewModel : ObservableObject
         {
             _syncing = false;
         }
+    }
+
+    /// <summary>
+    /// 实现的显示名称：内置实现按界面语言翻译，插件提供的名称原样显示。
+    /// </summary>
+    /// <param name="implementation">实现描述。</param>
+    private static string GetImplementationName(PluggableImplDescriptor implementation)
+    {
+        return implementation.IsBuiltin
+            ? I18nService.Instance.Translate(implementation.DisplayName)
+            : implementation.DisplayName;
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -19,8 +20,8 @@ namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 /// </summary>
 public sealed partial class PuloniaRunTargetsViewModel : ObservableObject
 {
-    /// <summary>没有选中任何实例时的提示。</summary>
-    private const string NoSelectionMessage = "请至少选择一个实例。";
+    /// <summary>没有选中任何实例时的提示（按当前界面语言）。</summary>
+    private static string NoSelectionMessage => I18nService.Instance.Translate("请至少选择一个实例。");
 
     /// <summary>编辑会话：账户服务与运行提交。</summary>
     private readonly PuloniaPlanEditingSession _session;
@@ -77,14 +78,14 @@ public sealed partial class PuloniaRunTargetsViewModel : ObservableObject
 
     /// <summary>弹出层顶部的说明，随计划的运行账户设置变化。</summary>
     public string HintText => IsMultiSelect
-        ? "计划跟随当前账户：可以选择多个实例，每个实例各运行一次，为该实例的当前账户执行。"
-        : "计划指定了运行账户：同一账户不能同时在多个实例运行，只能选一个实例。";
+        ? I18nService.Instance.Translate("计划跟随当前账户：可以选择多个实例，每个实例各运行一次，为该实例的当前账户执行。")
+        : I18nService.Instance.Translate("计划指定了运行账户：同一账户不能同时在多个实例运行，只能选一个实例。");
 
     /// <summary>收起时按钮上的摘要，例如“运行于：主实例、云原神 · A”。</summary>
     public string SummaryText => Options.Where(option => option.IsSelected).Select(option => option.InstanceName).ToArray()
         is { Length: > 0 } names
-        ? "运行于：" + string.Join("、", names)
-        : "运行于：请选择实例";
+        ? string.Format(I18nService.Instance.Translate("运行于：{0}"), string.Join(I18nService.Instance.Translate("、"), names))
+        : I18nService.Instance.Translate("运行于：请选择实例");
 
     /// <summary>
     /// 提交前的确认：参数为要运行的计划与选中的实例，返回 null 时不提交。
@@ -213,7 +214,7 @@ public sealed partial class PuloniaRunTargetsViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            problems.Add("账户目录读取失败：" + ex.Message);
+            problems.Add(I18nService.Instance.Translate("账户目录读取失败：") + ex.Message);
         }
         var currents = new string?[rows.Count];
         for (var index = 0; index < rows.Count; index++)
@@ -224,7 +225,7 @@ public sealed partial class PuloniaRunTargetsViewModel : ObservableObject
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                problems.Add($"“{rows[index].Name}”的当前账户读取失败：{ex.Message}");
+                problems.Add(string.Format(I18nService.Instance.Translate("“{0}”的当前账户读取失败：{1}"), rows[index].Name, ex.Message));
             }
         }
         if (version != _refreshVersion)
@@ -396,7 +397,7 @@ public sealed partial class PuloniaRunTargetsViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            error = $"未能修改“{option.InstanceName}”的当前账户：{ex.Message}";
+            error = string.Format(I18nService.Instance.Translate("未能修改“{0}”的当前账户：{1}"), option.InstanceName, ex.Message);
         }
         await RefreshAsync();
         if (error is not null)

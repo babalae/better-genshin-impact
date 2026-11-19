@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Pulonia.Executors;
 
@@ -66,14 +67,14 @@ public sealed class PuloniaTaskExecutionContext
         if (Runtime is null)
         {
             runtime = null;
-            failureMessage = "当前节点没有持有游戏输入租约，无法执行游戏任务。";
+            failureMessage = I18nService.Instance.Translate("当前节点没有持有游戏输入租约，无法执行游戏任务。");
             return false;
         }
 
         if (Runtime.IsStopping)
         {
             runtime = null;
-            failureMessage = "本节点使用的游戏运行环境已停止，当前节点失败；下一节点会重新准备运行环境。";
+            failureMessage = I18nService.Instance.Translate("本节点使用的游戏运行环境已停止，当前节点失败；下一节点会重新准备运行环境。");
             return false;
         }
 

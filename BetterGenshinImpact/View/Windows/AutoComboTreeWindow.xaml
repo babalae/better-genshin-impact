@@ -1,10 +1,11 @@
 <Window x:Class="BetterGenshinImpact.View.Windows.AutoComboTreeWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="自动连招行为树"
+        Title="{i18n:T 自动连招行为树}"
         Width="465"
         Height="550"
         WindowStyle="None"
@@ -29,7 +30,7 @@
                           HorizontalScrollBarVisibility="Auto">
                 <StackPanel>
                     <!--  主树：技能连招  -->
-                    <TextBlock Text="连招树"
+                    <TextBlock Text="{i18n:T 连招树}"
                                FontSize="12"
                                Margin="4,0,0,2"
                                Foreground="#99FFFFFF" />
@@ -55,7 +56,7 @@
                     </TextBox>
 
                     <!--  兜底树：基础攻击  -->
-                    <TextBlock Text="兜底攻击树"
+                    <TextBlock Text="{i18n:T 兜底攻击树}"
                                FontSize="12"
                                Margin="4,6,0,2"
                                Foreground="#99FFFFFF" />

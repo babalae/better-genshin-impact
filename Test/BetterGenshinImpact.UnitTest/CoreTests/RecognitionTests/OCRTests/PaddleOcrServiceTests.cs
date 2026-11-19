@@ -58,6 +58,12 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
         [InlineData("it", "Incarichi")]
         [InlineData("it", "Pesca")]
         [InlineData("it", "Katheryne")]
+        [InlineData("pt-BR", "Desafio Concluído", "(Desafio|Conclu[ií]do)")]
+        [InlineData("pt-BR", "Seleção Rápida", "Sele[çc][ãa]o.*R[áa]pida")]
+        [InlineData("pt-BR", "Pular")]
+        [InlineData("pt-BR", "Resgatar")]
+        [InlineData("pt-BR", "Pescar")]
+        [InlineData("pt-BR", "Katheryne")]
         /// <summary>
         /// 测试识别各种文字，结果为成功
         /// </summary>

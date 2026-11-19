@@ -1,3 +1,5 @@
+using BetterGenshinImpact.Service.I18n;
+
 namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
 
 /// <summary>
@@ -10,5 +12,7 @@ namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
 public sealed record PuloniaSettingsProfileListItemViewModel(string Id, string Name, int SettingCount, int UsageCount)
 {
     /// <summary>列表第二行的说明。</summary>
-    public string Detail => $"{SettingCount} 项设置 · " + (UsageCount == 0 ? "未被使用" : $"被 {UsageCount} 个节点使用");
+    public string Detail => UsageCount == 0
+        ? string.Format(I18nService.Instance.Translate("{0} 项设置 · 未被使用"), SettingCount)
+        : string.Format(I18nService.Instance.Translate("{0} 项设置 · 被 {1} 个节点使用"), SettingCount, UsageCount);
 }

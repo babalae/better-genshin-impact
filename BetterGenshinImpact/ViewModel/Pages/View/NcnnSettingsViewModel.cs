@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.Ncnn;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -54,12 +55,12 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
 
         // 三套参数完全独立；旧配置缺失时由 FromConfig 统一回落到 ncnn 默认值。
         // 标题使用标准用途名：文本检测（Det）/ 文本识别（Rec）/ YOLO。
-        DetTuning = new NcnnTuningViewModel("文本检测（Det）",
-            "文本检测（DB）使用 det_dyn 动态模型，调优只影响该用途的会话。", normalized.Det);
-        RecTuning = new NcnnTuningViewModel("文本识别（Rec）",
-            "文本识别（CTC）使用 rec_dyn 动态宽度模型，线程与并行会话可独立设置。", normalized.Rec);
+        DetTuning = new NcnnTuningViewModel(I18nService.Instance.Translate("文本检测（Det）"),
+            I18nService.Instance.Translate("文本检测（DB）使用 det_dyn 动态模型，调优只影响该用途的会话。"), normalized.Det);
+        RecTuning = new NcnnTuningViewModel(I18nService.Instance.Translate("文本识别（Rec）"),
+            I18nService.Instance.Translate("文本识别（CTC）使用 rec_dyn 动态宽度模型，线程与并行会话可独立设置。"), normalized.Rec);
         YoloTuning = new NcnnTuningViewModel("YOLO",
-            "所有 ncnn YOLO 模型共用这套参数；像素直输需模型自带归一化。", normalized.Yolo);
+            I18nService.Instance.Translate("所有 ncnn YOLO 模型共用这套参数；像素直输需模型自带归一化。"), normalized.Yolo);
         NcnnTunings = [DetTuning, RecTuning, YoloTuning];
         foreach (var tuning in NcnnTunings) tuning.Changed += OnTuningChanged;
 
@@ -70,9 +71,11 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
 
         NcnnThreadChoices = Enumerable.Range(1, NcnnTuningSettings.MaxThreads)
             .Select(i => new InferenceThreadChoice(i,
-                i == NcnnTuningSettings.DefaultThreads ? $"{i}（默认）" : i.ToString())).ToArray();
+                i == NcnnTuningSettings.DefaultThreads ? string.Format(I18nService.Instance.Translate("{0}（默认）"), i) : i.ToString())).ToArray();
         NcnnParallelChoices = Enumerable.Range(1, NcnnTuningSettings.MaxParallelSessions)
-            .Select(i => new InferenceThreadChoice(i, i == 1 ? "1（顺序执行，推荐）" : $"{i} 路并行")).ToArray();
+            .Select(i => new InferenceThreadChoice(i, i == 1
+                ? I18nService.Instance.Translate("1（顺序执行，推荐）")
+                : string.Format(I18nService.Instance.Translate("{0} 路并行"), i))).ToArray();
         // 构造阶段只做文件层探测（字段初始化已完成）；设备枚举与 Vulkan 详情由 Activate / ReloadAssets 触发，
         // 避免仅仅打开设置页或构造测试就初始化 Vulkan。
     }
@@ -92,14 +95,16 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         get
         {
             var changed = NcnnTunings.Count(t => t.HasChanges);
-            return changed == 0 ? "三套参数均与已保存一致" : $"{changed}/3 套已修改 · 应用并重启后生效";
+            return changed == 0
+                ? I18nService.Instance.Translate("三套参数均与已保存一致")
+                : string.Format(I18nService.Instance.Translate("{0}/3 套已修改 · 应用并重启后生效"), changed);
         }
     }
 
     public NcnnComputeModeChoice[] NcnnComputeModeChoices { get; } =
     [
-        new(NcnnComputeMode.Vulkan, "Vulkan", "调用 Vulkan 显卡，速度最快；设备名称由 ncnn_shim 枚举。"),
-        new(NcnnComputeMode.Cpu, "CPU", "不依赖 Vulkan 驱动；使用下方线程数在处理器上推理。")
+        new(NcnnComputeMode.Vulkan, "Vulkan", I18nService.Instance.Translate("调用 Vulkan 显卡，速度最快；设备名称由 ncnn_shim 枚举。")),
+        new(NcnnComputeMode.Cpu, "CPU", I18nService.Instance.Translate("不依赖 Vulkan 驱动；使用下方线程数在处理器上推理。"))
     ];
 
     /// <summary>页面忙碌时统一禁用子控件（由主 ViewModel 单向同步）。</summary>
@@ -133,27 +138,27 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
 
     /// <summary>某个用途单独切回 ONNX 时的目标名称。</summary>
     public string OnnxTargetName => _owner != null && _owner.ForceCpuOcr && !OwnerEngineIsCpu
-        ? "CPU（强制 OCR）"
+        ? I18nService.Instance.Translate("CPU（强制 OCR）")
         : _owner?.SelectedEngine?.Name ?? "ONNX Runtime";
 
     public string EffectiveCombinationText => $"OCR · {(UseNcnnOcr
-        ? $"ncnn · {NcnnDeviceText} · PP-OCRv6（固定模型）"
+        ? string.Format(I18nService.Instance.Translate("ncnn · {0} · PP-OCRv6（固定模型）"), NcnnDeviceText)
         : $"ONNX Runtime · {OnnxTargetName}")}　|　YOLO · {(UseNcnnYolo
         ? $"ncnn · {NcnnDeviceText}"
-        : $"ONNX Runtime · {_owner?.SelectedEngine?.Name ?? "ONNX Runtime"} · {_owner?.SelectedEngine?.SelectedDevice?.Name ?? "尚无可用设备"}")}";
+        : $"ONNX Runtime · {_owner?.SelectedEngine?.Name ?? "ONNX Runtime"} · {_owner?.SelectedEngine?.SelectedDevice?.Name ?? I18nService.Instance.Translate("尚无可用设备")}")}";
 
     internal static string SavedNcnnDeviceText(NcnnConfig config) =>
         config.ComputeMode == NcnnComputeMode.Cpu
-            ? $"CPU · {config.DetTuning.Threads} 线程"
-            : $"Vulkan 设备 #{config.GpuIndex} · {config.DetTuning.GpuThreads} 线程";
+            ? string.Format(I18nService.Instance.Translate("CPU · {0} 线程"), config.DetTuning.Threads)
+            : string.Format(I18nService.Instance.Translate("Vulkan 设备 #{0} · {1} 线程"), config.GpuIndex, config.DetTuning.GpuThreads);
 
     public string OcrOverrideHint => IsNcnnBackend
-        ? "当前全局为 ncnn；关闭后 OCR 由 ONNX Runtime 承担。"
-        : "当前全局不是 ncnn；开启后 OCR 覆盖为 ncnn。";
+        ? I18nService.Instance.Translate("当前全局为 ncnn；关闭后 OCR 由 ONNX Runtime 承担。")
+        : I18nService.Instance.Translate("当前全局不是 ncnn；开启后 OCR 覆盖为 ncnn。");
 
     public string YoloOverrideHint => IsNcnnBackend
-        ? "当前全局为 ncnn；关闭后 YOLO 由 ONNX Runtime 承担。"
-        : "当前全局不是 ncnn；开启后 YOLO 覆盖为 ncnn。";
+        ? I18nService.Instance.Translate("当前全局为 ncnn；关闭后 YOLO 由 ONNX Runtime 承担。")
+        : I18nService.Instance.Translate("当前全局不是 ncnn；开启后 YOLO 覆盖为 ncnn。");
 
     // ---------------- 计算模式与设备 ----------------
 
@@ -169,17 +174,19 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
     public bool HasNcnnDevices => NcnnDevices.Count > 0;
 
     public string NcnnDeviceText => IsNcnnCpu
-        ? $"CPU · {DetTuning.Settings.Threads} 线程（检测基准）"
-        : SelectedNcnnDevice?.Name ?? $"Vulkan 设备 #{NcnnGpuIndex}";
+        ? string.Format(I18nService.Instance.Translate("CPU · {0} 线程（检测基准）"), DetTuning.Settings.Threads)
+        : SelectedNcnnDevice?.Name ?? string.Format(I18nService.Instance.Translate("Vulkan 设备 #{0}"), NcnnGpuIndex);
 
     public string NcnnDeviceHint => IsNcnnCpu
-        ? "ncnn 原生 CPU 推理，三套线程数各自独立，不需要 Vulkan 驱动。"
+        ? I18nService.Instance.Translate("ncnn 原生 CPU 推理，三套线程数各自独立，不需要 Vulkan 驱动。")
         : HasNcnnDevices
-            ? "设备名称来自 ncnn_shim 的 Vulkan 枚举；索引 0 通常为独显。"
-            : "未能枚举到 Vulkan 设备；请检查显卡驱动，或改用 CPU 计算模式。";
+            ? I18nService.Instance.Translate("设备名称来自 ncnn_shim 的 Vulkan 枚举；索引 0 通常为独显。")
+            : I18nService.Instance.Translate("未能枚举到 Vulkan 设备；请检查显卡驱动，或改用 CPU 计算模式。");
 
     /// <summary>ncnn 卡片的简短状态（产物与运行库是否齐全）。</summary>
-    public string CardStatus => !NcnnShimReady ? "运行库缺失" : NcnnAssetsReady ? "产物齐全" : "部分产物缺失";
+    public string CardStatus => !NcnnShimReady
+        ? I18nService.Instance.Translate("运行库缺失")
+        : NcnnAssetsReady ? I18nService.Instance.Translate("产物齐全") : I18nService.Instance.Translate("部分产物缺失");
 
     /// <summary>卡片的能力摘要；没有详情时退回产物状态。</summary>
     public string CardSummary => NcnnDeviceDetails is { } d
@@ -197,12 +204,12 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
     public IReadOnlyList<NcnnAssetGroup> NcnnAssetGroups => NcnnStatus.Groups;
 
     public string NcnnRuntimeText => NcnnShimReady
-        ? "已就绪（ncnn_shim）"
-        : "缺失 · 需要 ncnn_shim.dll";
+        ? I18nService.Instance.Translate("已就绪（ncnn_shim）")
+        : I18nService.Instance.Translate("缺失 · 需要 ncnn_shim.dll");
 
     public string NcnnApiText => NcnnShimReady
-        ? "版本化接口（create_ex / infer_ex）：调优参数、张量元信息、设备详情可用"
-        : "运行库缺失 · 无法读取 shim 能力";
+        ? I18nService.Instance.Translate("版本化接口（create_ex / infer_ex）：调优参数、张量元信息、设备详情可用")
+        : I18nService.Instance.Translate("运行库缺失 · 无法读取 shim 能力");
 
     // ---------------- 设备详情与显存 ----------------
 
@@ -220,7 +227,7 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
 
     public IReadOnlyList<NcnnDetailRow> NcnnDetailRows => NcnnDeviceDetails is { } d ? BuildDetailRows(d) : [];
 
-    public string NcnnHeapBudgetText => NcnnHeapBudgetMB == 0 ? "显存预算未知" : $"{NcnnHeapBudgetMB} MB";
+    public string NcnnHeapBudgetText => NcnnHeapBudgetMB == 0 ? I18nService.Instance.Translate("显存预算未知") : $"{NcnnHeapBudgetMB} MB";
 
     public string NcnnCapabilityText => NcnnDeviceDetails is { } d
         ? $"FP16 {d.Fp16Text} · INT8 {d.Int8Text}" + (d.ResizableBarEnabled ? " · ReBAR" : "")
@@ -228,7 +235,7 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
 
     // ---------------- 模型自检 ----------------
 
-    [ObservableProperty] private string _ncnnBlobText = "尚未探测；可点击「探测 blob 名」读取真实输入输出名与形状。";
+    [ObservableProperty] private string _ncnnBlobText = I18nService.Instance.Translate("尚未探测；可点击「探测 blob 名」读取真实输入输出名与形状。");
     [ObservableProperty] private bool _isProbing;
 
     /// <summary>探测按钮可用性：页面忙碌或正在探测时置灰。</summary>
@@ -480,12 +487,12 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         if (IsProbing) return;
         if (!NcnnShimReady)
         {
-            NcnnBlobText = "ncnn_shim.dll 缺失，无法探测；请先补齐运行库。";
+            NcnnBlobText = I18nService.Instance.Translate("ncnn_shim.dll 缺失，无法探测；请先补齐运行库。");
             return;
         }
 
         IsProbing = true;
-        NcnnBlobText = "正在读取 ncnn 模型的 blob 名…";
+        NcnnBlobText = I18nService.Instance.Translate("正在读取 ncnn 模型的 blob 名…");
         try
         {
             var gpuIndex = IsNcnnCpu ? -1 : NcnnGpuIndex;
@@ -496,7 +503,7 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            NcnnBlobText = "探测失败：" + ex.Message;
+            NcnnBlobText = string.Format(I18nService.Instance.Translate("探测失败：{0}"), ex.Message);
         }
         finally
         {
@@ -507,30 +514,30 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
     /// <summary>设备详情键值行；未知字段按「未知」显示而不是留空，避免表格错位。</summary>
     private static IReadOnlyList<NcnnDetailRow> BuildDetailRows(NcnnDeviceDetails d) =>
     [
-        new("设备名称", d.Name),
-        new("设备类型", d.TypeName),
+        new(I18nService.Instance.Translate("设备名称"), d.Name),
+        new(I18nService.Instance.Translate("设备类型"), d.TypeName),
         new("Vendor / Device ID", $"{d.VendorText} / {d.DeviceIdText}"),
-        new("Vulkan API 版本", d.ApiVersionText),
-        new("驱动版本", d.DriverVersionText),
-        new("驱动名称", string.IsNullOrWhiteSpace(d.DriverName) ? "未知" : d.DriverName),
-        new("计算 / 传输队列", string.Create(CultureInfo.InvariantCulture,
+        new(I18nService.Instance.Translate("Vulkan API 版本"), d.ApiVersionText),
+        new(I18nService.Instance.Translate("驱动版本"), d.DriverVersionText),
+        new(I18nService.Instance.Translate("驱动名称"), string.IsNullOrWhiteSpace(d.DriverName) ? I18nService.Instance.Translate("未知") : d.DriverName),
+        new(I18nService.Instance.Translate("计算 / 传输队列"), string.Create(CultureInfo.InvariantCulture,
             $"{d.ComputeQueueCount} / {d.TransferQueueCount}")),
-        new("统一队列", d.UnifiedComputeTransferQueue ? "是" : "否"),
-        new("ReBAR（显存直通）", d.ResizableBarEnabled ? "已启用" : "未启用"),
-        new("image storage", d.SupportImageStorage ? "支持" : "不支持"),
-        new("shader local memory", d.PreferShaderLocalMemory ? "优先使用" : "不使用"),
+        new(I18nService.Instance.Translate("统一队列"), d.UnifiedComputeTransferQueue ? I18nService.Instance.Translate("是") : I18nService.Instance.Translate("否")),
+        new(I18nService.Instance.Translate("ReBAR（显存直通）"), d.ResizableBarEnabled ? I18nService.Instance.Translate("已启用") : I18nService.Instance.Translate("未启用")),
+        new("image storage", d.SupportImageStorage ? I18nService.Instance.Translate("支持") : I18nService.Instance.Translate("不支持")),
+        new("shader local memory", d.PreferShaderLocalMemory ? I18nService.Instance.Translate("优先使用") : I18nService.Instance.Translate("不使用")),
         new("FP16", d.Fp16Text),
         new("INT8", d.Int8Text),
         new("INT16", d.Int16Text),
-        new("BF16", d.SupportBf16Storage ? "storage 支持" : "不支持"),
+        new("BF16", d.SupportBf16Storage ? I18nService.Instance.Translate("storage 支持") : I18nService.Instance.Translate("不支持")),
         new("Subgroup", string.Create(CultureInfo.InvariantCulture,
             $"{d.SubgroupSize}（{d.MinSubgroupSize}–{d.MaxSubgroupSize}）")),
-        new("Subgroup 能力", DescribeSubgroup(d)),
-        new("共享内存 / 工作组", string.Create(CultureInfo.InvariantCulture,
+        new(I18nService.Instance.Translate("Subgroup 能力"), DescribeSubgroup(d)),
+        new(I18nService.Instance.Translate("共享内存 / 工作组"), string.Create(CultureInfo.InvariantCulture,
             $"{d.MaxSharedMemorySize / 1024} KB / {d.MaxWorkgroupInvocations}")),
-        new("性能评分", string.Create(CultureInfo.InvariantCulture, $"{d.RoughScore}")),
-        new("显存预算", d.HeapBudgetMB == 0
-            ? "未知"
+        new(I18nService.Instance.Translate("性能评分"), string.Create(CultureInfo.InvariantCulture, $"{d.RoughScore}")),
+        new(I18nService.Instance.Translate("显存预算"), d.HeapBudgetMB == 0
+            ? I18nService.Instance.Translate("未知")
             : string.Create(CultureInfo.InvariantCulture, $"{d.HeapBudgetMB} MB"))
     ];
 
@@ -540,7 +547,7 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         if (d.SupportSubgroupSizeControl) parts.Add("size control");
         if (d.SupportComputeFullSubgroups) parts.Add("full subgroups");
         if (d.SupportFpFastMath) parts.Add("fast math");
-        return parts.Count == 0 ? "无额外能力" : string.Join(" / ", parts);
+        return parts.Count == 0 ? I18nService.Instance.Translate("无额外能力") : string.Join(" / ", parts);
     }
 
     public void Dispose()

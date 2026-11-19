@@ -2,6 +2,7 @@ using BetterGenshinImpact.Service.AccountRecords;
 using System;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.Generic;
@@ -76,7 +77,7 @@ public partial class AccountRecordsEventsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "事件记录", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error);
+            await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), I18nService.Instance.Translate("事件记录"), MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error);
         }
     }
     /// <summary>按创建顺序倒序展示。</summary>
@@ -89,23 +90,23 @@ public partial class AccountRecordsEventsViewModel : ObservableObject
     {
         get
         {
-            if (Selected is not { } item) return "请选择事件。";
-            var status = item.State == "Aborted" ? "已终止（由人工确认库存替代）" : item.State;
+            if (Selected is not { } item) return I18nService.Instance.Translate("请选择事件。");
+            var status = item.State == "Aborted" ? I18nService.Instance.Translate("已终止（由人工确认库存替代）") : item.State;
             var lines = new List<string>
             {
-                $"事件 ID：{item.Id}",
-                $"上报批次：{item.AttemptId}",
+                string.Format(I18nService.Instance.Translate("事件 ID：{0}"), item.Id),
+                string.Format(I18nService.Instance.Translate("上报批次：{0}"), item.AttemptId),
                 AccountRecordsErrorMessages.ForDisplay(item.Message),
-                $"状态：{status}    {(item.Archived ? "已归档" : "未归档")}",
+                string.Format(I18nService.Instance.Translate("状态：{0}    {1}"), status, item.Archived ? I18nService.Instance.Translate("已归档") : I18nService.Instance.Translate("未归档")),
                 "",
-                $"物品：{item.Name}",
-                $"起止时间：{item.TimeRange}",
-                $"来源：{item.Source}"
+                string.Format(I18nService.Instance.Translate("物品：{0}"), item.Name),
+                string.Format(I18nService.Instance.Translate("起止时间：{0}"), item.TimeRange),
+                string.Format(I18nService.Instance.Translate("来源：{0}"), item.Source)
             };
-            if (!string.IsNullOrWhiteSpace(item.VerificationSource)) lines.Add($"核实来源：{item.VerificationSource}");
-            lines.Add($"记录时间：{item.RecordedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}");
-            lines.Add($"{(item.Kind == "Delta" ? "增减数量" : "上报数量")}：{item.Quantity}");
-            if (item.Baseline is { } baseline) lines.Add($"原库存：{baseline}");
+            if (!string.IsNullOrWhiteSpace(item.VerificationSource)) lines.Add(string.Format(I18nService.Instance.Translate("核实来源：{0}"), item.VerificationSource));
+            lines.Add(string.Format(I18nService.Instance.Translate("记录时间：{0:yyyy-MM-dd HH:mm:ss}"), item.RecordedAt.ToLocalTime()));
+            lines.Add(string.Format(item.Kind == "Delta" ? I18nService.Instance.Translate("增减数量：{0}") : I18nService.Instance.Translate("上报数量：{0}"), item.Quantity));
+            if (item.Baseline is { } baseline) lines.Add(string.Format(I18nService.Instance.Translate("原库存：{0}"), baseline));
             return string.Join("\n", lines);
         }
     }

@@ -168,4 +168,61 @@
   <data name="脆弱树脂" xml:space="preserve">
     <value>Fragile Resin</value>
   </data>
+  <data name="地脉花_溢口" xml:space="preserve">
+    <value>Outcrop</value>
+  </data>
+  <data name="地脉花_交互提示" xml:space="preserve">
+    <value>(?i)Ley\s*Line|Blossom|Outcrop</value>
+  </data>
+  <data name="地脉花_地脉之花" xml:space="preserve">
+    <value>Ley\s*Line\s*Blossom|Blossom</value>
+  </data>
+  <data name="地脉花_领奖标题" xml:space="preserve">
+    <value>Ley\s*Line|Blossom|Activat</value>
+  </data>
+  <data name="地脉花_领奖内容" xml:space="preserve">
+    <value>Resin|Ley\s*Line|Activat|Replenish</value>
+  </data>
+  <data name="地脉花_原粹" xml:space="preserve">
+    <value>Original</value>
+  </data>
+  <data name="地脉花_双倍" xml:space="preserve">
+    <value>Double|2x|x2</value>
+  </data>
+  <data name="地脉花_复苏" xml:space="preserve">
+    <value>Reviv</value>
+  </data>
+  <data name="地脉花_停止追踪" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="地脉花_追踪目标" xml:space="preserve">
+    <value>Ley\s*Line|Outcrop</value>
+  </data>
+  <data name="地脉花_战斗提示" xml:space="preserve">
+    <value>Defeat|opponent|enem</value>
+  </data>
+  <data name="地脉花_国家_蒙德" xml:space="preserve">
+    <value>Mondstadt</value>
+  </data>
+  <data name="地脉花_国家_璃月" xml:space="preserve">
+    <value>Liyue</value>
+  </data>
+  <data name="地脉花_国家_稻妻" xml:space="preserve">
+    <value>Inazuma</value>
+  </data>
+  <data name="地脉花_国家_须弥" xml:space="preserve">
+    <value>Sumeru</value>
+  </data>
+  <data name="地脉花_国家_枫丹" xml:space="preserve">
+    <value>Fontaine</value>
+  </data>
+  <data name="地脉花_国家_纳塔" xml:space="preserve">
+    <value>Natlan</value>
+  </data>
+  <data name="地脉花_国家_挪德卡莱" xml:space="preserve">
+    <value>Nod\W?Krai</value>
+  </data>
+  <data name="地脉花_国家_至冬" xml:space="preserve">
+    <value>Snezhnaya</value>
+  </data>
 </root>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BetterGenshinImpact.Service.I18n;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -42,7 +43,7 @@ public sealed class PuloniaTaskPlan
     /// 计划显示名称，修改时不改变 ID。
     /// </summary>
     [JsonProperty("name", Required = Required.Always)]
-    public string Name { get; set; } = "新计划";
+    public string Name { get; set; } = I18nService.Key("新计划");
 
     /// <summary>
     /// 用户填写的计划说明。
@@ -60,7 +61,7 @@ public sealed class PuloniaTaskPlan
     /// 唯一根节点，类型固定为 group。
     /// </summary>
     [JsonProperty("root_task", Required = Required.Always)]
-    public PuloniaTask RootTask { get; set; } = new() { Name = "根分组" };
+    public PuloniaTask RootTask { get; set; } = new() { Name = I18nService.Key("根分组") };
 
     /// <summary>
     /// 计划内定时与热键配置，运行状态和调度游标不写入此处。

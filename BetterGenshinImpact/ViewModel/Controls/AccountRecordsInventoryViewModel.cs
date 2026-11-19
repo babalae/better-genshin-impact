@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -83,7 +84,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowMissingIconRowNumbers));
     });
     /// <summary>当前账号的总项数与搜索、分类筛选后可见的项数。</summary>
-    public string ItemCountText => $"共 {Rows.Count} 项，筛选后 {Items.Cast<AccountRecordsInventoryRow>().Count()} 项";
+    public string ItemCountText => string.Format(I18nService.Instance.Translate("共 {0} 项，筛选后 {1} 项"), Rows.Count, Items.Cast<AccountRecordsInventoryRow>().Count());
     /// <summary>是否选择了账号。</summary>
     public bool HasUid => Uid != null;
     /// <summary>默认显示来源名称。</summary>
@@ -126,7 +127,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
                 using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
             });
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "打开 Warning 规则", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), I18nService.Instance.Translate("打开 Warning 规则"), MessageBoxButton.OK); }
     }
 
     /// <summary>当前搜索词。</summary>
@@ -220,7 +221,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     /// <summary>同步完整字典分类；原选中分类全部消失时恢复全选，主动取消全选则保持。</summary>
     private void UpdateCategories(System.Collections.Generic.IEnumerable<string> categories)
     {
-        var names = categories.Select(value => string.IsNullOrEmpty(value) ? "未分类" : value).Append("未分类").Distinct().OrderBy(value => value, _catalog.TextComparer).ToArray();
+        var names = categories.Select(value => string.IsNullOrEmpty(value) ? I18nService.Key("未分类") : value).Append(I18nService.Key("未分类")).Distinct().OrderBy(value => value, _catalog.TextComparer).ToArray();
         if (names.SequenceEqual(Categories.Select(item => item.Name))) return;
         var previous = Categories.ToDictionary(item => item.Name, item => item.IsSelected);
         var allSelected = AllCategoriesSelected;
@@ -324,7 +325,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            if (Uid == uid && version == _loadVersion) Status = $"库存检查失败：{AccountRecordsErrorMessages.Describe(ex)} 当前保留上次读取的内容。";
+            if (Uid == uid && version == _loadVersion) Status = string.Format(I18nService.Instance.Translate("库存检查失败：{0} 当前保留上次读取的内容。"), AccountRecordsErrorMessages.Describe(ex));
         }
     }
 
@@ -368,14 +369,14 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
             _hasSnapshot = true;
             NotifyWorkspaceChanged();
             var errors = Rows.Count(row => row.StateRank == 0);
-            Status = errors > 0 ? $"{errors} 项库存异常待处理，请点击状态灯查看。" : "";
-            if (workspace.WarningRuleError != null) Status = $"提醒规则无效：{workspace.WarningRuleError}";
+            Status = errors > 0 ? string.Format(I18nService.Instance.Translate("{0} 项库存异常待处理，请点击状态灯查看。"), errors) : "";
+            if (workspace.WarningRuleError != null) Status = string.Format(I18nService.Instance.Translate("提醒规则无效：{0}"), workspace.WarningRuleError);
             OnPropertyChanged(nameof(IsEmpty)); OnPropertyChanged(nameof(PreferReadableSource)); OnPropertyChanged(nameof(SnapshotsEnabled));
         }
         catch (Exception ex)
         {
             if (version == _loadVersion)
-                Status = $"库存读取失败：{AccountRecordsErrorMessages.Describe(ex)}" + (Rows.Count > 0 ? " 当前保留上次读取的内容。" : "");
+                Status = string.Format(I18nService.Instance.Translate("库存读取失败：{0}"), AccountRecordsErrorMessages.Describe(ex)) + (Rows.Count > 0 ? I18nService.Instance.Translate(" 当前保留上次读取的内容。") : "");
         }
         finally
         {
@@ -417,7 +418,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         };
         if (relativePath == null) return;
         var path = Global.Absolute(relativePath);
-        var title = kind switch { "items" => "物品字典", "user" => "补充字典", _ => "来源字典" };
+        var title = kind switch { "items" => I18nService.Instance.Translate("物品字典"), "user" => I18nService.Instance.Translate("补充字典"), _ => I18nService.Instance.Translate("来源字典") };
         new AccountRecordsDictionaryDialog(new AccountRecordsDictionaryViewModel(title, path, kind != "items", _catalog,
             kind == "user", kind == "user" ? _store.RestorePresetCategoriesAsync : null))
         { Owner = Application.Current.MainWindow }.ShowDialog();
@@ -519,7 +520,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
             if (Uid == uid && version == _loadVersion && _hasSnapshot) await RefreshRowsAsync(refresh);
             OnPropertyChanged(nameof(PreferReadableSource)); OnPropertyChanged(nameof(SnapshotsEnabled));
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "狛荷屋记录", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), I18nService.Instance.Translate("狛荷屋记录"), MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
     }
 
     /// <summary>打开数量编辑；已收录名称与内置非空分类只读，用户补充分类允许修订。</summary>
@@ -555,7 +556,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     {
         if (Uid == null || row == null) return;
         var uid = Uid;
-        if (await ThemedMessageBox.ShowAsync($"删除“{row.Name}”的库存、异常和快照中的记录？", "删除库存记录", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+        if (await ThemedMessageBox.ShowAsync(string.Format(I18nService.Instance.Translate("删除“{0}”的库存、异常和快照中的记录？"), row.Name), I18nService.Instance.Translate("删除库存记录"), MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             await RunManualAsync(() => _store.DeleteItemAsync(uid, row.Name));
     }
 
@@ -586,21 +587,21 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         try { previous = InventoryStore.GetRetentionLimit(await _store.GetSettingsAsync(), kind); }
         catch (Exception ex)
         {
-            await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "读取保存设置", MessageBoxButton.OK);
+            await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), I18nService.Instance.Translate("读取保存设置"), MessageBoxButton.OK);
             return;
         }
-        var prompt = events ? "每个 UID 保留多少条事件？（1000～50000，默认 5000）超限清理最旧的已结束记录；未解决事件保留，实际数量可能超过上限。"
-            : snapshots ? "保留最近几个有记录的日期？（1～30）" : "每个物品保留几个最近来源？（1～10，含当前记录）";
-        var value = PromptDialog.Prompt(prompt, "保存设置", previous.ToString(CultureInfo.InvariantCulture));
+        var prompt = events ? I18nService.Instance.Translate("每个 UID 保留多少条事件？（1000～50000，默认 5000）超限清理最旧的已结束记录；未解决事件保留，实际数量可能超过上限。")
+            : snapshots ? I18nService.Instance.Translate("保留最近几个有记录的日期？（1～30）") : I18nService.Instance.Translate("每个物品保留几个最近来源？（1～10，含当前记录）");
+        var value = PromptDialog.Prompt(prompt, I18nService.Instance.Translate("保存设置"), previous.ToString(CultureInfo.InvariantCulture));
         if (string.IsNullOrEmpty(value)) return;
         if (!int.TryParse(value, out var count) || count < (events ? 1000 : 1) || count > (events ? 50000 : snapshots ? 30 : 10))
-        { await ThemedMessageBox.ShowAsync($"保留数量须为 {(events ? "1000～50000" : snapshots ? "1～30" : "1～10")} 范围内的整数，设置尚未保存。", "保存设置", MessageBoxButton.OK); return; }
+        { await ThemedMessageBox.ShowAsync(string.Format(I18nService.Instance.Translate("保留数量须为 {0} 范围内的整数，设置尚未保存。"), events ? "1000～50000" : snapshots ? "1～30" : "1～10"), I18nService.Instance.Translate("保存设置"), MessageBoxButton.OK); return; }
         if (count < previous)
         {
-            var records = events ? "已结束事件" : snapshots ? "日期快照" : "每个物品的来源记录";
+            var records = events ? I18nService.Instance.Translate("已结束事件") : snapshots ? I18nService.Instance.Translate("日期快照") : I18nService.Instance.Translate("每个物品的来源记录");
             if (await ThemedMessageBox.ShowAsync(
-                    $"将{records}保留数量从 {previous} 调小至 {count}，会立即清理所有 UID 中超出上限的旧记录。\n调大数量不会恢复已清理的记录。请先备份运行目录下的 User/AccountRecords 文件夹，再继续操作。\n\n是否继续？",
-                    "减少保留数量", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning) != MessageBoxResult.Yes)
+                    string.Format(I18nService.Instance.Translate("将{0}保留数量从 {1} 调小至 {2}，会立即清理所有 UID 中超出上限的旧记录。\n调大数量不会恢复已清理的记录。请先备份运行目录下的 User/AccountRecords 文件夹，再继续操作。\n\n是否继续？"), records, previous, count),
+                    I18nService.Instance.Translate("减少保留数量"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning) != MessageBoxResult.Yes)
                 return;
         }
         await RunManualAsync(async () =>
@@ -612,8 +613,8 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     /// <summary>清理公共派生图片，不影响任何 UID 的库存。</summary>
     [RelayCommand] private async Task ClearIconCache()
     {
-        if (await ThemedMessageBox.ShowAsync("清理所有 UID 共用的物品图标？删除后需重新采集或手动上传，当前尚未接入图标自动重建。库存和事件记录不受影响。",
-            "清理所有图像缓存", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+        if (await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("清理所有 UID 共用的物品图标？删除后需重新采集或手动上传，当前尚未接入图标自动重建。库存和事件记录不受影响。"),
+            I18nService.Instance.Translate("清理所有图像缓存"), MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             await RunManualAsync(() => Task.Run(_icons.Clear), AccountRecordsRefreshKind.Icons);
     }
 
@@ -625,8 +626,8 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     private async Task DeleteIcon(AccountRecordsInventoryRow? row)
     {
         if (row == null || !CanDeleteIcon(row)) return;
-        if (await ThemedMessageBox.ShowAsync($"清理“{row.Name}”的图标缓存？所有 UID 共用此图标，删除后需重新采集或手动上传，当前尚未接入图标自动重建。库存记录不受影响。",
-            "清理物品图标缓存", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+        if (await ThemedMessageBox.ShowAsync(string.Format(I18nService.Instance.Translate("清理“{0}”的图标缓存？所有 UID 共用此图标，删除后需重新采集或手动上传，当前尚未接入图标自动重建。库存记录不受影响。"), row.Name),
+            I18nService.Instance.Translate("清理物品图标缓存"), MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             await RunManualAsync(() => Task.Run(() => _icons.Delete(row.Name)), AccountRecordsRefreshKind.Icons);
     }
 
@@ -637,7 +638,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         if (row == null) return;
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "选择物品图标（最多 4 MiB）", Filter = "图片|*.png;*.jpg;*.jpeg;*.webp;*.bmp", CheckFileExists = true
+            Title = I18nService.Instance.Translate("选择物品图标（最多 4 MiB）"), Filter = I18nService.Instance.Translate("图片") + "|*.png;*.jpg;*.jpeg;*.webp;*.bmp", CheckFileExists = true
         };
         if (dialog.ShowDialog() != true) return;
         await RunManualAsync(() => Task.Run(() =>

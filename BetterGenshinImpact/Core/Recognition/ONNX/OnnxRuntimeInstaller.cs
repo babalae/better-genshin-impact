@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -297,7 +298,7 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
             ExpectedSize = package.DownloadBytes > 0 ? package.DownloadBytes : null,
             ExpectedHash = package.Hash is null ? null : new DownloadHash(package.HashAlgorithm, package.Hash),
             // 下载完成后还要解压和安装，重试需要回到设置页
-            Origin = "硬件加速设置",
+            Origin = I18nService.Key("硬件加速设置"),
         }, token);
         task.ProgressChanged += (_, p) =>
         {

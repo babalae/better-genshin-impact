@@ -3,6 +3,7 @@
                  xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
                  
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
@@ -238,13 +239,13 @@
     </ui:CardControl.Style>
     <ui:CardControl.Header>
         <StackPanel Margin="0,0,16,0">
-            <ui:TextBlock FontTypography="Body" Text="树脂使用" TextWrapping="Wrap" />
+            <ui:TextBlock FontTypography="Body" Text="{i18n:T 树脂使用}" TextWrapping="Wrap" />
             <ContentControl Content="{Binding Resin, Mode=OneWay}" ContentTemplate="{StaticResource ResinUsageSummaryTemplate}"
                             Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             HorizontalContentAlignment="Stretch" Focusable="False" />
         </StackPanel>
     </ui:CardControl.Header>
-    <ui:Button Content="设置" MinWidth="88" Command="{Binding Resin.EditCommand, Mode=OneWay}"
+    <ui:Button Content="{i18n:T 设置}" MinWidth="88" Command="{Binding Resin.EditCommand, Mode=OneWay}"
                AutomationProperties.Name="设置树脂使用" ToolTip="{Binding Resin.Summary, Mode=OneWay}" />
 </ui:CardControl>
                 <StackPanel>
@@ -296,6 +297,12 @@
                 </combat:CombatStrategyPicker>
                 <ComboBox ItemsSource="{Binding Choices, Mode=OneWay}"
                           SelectedItem="{Binding SelectedChoice, Mode=TwoWay}">
+                    <!-- 选项可能是保存的中文 Key，按界面语言展示，不改变保存值 -->
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{i18n:TBinding}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
                     <ComboBox.Style>
                         <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -308,8 +315,8 @@
                     </ComboBox.Style>
                 </ComboBox>
                 <ui:ToggleSwitch IsChecked="{Binding BooleanValue, Mode=TwoWay}"
-                                 OnContent="已开启"
-                                 OffContent="已关闭">
+                                 OnContent="{i18n:T 已开启}"
+                                 OffContent="{i18n:T 已关闭}">
                     <ui:ToggleSwitch.Style>
                         <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -394,7 +401,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Margin="0,0,10,0" VerticalAlignment="Center" Text="仓库" />
+                            <TextBlock Margin="0,0,10,0" VerticalAlignment="Center" Text="{i18n:T 仓库}" />
                             <ComboBox Grid.Column="1"
                                       MinWidth="170"
                                       Margin="0,0,10,0"
@@ -404,13 +411,13 @@
                                       Style="{StaticResource PuloniaRepositorySelectorStyle}" />
                             <StackPanel Grid.Column="2" Orientation="Horizontal">
                                 <ui:Button Command="{Binding OpenRepositoryManagerCommand}"
-                                           Content="管理仓库"
-                                           ToolTip="打开 Pulonia 仓库管理，添加、同步和管理来源" />
+                                           Content="{i18n:T 管理仓库}"
+                                           ToolTip="{i18n:T '打开 Pulonia 仓库管理，添加、同步和管理来源'}" />
                             </StackPanel>
                         </Grid>
                         <TextBlock Margin="0,7,0,0" FontSize="11" TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="当前列表读取本机仓库副本或本地仓库；添加任务不会访问远端。如需远端最新内容，请先同步仓库。" />
+                                   Text="{i18n:T 当前列表读取本机仓库副本或本地仓库；添加任务不会访问远端。如需远端最新内容，请先同步仓库。}" />
                     </StackPanel>
                 </Border>
 
@@ -437,7 +444,7 @@
                                     Orientation="Horizontal">
                             <ui:Button Margin="0,0,6,0"
                                        Command="{Binding OpenResourceRepositoryCommand}"
-                                       Content="获取更多资源">
+                                       Content="{i18n:T 获取更多资源}">
                                 <ui:Button.Style>
                                     <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                         <Setter Property="Visibility" Value="Visible" />
@@ -450,7 +457,7 @@
                                 </ui:Button.Style>
                             </ui:Button>
                             <ui:Button Command="{Binding RefreshResourcesCommand}"
-                                       Content="刷新" />
+                                       Content="{i18n:T 刷新}" />
                         </StackPanel>
                         <Grid Grid.Row="2" Margin="0,8,0,0">
                             <!-- 地图追踪保留 d-v3 易理解的目录层级，同时用 Behavior 维持 MVVM 选中状态。 -->
@@ -576,7 +583,7 @@
                                 <TextBlock Text="{Binding RepositoryGuidance}" TextWrapping="Wrap"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                 <ui:Button Margin="0,12,0,0" HorizontalAlignment="Left"
-                                           Content="打开仓库管理" Command="{Binding OpenRepositoryManagerCommand}" />
+                                           Content="{i18n:T 打开仓库管理}" Command="{Binding OpenRepositoryManagerCommand}" />
                             </StackPanel>
                         </Grid>
                     </Grid>
@@ -675,7 +682,7 @@
                                     <StackPanel>
                                         <TextBlock Margin="0,0,0,5"
                                                    FontWeight="SemiBold"
-                                                   Text="目录添加方式" />
+                                                   Text="{i18n:T 目录添加方式}" />
                                         <ComboBox DisplayMemberPath="DisplayName"
                                                   ItemsSource="{Binding DirectoryImportModes}"
                                                   SelectedItem="{Binding SelectedDirectoryImportMode, Mode=TwoWay}" />
@@ -684,7 +691,7 @@
                                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                                    Text="{Binding DirectoryImportModeDescription}"
                                                    TextWrapping="Wrap" />
-                                        <CheckBox Content="包含全部子目录"
+                                        <CheckBox Content="{i18n:T 包含全部子目录}"
                                                   IsChecked="{Binding IncludeSubdirectories, Mode=TwoWay}" />
                                     </StackPanel>
                                 </Border>
@@ -754,11 +761,11 @@
                         <TextBlock Margin="0,0,0,12"
                                    FontSize="15"
                                    FontWeight="SemiBold"
-                                   Text="创建设置" />
+                                   Text="{i18n:T 创建设置}" />
                         <ItemsControl ItemsSource="{Binding ParameterFields}"
                                       ItemTemplate="{StaticResource ParameterFieldTemplate}" />
                         <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="此任务无需额外参数，确认后即可添加。">
+                                   Text="{i18n:T 此任务无需额外参数，确认后即可添加。}">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -809,11 +816,11 @@
                                Margin="0,0,8,0"
                                Appearance="Primary"
                                Command="{Binding ConfirmCommand}"
-                               Content="添加任务"
+                               Content="{i18n:T 添加任务}"
                                IsDefault="True" />
                     <ui:Button MinWidth="76"
                                Command="{Binding CancelCommand}"
-                               Content="取消"
+                               Content="{i18n:T 取消}"
                                IsCancel="True" />
                 </StackPanel>
             </Grid>

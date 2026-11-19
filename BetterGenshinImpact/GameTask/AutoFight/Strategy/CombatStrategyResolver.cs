@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service.I18n;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Strategy;
@@ -79,7 +80,8 @@ public static class CombatStrategyResolver
             {
                 var relative = System.IO.Path.GetRelativePath(fightRoot, path);
                 canonical = relative == "." ? AutoSelectName : AutoScopePrefix + relative;
-                display = relative == "." ? "按队伍匹配" : "按队伍匹配 · " + relative.Replace("\\", " / ");
+                // 仅用于界面展示，按当前界面语言翻译
+                display = relative == "." ? I18nService.Instance.Translate("按队伍匹配") : string.Format(I18nService.Instance.Translate("按队伍匹配 · {0}"), relative.Replace("\\", " / "));
             }
             else if (kind == CombatStrategyKind.KeyMouse && IsWithin(path, macroRoot))
             {

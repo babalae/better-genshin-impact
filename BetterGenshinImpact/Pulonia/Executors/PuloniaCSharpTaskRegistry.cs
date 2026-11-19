@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Executors;
@@ -62,7 +63,7 @@ public sealed class PuloniaCSharpTaskRegistry
     {
         var delayMilliseconds = parameters.Value<int?>("delay_milliseconds") ?? 0;
         if (delayMilliseconds is < 0 or > 600000)
-            return PuloniaTaskOutcome.Failure("delay_milliseconds 必须在 0—600000 之间。");
+            return PuloniaTaskOutcome.Failure(I18nService.Instance.Translate("delay_milliseconds 必须在 0—600000 之间。"));
         if (delayMilliseconds > 0)
             await Task.Delay(delayMilliseconds, ct).ConfigureAwait(false);
 
@@ -74,10 +75,10 @@ public sealed class PuloniaCSharpTaskRegistry
         }
         catch (Exception ex) when (ex is FormatException or OverflowException or InvalidCastException)
         {
-            return PuloniaTaskOutcome.Failure("values 必须全部是可求和的有限数字：" + ex.Message);
+            return PuloniaTaskOutcome.Failure(I18nService.Instance.Translate("values 必须全部是可求和的有限数字：") + ex.Message);
         }
 
-        return PuloniaTaskOutcome.Success($"计算完成，合计为 {sum}。", new JObject
+        return PuloniaTaskOutcome.Success(string.Format(I18nService.Instance.Translate("计算完成，合计为 {0}。"), sum), new JObject
         {
             ["sum"] = sum,
             ["value_count"] = values.Count,

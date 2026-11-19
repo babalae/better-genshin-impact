@@ -8,6 +8,7 @@ using System.Windows;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Remote;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -197,24 +198,26 @@ public partial class PuloniaPlanEditingSession : ObservableObject
             }
             IsInitialized = true;
             if (Documents.Count == 0)
-                CreatePlanDocument("我的任务计划");
+                // 默认计划名是数据值，界面通过 {i18n:TBinding Name} 翻译展示
+                CreatePlanDocument(I18nService.Key("我的任务计划"));
             var failures = plans.Failures.Concat(profiles.Failures).ToArray();
             var failureNotice = failures.Length == 0 ? null
-                : $"有 {failures.Length} 个计划或设置方案文件无法读取，已跳过（文件未删除）：" + string.Join("；", failures.Select(item => item.ToString()));
+                : string.Format(I18nService.Instance.Translate("有 {0} 个计划或设置方案文件无法读取，已跳过（文件未删除）："), failures.Length)
+                  + string.Join("；", failures.Select(item => item.ToString()));
             LoadMessage = string.Join("\n", new[] { TaskService.RecoveryNotice, failureNotice }.OfType<string>()) is { Length: > 0 } notice
                 ? notice
-                : $"已加载 {Documents.Count} 个计划和 {_profiles.Count} 个设置方案。";
+                : string.Format(I18nService.Instance.Translate("已加载 {0} 个计划和 {1} 个设置方案。"), Documents.Count, _profiles.Count);
             if (failureNotice is not null)
             {
                 ReportStatus(failureNotice);
-                await ThemedMessageBox.WarningAsync(failureNotice, "部分任务计划无法读取");
+                await ThemedMessageBox.WarningAsync(failureNotice, I18nService.Instance.Translate("部分任务计划无法读取"));
             }
         }
         catch (Exception ex)
         {
-            LoadMessage = "加载失败：" + ex.Message;
+            LoadMessage = I18nService.Instance.Translate("加载失败：") + ex.Message;
             ReportStatus(LoadMessage);
-            await ThemedMessageBox.ErrorAsync(LoadMessage, "无法加载任务计划");
+            await ThemedMessageBox.ErrorAsync(LoadMessage, I18nService.Instance.Translate("无法加载任务计划"));
         }
         finally
         {
@@ -392,9 +395,10 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         catch (Exception ex)
         {
             document.SetSaveError(ex.Message);
-            var message = $"“{document.Name}”保存失败，修改仍保留在当前页面：{ex.Message}";
+            var message = string.Format(I18nService.Instance.Translate("“{0}”保存失败，修改仍保留在当前页面：{1}"),
+                I18nService.Instance.Translate(document.Name), ex.Message);
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "任务计划保存失败");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("任务计划保存失败"));
             return false;
         }
         finally
@@ -415,8 +419,8 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         if (document.IsDirty)
         {
             var result = await ThemedMessageBox.ShowAsync(
-                "重新加载会丢弃当前计划尚未保存的编辑，是否继续？",
-                "重新加载任务计划", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning,
+                I18nService.Instance.Translate("重新加载会丢弃当前计划尚未保存的编辑，是否继续？"),
+                I18nService.Instance.Translate("重新加载任务计划"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning,
                 MessageBoxResult.No);
             if (result != MessageBoxResult.Yes)
                 return;
@@ -432,18 +436,18 @@ public partial class PuloniaPlanEditingSession : ObservableObject
             var diskPlan = await _store.LoadPlanAsync(document.Id);
             if (diskPlan is null)
             {
-                ReportStatus("该计划尚未保存，磁盘上没有可重新加载的版本。");
+                ReportStatus(I18nService.Instance.Translate("该计划尚未保存，磁盘上没有可重新加载的版本。"));
                 ScheduleAutoSave(document);
                 return;
             }
             document.ReplaceFromDisk(diskPlan);
-            ReportStatus($"已从磁盘重新加载“{diskPlan.Name}”。");
+            ReportStatus(string.Format(I18nService.Instance.Translate("已从磁盘重新加载“{0}”。"), I18nService.Instance.Translate(diskPlan.Name)));
         }
         catch (Exception ex)
         {
-            var message = "重新加载失败，当前内容未变：" + ex.Message;
+            var message = I18nService.Instance.Translate("重新加载失败，当前内容未变：") + ex.Message;
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "任务计划重新加载失败");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("任务计划重新加载失败"));
             ScheduleAutoSave(document);
         }
         finally
@@ -474,7 +478,8 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         {
             var documents = document.Purpose == PuloniaTaskPlanPurpose.OneDragon ? OneDragonDocuments : Documents;
             var plan = PuloniaTaskJson.CopyPlan(document.Plan);
-            var baseName = document.Name + " - 副本";
+            // 副本名称按当前界面语言生成，之后作为用户内容保存
+            var baseName = string.Format(I18nService.Instance.Translate("{0} - 副本"), I18nService.Instance.Translate(document.Name));
             var name = baseName;
             var suffix = 1;
             while (documents.Any(item => item.Name == name))
@@ -488,14 +493,14 @@ public partial class PuloniaPlanEditingSession : ObservableObject
             // 副本紧邻来源计划，便于连续复制后比较编辑内容。
             documents.Move(documents.IndexOf(copy), documents.IndexOf(document) + 1);
             if (await SaveDocumentAsync(copy))
-                ReportStatus($"已复制为“{name}”。副本的定时和快捷键触发默认关闭，可在触发方式中启用。");
+                ReportStatus(string.Format(I18nService.Instance.Translate("已复制为“{0}”。副本的定时和快捷键触发默认关闭，可在触发方式中启用。"), name));
             return copy;
         }
         catch (Exception ex)
         {
-            var message = "复制计划失败：" + ex.Message;
+            var message = I18nService.Instance.Translate("复制计划失败：") + ex.Message;
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "无法复制任务计划");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("无法复制任务计划"));
             return null;
         }
         finally
@@ -514,9 +519,9 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         if (!CanManagePlan(document))
             return false;
         var answer = await ThemedMessageBox.ShowAsync(
-            $"确定删除任务计划“{document.Name}”及其全部任务和触发配置？此操作无法撤销。\n"
-            + "已有执行记录会保留；已开始的手动运行仍按提交时的内容继续执行。",
-            "删除任务计划", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning,
+            string.Format(I18nService.Instance.Translate("确定删除任务计划“{0}”及其全部任务和触发配置？此操作无法撤销。\n已有执行记录会保留；已开始的手动运行仍按提交时的内容继续执行。"),
+                I18nService.Instance.Translate(document.Name)),
+            I18nService.Instance.Translate("删除任务计划"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning,
             MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes || !CanManagePlan(document))
             return false;
@@ -538,7 +543,7 @@ public partial class PuloniaPlanEditingSession : ObservableObject
             document.IsDeleted = true;
             DetachDocument(document);
             UpdateResourceSummaries(GetResourceDocuments());
-            ReportStatus($"已删除任务计划“{document.Name}”，执行记录已保留。");
+            ReportStatus(string.Format(I18nService.Instance.Translate("已删除任务计划“{0}”，执行记录已保留。"), I18nService.Instance.Translate(document.Name)));
             await PersistPlanOrderAsync();
             // 被删计划有折叠记录时才重写展开状态，其余情况无需写盘。
             if (hadCollapsedNodes)
@@ -547,9 +552,9 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         }
         catch (Exception ex)
         {
-            var message = "删除计划失败，当前内容已保留：" + ex.Message;
+            var message = I18nService.Instance.Translate("删除计划失败，当前内容已保留：") + ex.Message;
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "无法删除任务计划");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("无法删除任务计划"));
             return false;
         }
         finally
@@ -595,9 +600,9 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         }
         catch (Exception ex)
         {
-            var message = "计划内容未受影响，但列表顺序保存失败：" + ex.Message;
+            var message = I18nService.Instance.Translate("计划内容未受影响，但列表顺序保存失败：") + ex.Message;
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "无法保存计划顺序");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("无法保存计划顺序"));
         }
     }
 
@@ -651,7 +656,7 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         var index = selected is not null && ReferenceEquals(selected.Parent, root)
             ? root.Children.IndexOf(selected) + 1 : root.Children.Count;
         document.InsertNode(task, root, index);
-        ReportStatus($"已添加“{task.Name}”。");
+        ReportStatus(string.Format(I18nService.Instance.Translate("已添加“{0}”。"), I18nService.Instance.Translate(task.Name)));
     }
 
     /// <summary>引用普通计划前保存草稿并检查循环；目标计划保持原菜单归属。</summary>
@@ -679,7 +684,7 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         foreach (var plan in result.Plans)
         {
             var baseName = plan.Name; var suffix = 2;
-            while (OneDragonDocuments.Any(d => d.Name == plan.Name)) plan.Name = baseName + $"（导入 {suffix++}）";
+            while (OneDragonDocuments.Any(d => d.Name == plan.Name)) plan.Name = string.Format(I18nService.Instance.Translate("{0}（导入 {1}）"), baseName, suffix++);
             // 归属来自导入入口，不以名称、任务类型或引用目标推断。
             plan.Purpose = PuloniaTaskPlanPurpose.OneDragon;
             var saved = await _store.SavePlanAsync(plan);
@@ -721,9 +726,9 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         }
         catch (Exception ex)
         {
-            var message = "提交运行失败：" + ex.Message;
+            var message = I18nService.Instance.Translate("提交运行失败：") + ex.Message;
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "无法运行任务计划");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("无法运行任务计划"));
             return [];
         }
 
@@ -790,27 +795,30 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         if (failed.Length == 0)
         {
             ReportStatus(results is [{ IsLocal: true }]
-                ? $"已提交“{document.Name}”，将按提交顺序执行；之后的修改不影响本次运行。"
-                : $"已提交“{document.Name}”到{string.Join("、", results.Select(result => "“" + result.InstanceName + "”"))}执行；之后的修改不影响本次运行。");
+                ? string.Format(I18nService.Instance.Translate("已提交“{0}”，将按提交顺序执行；之后的修改不影响本次运行。"),
+                    I18nService.Instance.Translate(document.Name))
+                : string.Format(I18nService.Instance.Translate("已提交“{0}”到{1}执行；之后的修改不影响本次运行。"),
+                    I18nService.Instance.Translate(document.Name),
+                    string.Join(I18nService.Instance.Translate("、"), results.Select(result => "“" + result.InstanceName + "”"))));
             return;
         }
         if (results.Count == 1)
         {
-            var message = "提交运行失败：" + failed[0].Error;
+            var message = I18nService.Instance.Translate("提交运行失败：") + failed[0].Error;
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "无法运行任务计划");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("无法运行任务计划"));
             return;
         }
         var allFailed = failed.Length == results.Count;
         var summary = allFailed
-            ? $"“{document.Name}”未能提交到任何实例："
-            : $"“{document.Name}”只提交到了部分实例：";
+            ? string.Format(I18nService.Instance.Translate("“{0}”未能提交到任何实例："), I18nService.Instance.Translate(document.Name))
+            : string.Format(I18nService.Instance.Translate("“{0}”只提交到了部分实例："), I18nService.Instance.Translate(document.Name));
         var lines = results.Select(result => result.IsSuccess
-            ? $"{result.InstanceName}：已提交"
-            : $"{result.InstanceName}：未提交，{result.Error}").ToArray();
+            ? string.Format(I18nService.Instance.Translate("{0}：已提交"), result.InstanceName)
+            : string.Format(I18nService.Instance.Translate("{0}：未提交，{1}"), result.InstanceName, result.Error)).ToArray();
         ReportStatus(summary + string.Join("；", lines));
         await ThemedMessageBox.WarningAsync(summary + "\n" + string.Join("\n", lines),
-            allFailed ? "无法运行任务计划" : "部分实例未能提交");
+            allFailed ? I18nService.Instance.Translate("无法运行任务计划") : I18nService.Instance.Translate("部分实例未能提交"));
     }
 
 

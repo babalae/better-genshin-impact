@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Plugins.Hosting;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -102,15 +103,15 @@ public sealed partial class InstalledPluginItemViewModel : ObservableObject
         {
             var text = Entry.State switch
             {
-                PluginState.Enabled => "已启用",
-                PluginState.Disabling => "正在停用，等待进行中的调用结束",
-                PluginState.Incompatible => $"不兼容：{Entry.Error}",
-                PluginState.LoadFailed => $"加载失败：{Entry.Error}",
-                PluginState.Duplicate => $"标识重复：{Entry.Error}",
-                PluginState.Uninstalled => "已卸载，文件将在下次启动时删除",
-                _ => "未启用",
+                PluginState.Enabled => I18nService.Instance.Translate("已启用"),
+                PluginState.Disabling => I18nService.Instance.Translate("正在停用，等待进行中的调用结束"),
+                PluginState.Incompatible => string.Format(I18nService.Instance.Translate("不兼容：{0}"), Entry.Error),
+                PluginState.LoadFailed => string.Format(I18nService.Instance.Translate("加载失败：{0}"), Entry.Error),
+                PluginState.Duplicate => string.Format(I18nService.Instance.Translate("标识重复：{0}"), Entry.Error),
+                PluginState.Uninstalled => I18nService.Instance.Translate("已卸载，文件将在下次启动时删除"),
+                _ => I18nService.Instance.Translate("未启用"),
             };
-            return Entry.PendingVersion is { } pending ? $"{text} · 重启后更新到 {pending}" : text;
+            return Entry.PendingVersion is { } pending ? string.Format(I18nService.Instance.Translate("{0} · 重启后更新到 {1}"), text, pending) : text;
         }
     }
 
@@ -142,10 +143,10 @@ public sealed partial class InstalledPluginItemViewModel : ObservableObject
                 .ToList();
             if (Entry.Languages.Count > 0)
             {
-                parts.Add($"界面语言（{string.Join("、", Entry.Languages.Select(l => l.DisplayName))}）");
+                parts.Add(string.Format(I18nService.Instance.Translate("界面语言（{0}）"), string.Join("、", Entry.Languages.Select(l => l.DisplayName))));
             }
 
-            return parts.Count == 0 ? "启用后显示" : string.Join("；", parts);
+            return parts.Count == 0 ? I18nService.Instance.Translate("启用后显示") : string.Join("；", parts);
         }
     }
 
@@ -176,7 +177,7 @@ public sealed partial class InstalledPluginItemViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            _ = ThemedMessageBox.ErrorAsync($"无法打开目录：{e.Message}", "插件");
+            _ = ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("无法打开目录：{0}"), e.Message), I18nService.Instance.Translate("插件"));
         }
     }
 
@@ -199,7 +200,7 @@ public sealed partial class InstalledPluginItemViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            _ = ThemedMessageBox.ErrorAsync($"无法打开插件“{Name}”的设置：{e.GetBaseException().Message}", "插件设置");
+            _ = ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("无法打开插件“{0}”的设置：{1}"), Name, e.GetBaseException().Message), I18nService.Instance.Translate("插件设置"));
             return;
         }
 
@@ -230,7 +231,7 @@ public sealed partial class InstalledPluginItemViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            _ = ThemedMessageBox.ErrorAsync($"无法打开主页：{e.Message}", "插件");
+            _ = ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("无法打开主页：{0}"), e.Message), I18nService.Instance.Translate("插件"));
         }
     }
 
@@ -266,7 +267,7 @@ public sealed partial class InstalledPluginItemViewModel : ObservableObject
             {
                 if (!_manager.Enable(Entry))
                 {
-                    await ThemedMessageBox.ErrorAsync($"启用插件“{Name}”失败：{Entry.Error}", "启用插件");
+                    await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("启用插件“{0}”失败：{1}"), Name, Entry.Error), I18nService.Instance.Translate("启用插件"));
                 }
             }
             else

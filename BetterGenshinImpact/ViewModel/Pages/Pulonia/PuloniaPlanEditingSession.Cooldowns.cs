@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Threading;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 
@@ -369,16 +370,18 @@ public partial class PuloniaPlanEditingSession
             var lines = new List<string>
             {
                 $"{PuloniaCooldownText.Account(account.Name)}：{PuloniaCooldownText.State(status.State)}",
-                status.Completion is null ? "上次成功：没有记录" : "上次成功：" + PuloniaCooldownText.Time(status.LastSuccessAt)
+                status.Completion is null
+                    ? I18nService.Instance.Translate("上次成功：没有记录")
+                    : I18nService.Instance.Translate("上次成功：") + PuloniaCooldownText.Time(status.LastSuccessAt)
             };
             if (status.NextEligibleAt is { } next)
-                lines.Add("下次可执行：" + PuloniaCooldownText.Time(next));
+                lines.Add(I18nService.Instance.Translate("下次可执行：") + PuloniaCooldownText.Time(next));
             return string.Join("\n", lines);
         }
 
         async Task<(string Status, bool HasRecord)> ClearAsync()
         {
-            await ClearCooldownRecordsAsync([key], $"“{node.Name}”");
+            await ClearCooldownRecordsAsync([key], $"“{I18nService.Instance.Translate(node.Name)}”");
             return (DescribeStatus(), Current().Completions.Find(key.Route) is not null);
         }
     }
@@ -390,8 +393,9 @@ public partial class PuloniaPlanEditingSession
     {
         if (keys.Count == 0) return 0;
         var answer = await ThemedMessageBox.ShowAsync(
-            $"清除{description}的路线 CD 记录（共 {keys.Count} 条）？\n\n清除后下次运行会执行这些路线；运行历史中的成功记录不受影响；此操作不能撤销。",
-            "清除路线 CD 记录", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
+            string.Format(I18nService.Instance.Translate("清除{0}的路线 CD 记录（共 {1} 条）？\n\n清除后下次运行会执行这些路线；运行历史中的成功记录不受影响；此操作不能撤销。"),
+                description, keys.Count),
+            I18nService.Instance.Translate("清除路线 CD 记录"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes) return 0;
         try
         {
@@ -401,15 +405,15 @@ public partial class PuloniaPlanEditingSession
                 removed += await AccountService.ClearRouteCompletionsAsync(group.Key,
                     group.Select(key => key.Route).Distinct(StringComparer.Ordinal).ToArray());
             await ReloadCooldownsAsync();
-            ReportStatus($"已清除 {removed} 条路线 CD 记录，这些路线下次运行会照常执行。");
+            ReportStatus(string.Format(I18nService.Instance.Translate("已清除 {0} 条路线 CD 记录，这些路线下次运行会照常执行。"), removed));
             return removed;
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.IO.IOException or UnauthorizedAccessException
                                        or PuloniaTaskValidationException or Newtonsoft.Json.JsonException)
         {
-            var message = "清除路线 CD 记录失败：" + ex.Message;
+            var message = I18nService.Instance.Translate("清除路线 CD 记录失败：") + ex.Message;
             ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "无法清除路线 CD 记录");
+            await ThemedMessageBox.ErrorAsync(message, I18nService.Instance.Translate("无法清除路线 CD 记录"));
             return 0;
         }
     }
@@ -491,23 +495,25 @@ public partial class PuloniaPlanEditingSession
     {
         var text = status.State switch
         {
-            PuloniaRouteCooldownState.CoolingDown when status.NextEligibleAt is { } next => "CD 中 · " + PuloniaCooldownText.Remaining(next, now),
-            PuloniaRouteCooldownState.Completed => "已完成",
-            PuloniaRouteCooldownState.Unmatched => "未识别 CD",
+            PuloniaRouteCooldownState.CoolingDown when status.NextEligibleAt is { } next => I18nService.Instance.Translate("CD 中 · ") + PuloniaCooldownText.Remaining(next, now),
+            PuloniaRouteCooldownState.Completed => I18nService.Instance.Translate("已完成"),
+            PuloniaRouteCooldownState.Unmatched => I18nService.Instance.Translate("未识别 CD"),
             _ => null
         };
         if (text is null) return (null, false, null);
         var lines = new List<string>
         {
-            $"路线 CD（{PuloniaCooldownText.Account(account.Name)}）：{PuloniaCooldownText.State(status.State)}",
-            $"规则：{rule.MaterialName ?? "未识别"} · {rule.Description}"
+            string.Format(I18nService.Instance.Translate("路线 CD（{0}）：{1}"), PuloniaCooldownText.Account(account.Name),
+                PuloniaCooldownText.State(status.State)),
+            string.Format(I18nService.Instance.Translate("规则：{0} · {1}"), rule.MaterialName ?? I18nService.Instance.Translate("未识别"),
+                rule.DisplayDescription)
         };
-        if (status.LastSuccessAt is { } last) lines.Add("上次成功：" + PuloniaCooldownText.Time(last));
-        if (status.NextEligibleAt is { } eligible) lines.Add("下次可执行：" + PuloniaCooldownText.Time(eligible));
+        if (status.LastSuccessAt is { } last) lines.Add(I18nService.Instance.Translate("上次成功：") + PuloniaCooldownText.Time(last));
+        if (status.NextEligibleAt is { } eligible) lines.Add(I18nService.Instance.Translate("下次可执行：") + PuloniaCooldownText.Time(eligible));
         if (status.State == PuloniaRouteCooldownState.Unmatched)
-            lines.Add("路径中没有已知的材料或类别目录，成功后不会跳过；可在“共享设置 → 路线 CD”中选择自定义周期。");
+            lines.Add(I18nService.Instance.Translate("路径中没有已知的材料或类别目录，成功后不会跳过；可在“共享设置 → 路线 CD”中选择自定义周期。"));
         else
-            lines.Add("本次运行会跳过；可在“共享设置 → 路线 CD”中清除记录。");
+            lines.Add(I18nService.Instance.Translate("本次运行会跳过；可在“共享设置 → 路线 CD”中清除记录。"));
         return (text, status.State == PuloniaRouteCooldownState.Unmatched, string.Join("\n", lines));
     }
 
@@ -515,16 +521,20 @@ public partial class PuloniaPlanEditingSession
     private static (string? Text, bool Caution, string? ToolTip) DescribeGroup(PuloniaCooldownSummary summary)
     {
         var text = summary.Skipped > 0
-            ? summary.HasDirectory ? $"{summary.Skipped} 项 CD 中" : $"{summary.Skipped}/{summary.Total} CD 中"
-            : summary.Unmatched > 0 ? $"{summary.Unmatched} 项未识别 CD" : null;
+            ? summary.HasDirectory
+                ? string.Format(I18nService.Instance.Translate("{0} 项 CD 中"), summary.Skipped)
+                : string.Format(I18nService.Instance.Translate("{0}/{1} CD 中"), summary.Skipped, summary.Total)
+            : summary.Unmatched > 0 ? string.Format(I18nService.Instance.Translate("{0} 项未识别 CD"), summary.Unmatched) : null;
         if (text is null) return (null, false, null);
         var lines = new List<string>
         {
-            $"下属启用路线：{(summary.HasDirectory ? "已知 " : "")}{summary.Total} 条，本次会跳过 {summary.Skipped} 条（CD 中或一次性已完成），"
-            + $"未识别刷新规则 {summary.Unmatched} 条"
+            string.Format(summary.HasDirectory
+                    ? I18nService.Instance.Translate("下属启用路线：已知 {0} 条，本次会跳过 {1} 条（CD 中或一次性已完成），未识别刷新规则 {2} 条")
+                    : I18nService.Instance.Translate("下属启用路线：{0} 条，本次会跳过 {1} 条（CD 中或一次性已完成），未识别刷新规则 {2} 条"),
+                summary.Total, summary.Skipped, summary.Unmatched)
         };
-        if (summary.EarliestNext is { } next) lines.Add("最早可执行：" + PuloniaCooldownText.Time(next));
-        if (summary.HasDirectory) lines.Add("目录引用不展开，只计入仍在 CD 的记录；逐项结果请使用“预览本次执行”。");
+        if (summary.EarliestNext is { } next) lines.Add(I18nService.Instance.Translate("最早可执行：") + PuloniaCooldownText.Time(next));
+        if (summary.HasDirectory) lines.Add(I18nService.Instance.Translate("目录引用不展开，只计入仍在 CD 的记录；逐项结果请使用“预览本次执行”。"));
         return (text, summary.Skipped == 0, string.Join("\n", lines));
     }
 
@@ -533,12 +543,13 @@ public partial class PuloniaPlanEditingSession
     {
         if (summary.Total == 0 && !summary.HasDirectory) return (null, null);
         var parts = new List<string>();
-        if (summary.Skipped > 0) parts.Add($"本次 {summary.Skipped} 项会因 CD 跳过");
-        if (summary.Unmatched > 0) parts.Add($"{summary.Unmatched} 项未识别刷新规则");
-        var text = "路线 CD：" + (parts.Count == 0 ? "启用的路线均可执行" : string.Join(" · ", parts));
-        var toolTip = $"{PuloniaCooldownText.Account(account.Name)}。按计划的运行账户与各节点当前规则计算；运行到每个节点时会按运行账户重新判定。"
-                      + (summary.EarliestNext is { } next ? "\n最早可执行：" + PuloniaCooldownText.Time(next) : string.Empty)
-                      + (summary.HasDirectory ? "\n目录引用只计入仍在 CD 的记录；逐项结果请使用“预览本次执行”。" : string.Empty);
+        if (summary.Skipped > 0) parts.Add(string.Format(I18nService.Instance.Translate("本次 {0} 项会因 CD 跳过"), summary.Skipped));
+        if (summary.Unmatched > 0) parts.Add(string.Format(I18nService.Instance.Translate("{0} 项未识别刷新规则"), summary.Unmatched));
+        var text = I18nService.Instance.Translate("路线 CD：") + (parts.Count == 0 ? I18nService.Instance.Translate("启用的路线均可执行") : string.Join(" · ", parts));
+        var toolTip = string.Format(I18nService.Instance.Translate("{0}。按计划的运行账户与各节点当前规则计算；运行到每个节点时会按运行账户重新判定。"),
+                          PuloniaCooldownText.Account(account.Name))
+                      + (summary.EarliestNext is { } next ? "\n" + I18nService.Instance.Translate("最早可执行：") + PuloniaCooldownText.Time(next) : string.Empty)
+                      + (summary.HasDirectory ? "\n" + I18nService.Instance.Translate("目录引用只计入仍在 CD 的记录；逐项结果请使用“预览本次执行”。") : string.Empty);
         return (text, toolTip);
     }
 
@@ -551,8 +562,8 @@ public partial class PuloniaPlanEditingSession
             if (ReferenceEquals(other, node) || document.ResolveCooldownRule(other) is not { } otherRule
                 || otherRule.FileIdentity != rule.FileIdentity || otherRule.Description == rule.Description)
                 continue;
-            return $"同一路线在“{document.Name} / {other.Name}”中使用不同规则（{otherRule.Description}）。"
-                   + "两处共用同一条完成记录，各自按自己的规则判定。";
+            return string.Format(I18nService.Instance.Translate("同一路线在“{0} / {1}”中使用不同规则（{2}）。两处共用同一条完成记录，各自按自己的规则判定。"),
+                I18nService.Instance.Translate(document.Name), I18nService.Instance.Translate(other.Name), otherRule.DisplayDescription);
         }
         return null;
     }

@@ -10,6 +10,7 @@ using BetterGenshinImpact.Infrastructure.Storage;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Infrastructure.Cache;
 
@@ -304,10 +305,10 @@ public sealed class FileCache : IFileCache, IStorageAreaProvider, IDisposable
         var unused = ListUnusedEntries();
         if (unused.Count > 0)
         {
-            areas.Add(new StorageArea("cache:unused", "已不再使用的缓存", StorageGroup.Cache, unused)
+            areas.Add(new StorageArea("cache:unused", I18nService.Key("已不再使用的缓存"), StorageGroup.Cache, unused)
             {
-                Description = "旧功能留下的缓存文件",
-                CleanupEffect = "不影响现有功能",
+                Description = I18nService.Key("旧功能留下的缓存文件"),
+                CleanupEffect = I18nService.Key("不影响现有功能"),
             });
         }
 

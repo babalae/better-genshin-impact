@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Interop;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -58,7 +59,7 @@ public partial class PuloniaLocalRepositoryDialogViewModel : ViewModel
     private async Task SelectDirectoryAsync()
     {
         var dialog = new Wpf.Ui.Violeta.Win32.OpenFolderDialog
-        { Description = "选择包含 repo.json 索引的本地仓库根目录", UseDescriptionForTitle = true };
+        { Description = I18nService.Instance.Translate("选择包含 repo.json 索引的本地仓库根目录"), UseDescriptionForTitle = true };
         var owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive);
         var accepted = owner is null ? dialog.ShowDialog() : dialog.ShowDialog(new WindowInteropHelper(owner).Handle);
         if (accepted == true) await AddSourceAsync(dialog.SelectedPath);
@@ -70,7 +71,7 @@ public partial class PuloniaLocalRepositoryDialogViewModel : ViewModel
     {
         var dialog = new OpenFileDialog
         {
-            Title = "选择脚本仓库 ZIP 压缩包", Filter = "ZIP 压缩包 (*.zip)|*.zip",
+            Title = I18nService.Instance.Translate("选择脚本仓库 ZIP 压缩包"), Filter = I18nService.Instance.Translate("ZIP 压缩包 (*.zip)|*.zip"),
             Multiselect = false, CheckFileExists = true
         };
         var owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive);
@@ -84,7 +85,7 @@ public partial class PuloniaLocalRepositoryDialogViewModel : ViewModel
         if (!CanAcceptSource()) return;
         SourcePath = path ?? string.Empty;
         ErrorMessage = string.Empty;
-        ProgressText = "正在识别本地来源…";
+        ProgressText = I18nService.Instance.Translate("正在识别本地来源…");
         ProgressValue = 0;
         IsProgressIndeterminate = true;
         IsBusy = true;
@@ -102,7 +103,7 @@ public partial class PuloniaLocalRepositoryDialogViewModel : ViewModel
             added = await _service.AddLocalSourceAsync(SourcePath,
                 (value, text) => ((IProgress<(int, string)>)progress).Report((value, text)));
         }
-        catch (Exception ex) { ErrorMessage = "添加本地仓库失败：" + ex.Message; }
+        catch (Exception ex) { ErrorMessage = I18nService.Instance.Translate("添加本地仓库失败：") + ex.Message; }
         finally { IsBusy = false; }
         // ZIP 写入开始后等待解压和注册完整结束，再让窗口返回成功结果。
         AddedRepository = added;

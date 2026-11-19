@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -7,6 +8,7 @@ namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
 /// <summary>
 /// 历史列表和详情共用的中文状态与时间格式，不把调度状态等同于业务核验结果。
+/// 返回的展示文字按当前界面语言翻译，只用于界面展示；运行摘要类别（Bucket）保留中文 Key 参与分组排序，展示时再翻译。
 /// </summary>
 public static class PuloniaTaskHistoryText
 {
@@ -22,34 +24,34 @@ public static class PuloniaTaskHistoryText
     {
         // 1. 编排层直接给出的跳过：未启用、续跑沿用、路线 CD
         if (result.ReasonCode == PuloniaTaskRunClassifier.DisabledReason)
-            return ("未启用", "未启用", PuloniaTaskRunStatusCategory.Neutral);
+            return (I18nService.Instance.Translate("未启用"), I18nService.Key("未启用"), PuloniaTaskRunStatusCategory.Neutral);
         if (result.ReasonCode == PuloniaTaskRunClassifier.ResumeSkippedReason)
-            return ("之前已完成", "之前已完成", PuloniaTaskRunStatusCategory.Neutral);
+            return (I18nService.Instance.Translate("之前已完成"), I18nService.Key("之前已完成"), PuloniaTaskRunStatusCategory.Neutral);
         if (PuloniaRouteCooldown.IsCooldownSkip(result))
-            return ("路线 CD 中", "路线 CD 跳过", PuloniaTaskRunStatusCategory.Neutral);
+            return (I18nService.Instance.Translate("路线 CD 中"), I18nService.Key("路线 CD 跳过"), PuloniaTaskRunStatusCategory.Neutral);
 
         // 2. 调度状态本身已说明结果的情况
         switch (result.Status)
         {
             case PuloniaTaskNodeStatus.Skipped:
-                return ("已跳过", "已跳过", PuloniaTaskRunStatusCategory.Neutral);
+                return (I18nService.Instance.Translate("已跳过"), I18nService.Key("已跳过"), PuloniaTaskRunStatusCategory.Neutral);
             case PuloniaTaskNodeStatus.Cancelled:
-                return ("已停止", "已停止", PuloniaTaskRunStatusCategory.Neutral);
+                return (I18nService.Instance.Translate("已停止"), I18nService.Key("已停止"), PuloniaTaskRunStatusCategory.Neutral);
             case PuloniaTaskNodeStatus.TimedOut:
-                return ("超时", "失败", PuloniaTaskRunStatusCategory.Failed);
+                return (I18nService.Instance.Translate("超时"), I18nService.Key("失败"), PuloniaTaskRunStatusCategory.Failed);
             case PuloniaTaskNodeStatus.NeedsAttention:
-                return ("待核对", "待核对", PuloniaTaskRunStatusCategory.Attention);
+                return (I18nService.Instance.Translate("待核对"), I18nService.Key("待核对"), PuloniaTaskRunStatusCategory.Attention);
         }
 
         // 3. 执行完成或失败时，再按执行器报告的业务完成程度细分
         return result.OutcomeKind switch
         {
-            PuloniaTaskOutcomeKind.ExecutedUnverified => ("已执行，待核对", "待核对", PuloniaTaskRunStatusCategory.Attention),
-            PuloniaTaskOutcomeKind.PartiallySucceeded => ("部分完成", "待核对", PuloniaTaskRunStatusCategory.Attention),
-            PuloniaTaskOutcomeKind.NeedsAttention => ("待核对", "待核对", PuloniaTaskRunStatusCategory.Attention),
-            PuloniaTaskOutcomeKind.Cancelled => ("已停止", "已停止", PuloniaTaskRunStatusCategory.Neutral),
-            _ when result.Status == PuloniaTaskNodeStatus.Succeeded => ("成功", "成功", PuloniaTaskRunStatusCategory.Success),
-            _ => ("失败", "失败", PuloniaTaskRunStatusCategory.Failed)
+            PuloniaTaskOutcomeKind.ExecutedUnverified => (I18nService.Instance.Translate("已执行，待核对"), I18nService.Key("待核对"), PuloniaTaskRunStatusCategory.Attention),
+            PuloniaTaskOutcomeKind.PartiallySucceeded => (I18nService.Instance.Translate("部分完成"), I18nService.Key("待核对"), PuloniaTaskRunStatusCategory.Attention),
+            PuloniaTaskOutcomeKind.NeedsAttention => (I18nService.Instance.Translate("待核对"), I18nService.Key("待核对"), PuloniaTaskRunStatusCategory.Attention),
+            PuloniaTaskOutcomeKind.Cancelled => (I18nService.Instance.Translate("已停止"), I18nService.Key("已停止"), PuloniaTaskRunStatusCategory.Neutral),
+            _ when result.Status == PuloniaTaskNodeStatus.Succeeded => (I18nService.Instance.Translate("成功"), I18nService.Key("成功"), PuloniaTaskRunStatusCategory.Success),
+            _ => (I18nService.Instance.Translate("失败"), I18nService.Key("失败"), PuloniaTaskRunStatusCategory.Failed)
         };
     }
 
@@ -89,13 +91,13 @@ public static class PuloniaTaskHistoryText
     /// </summary>
     public static string Source(string source) => source switch
     {
-        "ui" => "手动执行",
-        "schedule" => "定时触发",
-        "hotkey" => "快捷键触发",
-        "resume" => "续跑",
-        "cli" => "命令行启动",
-        "csharp" => "程序调用",
-        PuloniaTaskRequest.DispatchSource => "主实例下发",
+        "ui" => I18nService.Instance.Translate("手动执行"),
+        "schedule" => I18nService.Instance.Translate("定时触发"),
+        "hotkey" => I18nService.Instance.Translate("快捷键触发"),
+        "resume" => I18nService.Instance.Translate("续跑"),
+        "cli" => I18nService.Instance.Translate("命令行启动"),
+        "csharp" => I18nService.Instance.Translate("程序调用"),
+        PuloniaTaskRequest.DispatchSource => I18nService.Instance.Translate("主实例下发"),
         _ => source
     };
 
@@ -105,16 +107,16 @@ public static class PuloniaTaskHistoryText
     /// <param name="status">运行状态</param>
     public static string Status(PuloniaTaskRunStatus status) => status switch
     {
-        PuloniaTaskRunStatus.Queued => "排队中",
-        PuloniaTaskRunStatus.Running => "运行中",
-        PuloniaTaskRunStatus.Cancelling => "停止中",
-        PuloniaTaskRunStatus.Succeeded => "已完成",
-        PuloniaTaskRunStatus.Failed => "已失败",
-        PuloniaTaskRunStatus.Cancelled => "已停止",
-        PuloniaTaskRunStatus.TimedOut => "已超时",
-        PuloniaTaskRunStatus.Interrupted => "已中断",
-        PuloniaTaskRunStatus.NeedsAttention => "待处理",
-        PuloniaTaskRunStatus.Expired => "已过期（未执行）",
+        PuloniaTaskRunStatus.Queued => I18nService.Instance.Translate("排队中"),
+        PuloniaTaskRunStatus.Running => I18nService.Instance.Translate("运行中"),
+        PuloniaTaskRunStatus.Cancelling => I18nService.Instance.Translate("停止中"),
+        PuloniaTaskRunStatus.Succeeded => I18nService.Instance.Translate("已完成"),
+        PuloniaTaskRunStatus.Failed => I18nService.Instance.Translate("已失败"),
+        PuloniaTaskRunStatus.Cancelled => I18nService.Instance.Translate("已停止"),
+        PuloniaTaskRunStatus.TimedOut => I18nService.Instance.Translate("已超时"),
+        PuloniaTaskRunStatus.Interrupted => I18nService.Instance.Translate("已中断"),
+        PuloniaTaskRunStatus.NeedsAttention => I18nService.Instance.Translate("待处理"),
+        PuloniaTaskRunStatus.Expired => I18nService.Instance.Translate("已过期（未执行）"),
         _ => status.ToString()
     };
 
@@ -123,9 +125,9 @@ public static class PuloniaTaskHistoryText
     /// </summary>
     public static string FailureBehavior(string? behavior) => behavior switch
     {
-        "continue" => "继续执行后续任务",
-        "skip_group" => "跳过所在分组",
-        _ => "停止整个计划"
+        "continue" => I18nService.Instance.Translate("继续执行后续任务"),
+        "skip_group" => I18nService.Instance.Translate("跳过所在分组"),
+        _ => I18nService.Instance.Translate("停止整个计划")
     };
 
     /// <summary>
@@ -141,9 +143,9 @@ public static class PuloniaTaskHistoryText
         var local = value.ToLocalTime();
         var today = DateTimeOffset.Now.Date;
         if (local.Date == today)
-            return "今天 " + local.ToString("HH:mm");
+            return string.Format(I18nService.Instance.Translate("今天 {0}"), local.ToString("HH:mm"));
         if (local.Date == today.AddDays(-1))
-            return "昨天 " + local.ToString("HH:mm");
+            return string.Format(I18nService.Instance.Translate("昨天 {0}"), local.ToString("HH:mm"));
         return local.Year == today.Year ? local.ToString("MM-dd HH:mm") : local.ToString("yyyy-MM-dd HH:mm");
     }
 
@@ -153,9 +155,9 @@ public static class PuloniaTaskHistoryText
     public static string Duration(DateTimeOffset? start, DateTimeOffset? end)
     {
         if (start is null)
-            return "尚未开始";
+            return I18nService.Instance.Translate("尚未开始");
         if (end is null)
-            return "执行中";
+            return I18nService.Instance.Translate("执行中");
         return Duration(end.Value - start.Value);
     }
 
@@ -167,11 +169,11 @@ public static class PuloniaTaskHistoryText
         if (elapsed < TimeSpan.Zero)
             elapsed = TimeSpan.Zero;
         if (elapsed.TotalSeconds < 1)
-            return "不到 1 秒";
+            return I18nService.Instance.Translate("不到 1 秒");
         if (elapsed.TotalMinutes < 1)
-            return $"{(int)elapsed.TotalSeconds} 秒";
+            return string.Format(I18nService.Instance.Translate("{0} 秒"), (int)elapsed.TotalSeconds);
         if (elapsed.TotalHours < 1)
-            return $"{elapsed.Minutes} 分 {elapsed.Seconds} 秒";
-        return $"{(int)elapsed.TotalHours} 小时 {elapsed.Minutes} 分";
+            return string.Format(I18nService.Instance.Translate("{0} 分 {1} 秒"), elapsed.Minutes, elapsed.Seconds);
+        return string.Format(I18nService.Instance.Translate("{0} 小时 {1} 分"), (int)elapsed.TotalHours, elapsed.Minutes);
     }
 }

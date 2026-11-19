@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
@@ -138,7 +139,7 @@ public sealed partial class PuloniaTaskStore
             CredentialVault.Delete(target);
         return failures.Count == 0
             ? null
-            : "以下账户的登录凭据未能写入，请重新填写后保存：" + string.Join("；", failures);
+            : string.Format(I18nService.Instance.Translate("以下账户的登录凭据未能写入，请重新填写后保存：{0}"), string.Join("；", failures));
     }
 
     /// <summary>

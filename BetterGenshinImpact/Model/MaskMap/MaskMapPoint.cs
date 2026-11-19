@@ -34,6 +34,12 @@ public class MaskMapPoint
 
     public bool IsHidden { get; set; }
 
+    /// <summary>
+    /// 是否绘制该点位：已标记（IsHidden）的点位默认半透明绘制，开启“隐藏已标记的标点”时不绘制
+    /// </summary>
+    /// <param name="hideMarked">是否隐藏已标记的标点</param>
+    public bool IsDrawn(bool hideMarked) => !(hideMarked && IsHidden);
+
     public bool Contains(double px, double py)
     {
         return px >= X - MaskMapPointStatic.Width / 2 && px <= X + MaskMapPointStatic.Width / 2 &&

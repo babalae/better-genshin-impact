@@ -1,6 +1,6 @@
 <UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaTaskSettingsEditorView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
              ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
@@ -39,8 +39,8 @@
             </ui:CardExpander.Style>
             <ui:CardExpander.Header>
                 <StackPanel>
-                    <ui:TextBlock Text="更多任务设置" FontTypography="Body" />
-                    <ui:TextBlock Text="展开配置此任务的其他执行参数。" TextWrapping="Wrap"
+                    <ui:TextBlock Text="{i18n:T 更多任务设置}" FontTypography="Body" />
+                    <ui:TextBlock Text="{i18n:T 展开配置此任务的其他执行参数。}" TextWrapping="Wrap"
                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                 </StackPanel>
             </ui:CardExpander.Header>
@@ -55,9 +55,9 @@
                         Visibility="{Binding IsEmpty, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
             <ui:CardControl.Header>
                 <StackPanel>
-                    <ui:TextBlock FontTypography="Body" Text="此任务无需额外设置" />
+                    <ui:TextBlock FontTypography="Body" Text="{i18n:T 此任务无需额外设置}" />
                     <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                  Text="运行时直接使用任务默认配置。"
+                                  Text="{i18n:T 运行时直接使用任务默认配置。}"
                                   TextWrapping="Wrap" />
                 </StackPanel>
             </ui:CardControl.Header>

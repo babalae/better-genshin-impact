@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
@@ -77,8 +78,9 @@ public sealed class PuloniaRouteCooldownEntryViewModel
         Location = Path.GetDirectoryName(path)?.Replace('\\', '/') ?? string.Empty;
         // 记录时规则：从完成记录的规则摘要还原，状态与下次可执行时间都按它推算
         var rule = completion.Rule.ToRefreshRule(completion.Route);
-        Material = rule.MaterialName ?? "未识别";
-        RuleText = rule.Description;
+        // 材料名保持原值，参与分组与排序（“未识别”排在最后）；组头显示时再翻译
+        Material = rule.MaterialName ?? I18nService.Key("未识别");
+        RuleText = rule.DisplayDescription;
         LastSuccessText = PuloniaCooldownText.Time(completion.CompletedAt);
         var status = PuloniaRouteCooldown.GetStatus(rule, completion, now, serverUtcOffsetMinutes);
         State = status.State;
@@ -86,13 +88,13 @@ public sealed class PuloniaRouteCooldownEntryViewModel
         NextText = State switch
         {
             PuloniaRouteCooldownState.CoolingDown => PuloniaCooldownText.Next(status.NextEligibleAt!.Value, now),
-            PuloniaRouteCooldownState.Completed => "不再自动执行",
-            PuloniaRouteCooldownState.NotChecked or PuloniaRouteCooldownState.Unmatched => "记录时不限制",
-            _ => "可执行"
+            PuloniaRouteCooldownState.Completed => I18nService.Instance.Translate("不再自动执行"),
+            PuloniaRouteCooldownState.NotChecked or PuloniaRouteCooldownState.Unmatched => I18nService.Instance.Translate("记录时不限制"),
+            _ => I18nService.Instance.Translate("可执行")
         };
         ScopeText = accountName;
-        ToolTip = $"来源运行：{completion.RunId}\n执行实例：{PuloniaInstanceKey.DescribeDirectory(completion.Instance.Replace(':', '-'))}\n"
-                  + $"路线：{completion.Route}\n记录时规则：{RuleText}";
+        ToolTip = string.Format(I18nService.Instance.Translate("来源运行：{0}\n执行实例：{1}\n路线：{2}\n记录时规则：{3}"),
+            completion.RunId, PuloniaInstanceKey.DescribeDirectory(completion.Instance.Replace(':', '-')), completion.Route, RuleText);
     }
 
     /// <summary>把路线身份转换为可读路径：仓库路线去掉仓库前缀，本地路线显示完整路径。</summary>
@@ -126,11 +128,13 @@ public sealed class PuloniaRouteCooldownGroupViewModel
         Material = material;
         var cooling = entries.Where(entry => entry.State == PuloniaRouteCooldownState.CoolingDown).ToArray();
         var completed = entries.Count(entry => entry.State == PuloniaRouteCooldownState.Completed);
-        var parts = new List<string> { material, $"{entries.Count} 条" };
-        if (cooling.Length > 0) parts.Add($"{cooling.Length} 条 CD 中");
-        if (completed > 0) parts.Add($"{completed} 条已完成");
+        // 材料名为数据值，显示时按已有的翻译键翻译（没有翻译时原样显示）
+        var parts = new List<string>
+            { I18nService.Instance.Translate(material), string.Format(I18nService.Instance.Translate("{0} 条"), entries.Count) };
+        if (cooling.Length > 0) parts.Add(string.Format(I18nService.Instance.Translate("{0} 条 CD 中"), cooling.Length));
+        if (completed > 0) parts.Add(string.Format(I18nService.Instance.Translate("{0} 条已完成"), completed));
         if (cooling.Select(entry => entry.NextEligibleAt).Min() is { } earliest)
-            parts.Add($"最早 {earliest.ToLocalTime():MM-dd HH:mm} 可执行");
+            parts.Add(string.Format(I18nService.Instance.Translate("最早 {0} 可执行"), earliest.ToLocalTime().ToString("MM-dd HH:mm")));
         HeaderText = string.Join(" · ", parts);
     }
 }

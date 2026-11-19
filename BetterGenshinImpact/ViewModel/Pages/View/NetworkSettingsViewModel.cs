@@ -7,6 +7,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Infrastructure.Network;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.View;
 
@@ -42,9 +43,9 @@ public partial class NetworkSettingsViewModel : ObservableObject
     /// </summary>
     public IReadOnlyList<KeyValuePair<NetworkProxyMode, string>> ProxyModes { get; } =
     [
-        new(NetworkProxyMode.System, "跟随系统代理"),
-        new(NetworkProxyMode.None, "不使用代理"),
-        new(NetworkProxyMode.Custom, "自定义代理"),
+        new(NetworkProxyMode.System, I18nService.Instance.Translate("跟随系统代理")),
+        new(NetworkProxyMode.None, I18nService.Instance.Translate("不使用代理")),
+        new(NetworkProxyMode.Custom, I18nService.Instance.Translate("自定义代理")),
     ];
 
     /// <summary>
@@ -88,9 +89,9 @@ public partial class NetworkSettingsViewModel : ObservableObject
     /// </summary>
     public string ModeDescription => ProxyMode switch
     {
-        NetworkProxyMode.None => "所有请求直接连接",
-        NetworkProxyMode.Custom => "使用下方填写的代理地址",
-        _ => "使用 Windows 设置中的代理",
+        NetworkProxyMode.None => I18nService.Instance.Translate("所有请求直接连接"),
+        NetworkProxyMode.Custom => I18nService.Instance.Translate("使用下方填写的代理地址"),
+        _ => I18nService.Instance.Translate("使用 Windows 设置中的代理"),
     };
 
     /// <summary>
@@ -136,7 +137,7 @@ public partial class NetworkSettingsViewModel : ObservableObject
             return;
         }
 
-        ProxyAddressError = string.IsNullOrWhiteSpace(ProxyAddressText) ? "请填写代理地址，填写前所有请求直接连接" : error;
+        ProxyAddressError = string.IsNullOrWhiteSpace(ProxyAddressText) ? I18nService.Instance.Translate("请填写代理地址，填写前所有请求直接连接") : error;
     }
 
     /// <summary>

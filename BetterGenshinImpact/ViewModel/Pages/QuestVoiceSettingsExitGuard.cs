@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -13,7 +14,8 @@ internal static class QuestVoiceSettingsExitGuard
         await Task.Delay(700);
         var owner = App.GetService<QuestVoiceSettingsViewModel>();
         if (owner is null || await owner.FlushSettingsAsync()) return true;
-        await ThemedMessageBox.WarningAsync("自动配音配置仍有未保存草稿。请修正输入、处理文件冲突，或导出草稿后明确放弃并重新加载，再退出。", "配置尚未保存");
+        await ThemedMessageBox.WarningAsync(I18nService.Instance.Translate("自动配音配置仍有未保存草稿。请修正输入、处理文件冲突，或导出草稿后明确放弃并重新加载，再退出。"),
+            I18nService.Instance.Translate("配置尚未保存"));
         return false;
     }
 }

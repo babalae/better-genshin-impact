@@ -1,4 +1,5 @@
 <UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceSettings.EngineVoiceListView"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -12,6 +13,6 @@
     <StackPanel>
         <ComboBox ItemsSource="{Binding Voices, Mode=OneWay}" DisplayMemberPath="DisplayName"
                   SelectedItem="{Binding SelectedVoice, Mode=TwoWay}" HorizontalAlignment="Stretch" />
-        <ui:Button Content="刷新声音列表" Command="{Binding RefreshVoicesCommand, Mode=OneWay}" Margin="0,8,0,8" />
+        <ui:Button Content="{i18n:T 刷新声音列表}" Command="{Binding RefreshVoicesCommand, Mode=OneWay}" Margin="0,8,0,8" />
     </StackPanel>
 </UserControl>

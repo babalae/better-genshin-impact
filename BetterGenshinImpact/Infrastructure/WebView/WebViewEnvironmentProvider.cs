@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Infrastructure.WebView;
 
@@ -159,7 +160,7 @@ public sealed partial class WebViewEnvironmentProvider : IWebViewEnvironmentProv
                     StorageGroup.WebData, [profile.ProfileFolder])
                 {
                     Description = profile.Description,
-                    CleanupEffect = "会清除网页中保存的设置，下次启动时清理",
+                    CleanupEffect = I18nService.Key("会清除网页中保存的设置，下次启动时清理"),
                     Timing = StorageCleanupTiming.NextStartup,
                     RequiresConfirmation = true,
                     IncludedInQuickCleanup = false,
@@ -168,7 +169,7 @@ public sealed partial class WebViewEnvironmentProvider : IWebViewEnvironmentProv
                     StorageGroup.WebData, WebViewDataFolders.GetCacheFolders(profile.ProfileFolder))
                 {
                     Description = profile.Description,
-                    CleanupEffect = "下次启动时清理",
+                    CleanupEffect = I18nService.Key("下次启动时清理"),
                     Timing = StorageCleanupTiming.NextStartup,
                 });
         }
@@ -176,10 +177,10 @@ public sealed partial class WebViewEnvironmentProvider : IWebViewEnvironmentProv
         var unused = ListUnusedEnvironmentFolders();
         if (unused.Count > 0)
         {
-            areas.Add(new StorageArea("webview:unused", "已不再使用的网页数据", StorageGroup.WebData, unused)
+            areas.Add(new StorageArea("webview:unused", I18nService.Key("已不再使用的网页数据"), StorageGroup.WebData, unused)
             {
-                Description = "旧功能留下的网页目录",
-                CleanupEffect = "不影响现有功能",
+                Description = I18nService.Key("旧功能留下的网页目录"),
+                CleanupEffect = I18nService.Key("不影响现有功能"),
             });
         }
 

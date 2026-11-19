@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.View.Controls.Webview;
 
@@ -123,7 +124,7 @@ public class WebpagePanel : UserControl
         catch (Exception e)
         {
             _logger.LogError(e, "软件内网页初始化失败");
-            ShowNotice($"网页初始化失败：{e.Message}", null);
+            ShowNotice(string.Format(I18nService.Instance.Translate("网页初始化失败：{0}"), e.Message), null);
         }
     }
 
@@ -238,11 +239,11 @@ public class WebpagePanel : UserControl
     {
         if (kind == CoreWebView2ProcessFailedKind.BrowserProcessExited)
         {
-            ShowNotice("网页进程已退出，请关闭此窗口后重新打开。", null);
+            ShowNotice(I18nService.Instance.Translate("网页进程已退出，请关闭此窗口后重新打开。"), null);
             return;
         }
 
-        ShowNotice("网页进程异常退出。", () =>
+        ShowNotice(I18nService.Instance.Translate("网页进程异常退出。"), () =>
         {
             HideNotice();
             _webView?.CoreWebView2?.Reload();
@@ -259,7 +260,7 @@ public class WebpagePanel : UserControl
         panel.Children.Add(new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) });
         if (reload != null)
         {
-            var button = new Button { Content = "重新加载", HorizontalAlignment = HorizontalAlignment.Center, Padding = new Thickness(16, 4, 16, 4) };
+            var button = new Button { Content = I18nService.Instance.Translate("重新加载"), HorizontalAlignment = HorizontalAlignment.Center, Padding = new Thickness(16, 4, 16, 4) };
             button.Click += (_, _) => reload();
             panel.Children.Add(button);
         }
@@ -303,7 +304,7 @@ public class WebpagePanel : UserControl
     {
         var button = new Button
         {
-            Content = "查看需要安装 Microsoft Edge WebView2 点击这里开始下载",
+            Content = I18nService.Instance.Translate("查看需要安装 Microsoft Edge WebView2 点击这里开始下载"),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Padding = new Thickness(20, 6, 20, 6)

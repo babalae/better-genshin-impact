@@ -1,5 +1,6 @@
 using BetterGenshinImpact.GameTask.KeyMacro;
 using System.Collections.Generic;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.KeyMacro;
 
@@ -19,16 +20,16 @@ public sealed record KeyMacroTemplate(string Key, string Title, string Name, Key
 public static class KeyMacroTemplates
 {
     /// <summary>
-    /// 全部模板，按菜单顺序排列
+    /// 全部模板，按菜单顺序排列；每次读取按当前语言生成显示名称
     /// </summary>
-    public static IReadOnlyList<KeyMacroTemplate> All { get; } =
+    public static IReadOnlyList<KeyMacroTemplate> All =>
     [
-        new("blank", "空白宏", "新建宏", KeyMacroTriggerMode.Once, ""),
-        new("click", "连点左键（切换循环）", "连点左键", KeyMacroTriggerMode.Toggle,
+        new("blank", I18nService.Instance.Translate("空白宏"), I18nService.Instance.Translate("新建宏"), KeyMacroTriggerMode.Once, ""),
+        new("click", I18nService.Instance.Translate("连点左键（切换循环）"), I18nService.Instance.Translate("连点左键"), KeyMacroTriggerMode.Toggle,
             "// 按一下开始连点，再按一下停止\r\nclick(left)\r\nwait(0.05)"),
-        new("hold", "按住一个键 1 秒（单次）", "按住 E", KeyMacroTriggerMode.Once,
+        new("hold", I18nService.Instance.Translate("按住一个键 1 秒（单次）"), I18nService.Instance.Translate("按住 E"), KeyMacroTriggerMode.Once,
             "keydown(e)\r\nwait(1)\r\nkeyup(e)"),
-        new("charge-jump", "重击接跳跃（按住循环）", "重击跳", KeyMacroTriggerMode.Hold,
+        new("charge-jump", I18nService.Instance.Translate("重击接跳跃（按住循环）"), I18nService.Instance.Translate("重击跳"), KeyMacroTriggerMode.Hold,
             "// 按住时循环：重击后跳跃取消后摇\r\nmousedown(left)\r\nwait(0.35)\r\nmouseup(left)\r\nkeypress(space)  // 跳跃取消\r\nwait(0.4)")
     ];
 }

@@ -87,7 +87,7 @@
                               Width="200"
                               Margin="0,0,36,0"
                               DisplayMemberPath="Value"
-                              ItemsSource="{Binding GameLanguageDict}"
+                              ItemsSource="{Binding GameLanguageDict, Mode=OneWay}"
                               SelectedItem="{Binding Config.OtherConfig.GameCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}"
                               SelectedValuePath="Key" />
                 </Grid>
@@ -106,11 +106,11 @@
                     </Grid.RowDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   FontTypography="Body"
-                                  Text="本机外部访问服务"
+                                  Text="{i18n:T 本机外部访问服务}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="仅监听 loopback；功能开关和端口将在重启 BetterGI 后生效"
+                                  Text="{i18n:T 仅监听 loopback；功能开关和端口将在重启 BetterGI 后生效}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardExpander.Header>
@@ -127,7 +127,7 @@
                     <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="HTTP API" />
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="提供 /api/v1/health 与 /api/v1/version"
+                                  Text="{i18n:T 提供 /api/v1/health 与 /api/v1/version}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -145,10 +145,10 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="WebSocket 实时日志" />
+                    <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="{i18n:T WebSocket 实时日志}" />
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="不鉴权并允许任意 Origin，启用后本机网页可读取日志，请注意敏感信息风险"
+                                  Text="{i18n:T 不鉴权并允许任意 Origin，启用后本机网页可读取日志，请注意敏感信息风险}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -169,7 +169,7 @@
                     <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="MCP Streamable HTTP" />
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在 /mcp 暴露与 HTTP API 相同的共享能力"
+                                  Text="{i18n:T 在 /mcp 暴露与 HTTP API 相同的共享能力}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -184,9 +184,9 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <ui:TextBlock FontTypography="Body" Text="监听端口" />
+                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 监听端口}" />
                         <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="有效范围 1024～65535，HTTP、WebSocket 和 MCP 共用"
+                                      Text="{i18n:T 有效范围 1024～65535，HTTP、WebSocket 和 MCP 共用}"
                                       TextWrapping="Wrap" />
                     </StackPanel>
                     <ui:TextBox Grid.Column="1"
@@ -202,9 +202,9 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <ui:TextBlock FontTypography="Body" Text="访问令牌" />
+                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 访问令牌}" />
                         <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="HTTP API 与 MCP 共用；令牌变更立即生效"
+                                      Text="{i18n:T HTTP API 与 MCP 共用；令牌变更立即生效}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Margin="0,4,0,0"
                                       FontFamily="Consolas"
@@ -216,9 +216,9 @@
                                 Orientation="Horizontal">
                         <ui:Button Margin="0,0,8,0"
                                    Command="{Binding CopyExternalAccessTokenCommand}"
-                                   Content="复制" />
+                                   Content="{i18n:T 复制}" />
                         <ui:Button Command="{Binding RegenerateExternalAccessTokenCommand}"
-                                   Content="重新生成" />
+                                   Content="{i18n:T 重新生成}" />
                     </StackPanel>
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
@@ -232,7 +232,7 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,12,0" FontTypography="Body" Text="状态" />
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,12,0" FontTypography="Body" Text="{i18n:T 状态}" />
                     <ui:TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ExternalAccessState.StatusText}" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="1"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
@@ -241,7 +241,7 @@
                     <ui:TextBlock Grid.Row="2" Grid.Column="0"
                                   Margin="0,0,12,0"
                                   FontTypography="Body"
-                                  Text="访问地址" />
+                                  Text="{i18n:T 访问地址}" />
                     <ui:TextBlock Grid.Row="2" Grid.Column="1"
                                   FontFamily="Consolas"
                                   Text="{Binding ExternalAccessState.Address}"
@@ -570,13 +570,13 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="显示遮罩边框" />
+                        Text="{i18n:T 显示遮罩边框}" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="围绕游戏窗口紫色的边框线" />
+                        Text="{i18n:T 围绕游戏窗口紫色的边框线}" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
                         Grid.RowSpan="2"
@@ -1673,10 +1673,10 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0" Grid.Column="0"
-                                  Text="是否就近七天神像恢复血量"
+                                  Text="{i18n:T 是否就近七天神像恢复血量}"
                                   FontTypography="Body" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
-                                  Text="启用后将自动选择最近的七天神像，忽略下方指定位置"
+                                  Text="{i18n:T 启用后将自动选择最近的七天神像，忽略下方指定位置}"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
                                      IsChecked="{Binding Config.TpConfig.IsReviveInNearestStatueOfTheSeven}" />
@@ -1691,10 +1691,10 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0" Grid.Column="0"
-                                  Text="传送到七天神像之后是否需要移动后回血"
+                                  Text="{i18n:T 传送到七天神像之后是否需要移动后回血}"
                                   FontTypography="Body" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
-                                  Text="启用后将自动向七天神像方向移动"
+                                  Text="{i18n:T 启用后将自动向七天神像方向移动}"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
                                      IsChecked="{Binding Config.TpConfig.ShouldMove}" />
@@ -1723,7 +1723,14 @@
                               MinWidth="120"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding CountryList}"
-                              SelectedItem="{Binding SelectedCountry}" />
+                              SelectedItem="{Binding SelectedCountry}">
+                        <!--  国家名是保存值，仅展示时翻译  -->
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{i18n:TBinding}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
 
                 <!--  指定区域  -->
@@ -1750,7 +1757,14 @@
                               MinWidth="120"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding Areas}"
-                              SelectedItem="{Binding SelectedArea}" />
+                              SelectedItem="{Binding SelectedArea}">
+                        <!--  区域名是保存值，仅展示时翻译，Key 登记见 StatueOfTheSevenI18nKeys  -->
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{i18n:TBinding}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
 
                 <Grid Margin="16">
@@ -1797,19 +1811,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="手动导入本地脚本仓库（zip格式）"
+                                  Text="{i18n:T 手动导入本地脚本仓库（zip格式）}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="脚本仓库无法在线更新时使用"
+                                  Text="{i18n:T 脚本仓库无法在线更新时使用}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding ImportLocalScriptsRepoZipCommand}"
-                               Content="导入" />
+                               Content="{i18n:T 导入}" />
                 </Grid>
         
             </ui:CardControl.Header>
@@ -1971,7 +1985,14 @@
                               MinWidth="100"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding AdventurersGuildCountry}"
-                              SelectedItem="{Binding Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry, Mode=TwoWay}">
+                        <!--  国家名是保存值，仅展示时翻译  -->
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{i18n:TBinding}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                     <!--<ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
@@ -2004,8 +2025,14 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding ServerTimeZones}"
                               SelectedValue="{Binding Config.OtherConfig.ServerTimeZoneOffset}"
-                              SelectedValuePath="Item1"
-                              DisplayMemberPath="Item2" />
+                              SelectedValuePath="Item1">
+                        <!--  时区显示名仅展示时翻译，保存的是 Item1 时差  -->
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{i18n:TBinding Item2}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16,0,16,12">
                     <Grid.RowDefinitions>

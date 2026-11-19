@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Services;
@@ -35,8 +36,12 @@ public static class PuloniaRouteCooldown
         (PuloniaRouteRefreshMode.Once, "once")
     ];
 
-    /// <summary>星期显示名，下标 0 为周一。</summary>
-    private static readonly string[] WeekdayNames = ["一", "二", "三", "四", "五", "六", "日"];
+    /// <summary>每周重置的星期显示名（翻译键），下标 0 为周一。</summary>
+    private static readonly string[] WeekdayNames =
+    [
+        I18nService.Key("每周一"), I18nService.Key("每周二"), I18nService.Key("每周三"), I18nService.Key("每周四"),
+        I18nService.Key("每周五"), I18nService.Key("每周六"), I18nService.Key("每周日")
+    ];
 
     /// <summary>校验使用的唯一 Schema；对外只提供副本，避免被嵌入其他对象后修改。</summary>
     private static readonly JObject SchemaTemplate = new()
@@ -189,8 +194,10 @@ public static class PuloniaRouteCooldown
     /// <summary>跳过原因的说明，时间按本机时区显示。</summary>
     public static string FormatSkipReason(PuloniaRouteRefreshRule rule, PuloniaRouteCooldownStatus status)
         => status.State == PuloniaRouteCooldownState.Completed
-            ? $"一次性路线已成功执行，不再自动执行（{rule.MaterialName ?? "路线"}）。"
-            : $"仍在 CD，{status.NextEligibleAt?.ToLocalTime():yyyy-MM-dd HH:mm} 后可执行（{rule.MaterialName ?? "路线"} · {rule.Description}）。";
+            ? string.Format(I18nService.Instance.Translate("一次性路线已成功执行，不再自动执行（{0}）。"),
+                rule.MaterialName ?? I18nService.Instance.Translate("路线"))
+            : string.Format(I18nService.Instance.Translate("仍在 CD，{0:yyyy-MM-dd HH:mm} 后可执行（{1} · {2}）。"),
+                status.NextEligibleAt?.ToLocalTime(), rule.MaterialName ?? I18nService.Instance.Translate("路线"), rule.DisplayDescription);
 
     /// <summary>
     /// 固定本次规则和时间的机器可读说明，写入地图追踪节点结果的 <c>route_*</c> 数据；时间为 UTC ISO 字符串，界面显示时转换。
@@ -202,10 +209,11 @@ public static class PuloniaRouteCooldown
             ["route_rule"] = rule.Description,
             ["route_rule_source"] = rule.Source switch
             {
-                PuloniaRouteRefreshRuleSource.Directory => "目录自动识别",
-                PuloniaRouteRefreshRuleSource.Mixed => "混合类别",
-                PuloniaRouteRefreshRuleSource.Manual => "手动设置",
-                _ => "未识别"
+                // 写入节点结果数据，保持中文原值，界面显示时再翻译
+                PuloniaRouteRefreshRuleSource.Directory => I18nService.Key("目录自动识别"),
+                PuloniaRouteRefreshRuleSource.Mixed => I18nService.Key("混合类别"),
+                PuloniaRouteRefreshRuleSource.Manual => I18nService.Key("手动设置"),
+                _ => I18nService.Key("未识别")
             },
             ["route_last_success_at"] = lastSuccess?.ToUniversalTime().ToString("O"),
             ["route_next_eligible_at"] = next?.ToUniversalTime().ToString("O"),
@@ -219,18 +227,20 @@ public static class PuloniaRouteCooldown
     public static string DescribeSettings(JToken? value)
     {
         if (value is not JObject settings || !TryParseMode(settings.Value<string>("mode"), out var mode))
-            return "自动识别";
+            return I18nService.Instance.Translate("自动识别");
         var hour = settings.Value<int?>("reset_hour") ?? PuloniaServerTime.DayResetHour;
         var weekday = Math.Clamp(settings.Value<int?>("reset_weekday") ?? 1, 1, 7);
         return mode switch
         {
-            PuloniaRouteRefreshMode.Disabled => "不检查",
-            PuloniaRouteRefreshMode.Rolling => $"每 {settings.Value<double?>("hours") ?? 0:g} 小时",
-            PuloniaRouteRefreshMode.Daily => $"每日 {hour:00}:00",
-            PuloniaRouteRefreshMode.Weekly => $"每周{WeekdayNames[weekday - 1]} {hour:00}:00",
-            PuloniaRouteRefreshMode.CalendarDays => $"成功日期后第 {settings.Value<int?>("days") ?? 0} 天 00:00",
-            PuloniaRouteRefreshMode.Once => "只执行一次",
-            _ => "自动识别"
+            PuloniaRouteRefreshMode.Disabled => I18nService.Instance.Translate("不检查"),
+            PuloniaRouteRefreshMode.Rolling => string.Format(I18nService.Instance.Translate("每 {0:g} 小时"),
+                settings.Value<double?>("hours") ?? 0),
+            PuloniaRouteRefreshMode.Daily => string.Format(I18nService.Instance.Translate("每日 {0:00}:00"), hour),
+            PuloniaRouteRefreshMode.Weekly => $"{I18nService.Instance.Translate(WeekdayNames[weekday - 1])} {hour:00}:00",
+            PuloniaRouteRefreshMode.CalendarDays => string.Format(I18nService.Instance.Translate("成功日期后第 {0} 天 00:00"),
+                settings.Value<int?>("days") ?? 0),
+            PuloniaRouteRefreshMode.Once => I18nService.Instance.Translate("只执行一次"),
+            _ => I18nService.Instance.Translate("自动识别")
         };
     }
 

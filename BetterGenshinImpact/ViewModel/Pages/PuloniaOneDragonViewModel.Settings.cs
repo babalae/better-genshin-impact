@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -165,11 +166,11 @@ public partial class PuloniaOneDragonViewModel
         {
             if (node.Document.ReplaceOneDragonParameters(node, target))
                 _settingsSignature = BuildSettingsSignature(node);
-            SettingsMessage = errors.Count == 0 ? "" : "以下输入未生效，仍使用上次的值：" + string.Join("；", errors);
+            SettingsMessage = errors.Count == 0 ? "" : I18nService.Instance.Translate("以下输入未生效，仍使用上次的值：") + string.Join("；", errors);
         }
         catch (Exception ex) when (ex is PuloniaTaskValidationException or InvalidOperationException)
         {
-            SettingsMessage = "设置未生效：" + ex.Message;
+            SettingsMessage = I18nService.Instance.Translate("设置未生效：") + ex.Message;
         }
         finally { _isApplyingSettings = false; }
     }

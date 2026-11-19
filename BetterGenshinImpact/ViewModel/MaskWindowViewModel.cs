@@ -5,6 +5,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using System.ComponentModel;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls.Overlay;
 using BetterGenshinImpact.GameTask.MapMask;
@@ -26,6 +27,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.HoYoLab;
 using BetterGenshinImpact.Model.MaskMap;
 using BetterGenshinImpact.Service.Model;
 using BetterGenshinImpact.Service.Model.OverlayMetric;
@@ -138,7 +140,7 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private bool _isMapPointsLoading;
 
-        [ObservableProperty] private string _mapPointsLoadingText = "正在加载点位...";
+        [ObservableProperty] private string _mapPointsLoadingText = I18nService.Instance.Translate("正在加载点位...");
 
         public int MapPointTotalCount => MapPoints.Count;
 
@@ -166,8 +168,8 @@ namespace BetterGenshinImpact.ViewModel
 
         public IReadOnlyList<MapPointApiProviderOption> MapPointApiProviderOptions { get; } =
         [
-            new(MapPointApiProvider.MihoyoMap, "米游社大地图"),
-            new(MapPointApiProvider.KongyingTavern, "空荧酒馆"),
+            new(MapPointApiProvider.MihoyoMap, I18nService.Instance.Translate("米游社大地图")),
+            new(MapPointApiProvider.KongyingTavern, I18nService.Instance.Translate("空荧酒馆")),
             new(MapPointApiProvider.HoYoLab, "HoYoLab")
         ];
 
@@ -230,7 +232,9 @@ namespace BetterGenshinImpact.ViewModel
             IMaskWindowSnapshotSource<MaskWindowMapSnapshot> mapSource,
             ILogger<MaskWindowViewModel> logger,
             GameRuntimeService runtimeService,
-            IMaskWindowDrawingBoard drawingBoard)
+            IMaskWindowDrawingBoard drawingBoard,
+            HoYoLabMarkApiService hoYoLabMarkApi,
+            HoYoLabAccountService hoYoLabAccount)
         {
             Config = configService.Get();
             _overlayMetricsService = overlayMetricsService;
@@ -240,6 +244,8 @@ namespace BetterGenshinImpact.ViewModel
             _logger = logger;
             _runtimeService = runtimeService;
             _drawingBoard = drawingBoard;
+            _hoYoLabMarkApi = hoYoLabMarkApi;
+            _hoYoLabAccount = hoYoLabAccount;
             // 遮罩缩放、DPI 与 FPS 进程号跟随绑定变化（Started / Stopped 在 UI 线程上触发）
             _runtimeService.Started += OnRuntimeStarted;
             _runtimeService.Stopped += OnRuntimeStopped;
@@ -253,6 +259,12 @@ namespace BetterGenshinImpact.ViewModel
             DrawingStyle = CreateDrawingStyle();
 
             PointInfoPopup.ToggleHiddenRequested += (_, point) => ToggleMapPointHidden(point);
+            // 已登录 HoYoLAB 时以账号标记为准
+            InitHoYoLabAccount();
+            // 分类网格高亮已选中的分类
+            InitMapLabelSelectionHighlight();
+            // 临时隐藏全部标点的显示开关
+            InitMapPointsVisibility();
 
             WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
             {
@@ -473,6 +485,7 @@ namespace BetterGenshinImpact.ViewModel
         partial void OnSelectedMapPointApiProviderOptionChanged(MapPointApiProviderOption? value)
         {
             OnPropertyChanged(nameof(IsHoYoLabProviderSelected));
+            NotifyHoYoLabAccountPropertiesChanged();
             if (value == null)
             {
                 return;
@@ -542,6 +555,7 @@ namespace BetterGenshinImpact.ViewModel
                     Config.MapMaskConfig.MapPointApiProvider = provider;
                 }
 
+                OnHoYoLabProviderChanged();
                 await ResetAndReloadMapPointPickerAsync();
             }
             catch (Exception ex)
@@ -800,6 +814,7 @@ namespace BetterGenshinImpact.ViewModel
         {
             OnPropertyChanged(nameof(IsClickThrough));
             OnPropertyChanged(nameof(IsCrosshairVisible));
+            OnPropertyChanged(nameof(ShowBigMapPoints));
 
             if (!value)
             {
@@ -1026,6 +1041,8 @@ namespace BetterGenshinImpact.ViewModel
             _mapLabelItemsCts?.Dispose();
             _mapLabelItemsCts = new CancellationTokenSource();
             var ct = _mapLabelItemsCts.Token;
+            // 后台加载大类点位，统计“已标记/总数”
+            _ = LoadCategoryMarkedCountsAsync(category);
             return PopulateRightListAsync(loadVersion, category, searchText, ct);
         }
 
@@ -1177,7 +1194,7 @@ namespace BetterGenshinImpact.ViewModel
                 return labelName;
             }
 
-            return $"点位 {point.Id}";
+            return string.Format(I18nService.Instance.Translate("点位 {0}"), point.Id);
         }
 
         [RelayCommand]
@@ -1206,6 +1223,13 @@ namespace BetterGenshinImpact.ViewModel
                 return;
             }
 
+            // 已登录 HoYoLAB：标记以账号为准
+            if (IsHoYoLabAccountMode)
+            {
+                ToggleAccountMark(point);
+                return;
+            }
+
             var key = GetMapPointKey(point);
             if (!_hiddenMapPointIds.Add(key))
             {
@@ -1217,7 +1241,7 @@ namespace BetterGenshinImpact.ViewModel
             SyncPointInfoPopupHiddenState();
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanChangeAllMapPoints))]
         private void HideAllMapPoints()
         {
             if (MapPoints.Count == 0)
@@ -1236,7 +1260,7 @@ namespace BetterGenshinImpact.ViewModel
             SyncPointInfoPopupHiddenState();
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanChangeAllMapPoints))]
         private void ShowAllMapPoints()
         {
             if (_hiddenMapPointIds.Count == 0)
@@ -1310,6 +1334,10 @@ namespace BetterGenshinImpact.ViewModel
         private void LoadHiddenMapPointKeysFromStorage()
         {
             _hiddenMapPointIds.Clear();
+            if (TryLoadAccountHiddenKeys())
+            {
+                return;
+            }
 
             var keys = MapMaskStateStorage.Read(GetMapMaskDataSourceKey()).HiddenMapPointKeys;
             foreach (var key in keys)
@@ -1323,7 +1351,8 @@ namespace BetterGenshinImpact.ViewModel
 
         private void SaveHiddenMapPointKeysToStorage()
         {
-            if (_isRestoringMapMaskState)
+            // 账号模式下不写本地文件，保留仅存在于本地的标记供上传
+            if (_isRestoringMapMaskState || IsHoYoLabAccountMode)
             {
                 return;
             }
@@ -1356,6 +1385,8 @@ namespace BetterGenshinImpact.ViewModel
             OnPropertyChanged(nameof(HasMapPoints));
             OnPropertyChanged(nameof(HasHiddenMapPoints));
             OnPropertyChanged(nameof(MapPointVisibilitySummary));
+            // 标记变化后同步分类网格的“已标记/总数”
+            RefreshMapLabelMarkedCounts();
         }
     }
 
@@ -1385,6 +1416,23 @@ namespace BetterGenshinImpact.ViewModel
         public string ParentId { get; }
 
         [ObservableProperty] private ImageSource? _iconImage;
+
+        /// <summary>
+        /// 是否已选中（正在地图上显示），网格中高亮显示
+        /// </summary>
+        [ObservableProperty] private bool _isSelected;
+
+        /// <summary>
+        /// 该分类下已标记的点位数量（分类点位加载后统计）
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(PointCountText))]
+        private int _markedCount;
+
+        /// <summary>
+        /// 网格中显示的数量：没有标记时显示总数，有标记时显示“已标记/总数”
+        /// </summary>
+        public string PointCountText => MarkedCount > 0 ? $"{MarkedCount}/{PointCount}" : PointCount.ToString();
 
         public MapLabelItemVm(MaskMapPointLabel item)
         {

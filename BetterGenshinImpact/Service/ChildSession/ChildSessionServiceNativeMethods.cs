@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Service.ChildSession;
 
@@ -66,7 +67,7 @@ internal static class ChildSessionServiceNativeMethods
         using var handle = ServiceHandle.Open(serviceName, ServiceStart | ServiceQueryStatus);
         if (!handle.IsValid)
         {
-            error = $"无法打开服务 {serviceName}（错误 {Marshal.GetLastWin32Error()}）。";
+            error = string.Format(I18nService.Instance.Translate("无法打开服务 {0}（错误 {1}）。"), serviceName, Marshal.GetLastWin32Error());
             return false;
         }
 
@@ -81,7 +82,7 @@ internal static class ChildSessionServiceNativeMethods
             // 1056 = 服务已在运行
             if (code != 1056)
             {
-                error = $"启动服务 {serviceName} 失败（错误 {code}：{new Win32Exception(code).Message}）。";
+                error = string.Format(I18nService.Instance.Translate("启动服务 {0} 失败（错误 {1}：{2}）。"), serviceName, code, new Win32Exception(code).Message);
                 return false;
             }
         }
@@ -91,7 +92,7 @@ internal static class ChildSessionServiceNativeMethods
             return true;
         }
 
-        error = $"服务 {serviceName} 未能在 {StateTimeout.TotalSeconds:0} 秒内进入运行状态。";
+        error = string.Format(I18nService.Instance.Translate("服务 {0} 未能在 {1:0} 秒内进入运行状态。"), serviceName, StateTimeout.TotalSeconds);
         return false;
     }
 
@@ -105,13 +106,13 @@ internal static class ChildSessionServiceNativeMethods
         using var handle = ServiceHandle.Open(serviceName, ServiceStop | ServiceQueryStatus);
         if (!handle.IsValid)
         {
-            error = $"无法打开服务 {serviceName}（错误 {Marshal.GetLastWin32Error()}）。";
+            error = string.Format(I18nService.Instance.Translate("无法打开服务 {0}（错误 {1}）。"), serviceName, Marshal.GetLastWin32Error());
             return false;
         }
 
         if (!QueryServiceStatus(handle.Value, out var status))
         {
-            error = $"无法查询服务 {serviceName} 状态。";
+            error = string.Format(I18nService.Instance.Translate("无法查询服务 {0} 状态。"), serviceName);
             return false;
         }
 
@@ -125,7 +126,7 @@ internal static class ChildSessionServiceNativeMethods
             var code = Marshal.GetLastWin32Error();
             if (code != 1062)
             {
-                error = $"停止服务 {serviceName} 失败（错误 {code}：{new Win32Exception(code).Message}）。";
+                error = string.Format(I18nService.Instance.Translate("停止服务 {0} 失败（错误 {1}：{2}）。"), serviceName, code, new Win32Exception(code).Message);
                 return false;
             }
         }
@@ -135,7 +136,7 @@ internal static class ChildSessionServiceNativeMethods
             return true;
         }
 
-        error = $"服务 {serviceName} 未能在 {StateTimeout.TotalSeconds:0} 秒内停止。";
+        error = string.Format(I18nService.Instance.Translate("服务 {0} 未能在 {1:0} 秒内停止。"), serviceName, StateTimeout.TotalSeconds);
         return false;
     }
 
@@ -149,7 +150,7 @@ internal static class ChildSessionServiceNativeMethods
         using var handle = ServiceHandle.Open(serviceName, ServiceChangeConfig);
         if (!handle.IsValid)
         {
-            error = $"无法打开服务 {serviceName} 以修改启动类型（错误 {Marshal.GetLastWin32Error()}）。";
+            error = string.Format(I18nService.Instance.Translate("无法打开服务 {0} 以修改启动类型（错误 {1}）。"), serviceName, Marshal.GetLastWin32Error());
             return false;
         }
 
@@ -167,7 +168,7 @@ internal static class ChildSessionServiceNativeMethods
                 null))
         {
             var code = Marshal.GetLastWin32Error();
-            error = $"修改 {serviceName} 启动类型失败（错误 {code}：{new Win32Exception(code).Message}）。";
+            error = string.Format(I18nService.Instance.Translate("修改 {0} 启动类型失败（错误 {1}：{2}）。"), serviceName, code, new Win32Exception(code).Message);
             return false;
         }
 
@@ -285,7 +286,7 @@ internal static class ChildSessionServiceNativeMethods
         using var handle = ServiceHandle.Open(serviceName, ServiceChangeConfig);
         if (!handle.IsValid)
         {
-            error = $"无法打开服务 {serviceName} 以修改配置（错误 {Marshal.GetLastWin32Error()}）。";
+            error = string.Format(I18nService.Instance.Translate("无法打开服务 {0} 以修改配置（错误 {1}）。"), serviceName, Marshal.GetLastWin32Error());
             return false;
         }
 
@@ -308,7 +309,7 @@ internal static class ChildSessionServiceNativeMethods
                 null))
         {
             var code = Marshal.GetLastWin32Error();
-            error = $"修改 {serviceName} 服务配置失败（错误 {code}：{new Win32Exception(code).Message}）。";
+            error = string.Format(I18nService.Instance.Translate("修改 {0} 服务配置失败（错误 {1}：{2}）。"), serviceName, code, new Win32Exception(code).Message);
             return false;
         }
 

@@ -12,6 +12,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.I18n;
 using Meziantou.Framework.Win32;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -32,7 +33,7 @@ public partial class CheckUpdateWindow : FluentWindow
 
     [ObservableProperty] private string selectedGitSource = "CNB";
 
-    public string GitSourceDescription => SelectedGitSource == "CNB" ? "【国内】直接从 CNB 下载并更新" : "【国外】直接从 Github 下载并更新";
+    public string GitSourceDescription => SelectedGitSource == "CNB" ? I18nService.Instance.Translate("【国内】直接从 CNB 下载并更新") : I18nService.Instance.Translate("【国外】直接从 Github 下载并更新");
 
     partial void OnSelectedGitSourceChanged(string value)
     {
@@ -153,8 +154,8 @@ public partial class CheckUpdateWindow : FluentWindow
         if (source == "github")
         {
             // 提示用户这个是国外服务器，可能会很慢
-            var result = await ThemedMessageBox.ShowAsync("您已选择「Github」作为更新源。\n请确认：您当前网络可正常访问 Github 文件服务？\n若不确定能否访问，建议切换至其他更新渠道。\n是否继续使用 Github 渠道更新？",
-                "警告", System.Windows.MessageBoxButton.OKCancel, ThemedMessageBox.MessageBoxIcon.Warning);
+            var result = await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("您已选择「Github」作为更新源。\n请确认：您当前网络可正常访问 Github 文件服务？\n若不确定能否访问，建议切换至其他更新渠道。\n是否继续使用 Github 渠道更新？"),
+                I18nService.Instance.Translate("警告"), System.Windows.MessageBoxButton.OKCancel, ThemedMessageBox.MessageBoxIcon.Warning);
             if (result != MessageBoxResult.OK)
             {
                 return;
@@ -184,8 +185,8 @@ public partial class CheckUpdateWindow : FluentWindow
         // 没输入 CDK 的情况下提示这是收费渠道
         if (string.IsNullOrEmpty(MirrorChyanHelper.GetCdk()))
         {
-            var result = await ThemedMessageBox.ShowAsync("Mirror酱是一个【付费】更新渠道！\n更新窗上有多个可用的【免费】国内更新渠道！\n（使用有问题可以直接反馈，或者过一段时间后重试，也可以点击左下角按钮进行手动更新）\n是否继续使用 Mirror酱 渠道更新？",
-                "您已选择「Mirror酱」作为更新源", System.Windows.MessageBoxButton.OKCancel, ThemedMessageBox.MessageBoxIcon.Warning);
+            var result = await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("Mirror酱是一个【付费】更新渠道！\n更新窗上有多个可用的【免费】国内更新渠道！\n（使用有问题可以直接反馈，或者过一段时间后重试，也可以点击左下角按钮进行手动更新）\n是否继续使用 Mirror酱 渠道更新？"),
+                I18nService.Instance.Translate("您已选择「Mirror酱」作为更新源"), System.Windows.MessageBoxButton.OKCancel, ThemedMessageBox.MessageBoxIcon.Warning);
             if (result != MessageBoxResult.OK)
             {
                 return;
@@ -221,7 +222,7 @@ public partial class CheckUpdateWindow : FluentWindow
         string updaterExePath = Global.Absolute("BetterGI.update.exe");
         if (!File.Exists(updaterExePath))
         {
-            await ThemedMessageBox.ErrorAsync("更新程序不存在，请选择其他更新方式！");
+            await ThemedMessageBox.ErrorAsync(I18nService.Instance.Translate("更新程序不存在，请选择其他更新方式！"));
             return;
         }
 

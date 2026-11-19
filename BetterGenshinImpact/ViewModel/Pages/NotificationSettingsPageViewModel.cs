@@ -297,7 +297,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     {
         if (NotificationEventOptions.Count == 0)
         {
-            NotificationEventSelectionSummary = "当前版本没有可配置的通知事件";
+            NotificationEventSelectionSummary = I18nService.Instance.Translate("当前版本没有可配置的通知事件");
             return;
         }
 
@@ -305,14 +305,14 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         if (unknownEventCodeCount > 0)
         {
             NotificationEventSelectionSummary = selectedCount == 0
-                ? $"检测到 {unknownEventCodeCount} 个未知事件代码，当前未显示；修改后会自动清理。未勾选任何事件时按“全部通知”处理"
-                : $"已选择 {selectedCount} / {NotificationEventOptions.Count} 个事件；另有 {unknownEventCodeCount} 个未知事件代码，修改后会自动清理";
+                ? string.Format(I18nService.Instance.Translate("检测到 {0} 个未知事件代码，当前未显示；修改后会自动清理。未勾选任何事件时按“全部通知”处理"), unknownEventCodeCount)
+                : string.Format(I18nService.Instance.Translate("已选择 {0} / {1} 个事件；另有 {2} 个未知事件代码，修改后会自动清理"), selectedCount, NotificationEventOptions.Count, unknownEventCodeCount);
             return;
         }
 
         NotificationEventSelectionSummary = selectedCount == 0
-            ? "当前未勾选任何事件，将按“全部通知”处理"
-            : $"已选择 {selectedCount} / {NotificationEventOptions.Count} 个事件";
+            ? I18nService.Instance.Translate("当前未勾选任何事件，将按“全部通知”处理")
+            : string.Format(I18nService.Instance.Translate("已选择 {0} / {1} 个事件"), selectedCount, NotificationEventOptions.Count);
     }
 
     [RelayCommand]
@@ -697,18 +697,18 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     {
         if (string.IsNullOrWhiteSpace(Config.NotificationConfig.QqAppId))
         {
-            Toast.Error("请先填写 QQ AppID");
+            Toast.Error(I18nService.Instance.Translate("请先填写 QQ AppID"));
             return;
         }
 
         if (string.IsNullOrWhiteSpace(Config.NotificationConfig.QqClientSecret))
         {
-            Toast.Error("请先填写 QQ AppSecret");
+            Toast.Error(I18nService.Instance.Translate("请先填写 QQ AppSecret"));
             return;
         }
 
         IsBinding = true;
-        QqStatus = "正在连接 QQ 网关…";
+        QqStatus = I18nService.Instance.Translate("正在连接 QQ 网关…");
         _bindCts = new CancellationTokenSource();
 
         try
@@ -721,26 +721,26 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                     // 回调在后台线程执行，需要编组回 UI 线程才能更新 ObservableProperty
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        QqStatus = $"请用手机 QQ 私聊机器人，发送验证码 [{code}]";
+                        QqStatus = string.Format(I18nService.Instance.Translate("请用手机 QQ 私聊机器人，发送验证码 [{0}]"), code);
                     });
                 },
                 _bindCts.Token);
 
             // 绑定成功，自动回填 OpenID（配置自动保存 + 刷新通知器）
             Config.NotificationConfig.QqOpenId = openId;
-            QqStatus = "绑定成功";
-            Toast.Success("QQ 绑定成功");
+            QqStatus = I18nService.Instance.Translate("绑定成功");
+            Toast.Success(I18nService.Instance.Translate("QQ 绑定成功"));
         }
         catch (OperationCanceledException)
         {
             // 用户主动点击取消
-            QqStatus = "已取消绑定";
+            QqStatus = I18nService.Instance.Translate("已取消绑定");
         }
         catch (System.Exception ex)
         {
             // 超时或其他错误（超时已被 BindAsync 转为 NotifierException）
-            QqStatus = $"绑定失败：{ex.Message}";
-            Toast.Error($"绑定失败：{ex.Message}");
+            QqStatus = string.Format(I18nService.Instance.Translate("绑定失败：{0}"), ex.Message);
+            Toast.Error(string.Format(I18nService.Instance.Translate("绑定失败：{0}"), ex.Message));
         }
         finally
         {
@@ -767,7 +767,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     private async Task OnBindWechatClawbot()
     {
         IsWechatClawbotBinding = true;
-        WechatClawbotStatus = "正在获取登录二维码…";
+        WechatClawbotStatus = I18nService.Instance.Translate("正在获取登录二维码…");
         _wechatClawbotBindCts = new CancellationTokenSource();
 
         try
@@ -779,21 +779,21 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                 {
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        WechatClawbotStatus = "请用手机微信扫码登录 Clawbot";
+                        WechatClawbotStatus = I18nService.Instance.Translate("请用手机微信扫码登录 Clawbot");
                         try
                         {
                             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(qrCodeUrl) { UseShellExecute = true });
                         }
                         catch (System.Exception ex)
                         {
-                            WechatClawbotStatus = $"请用手机微信扫码登录 Clawbot（二维码链接：{qrCodeUrl}）";
+                            WechatClawbotStatus = string.Format(I18nService.Instance.Translate("请用手机微信扫码登录 Clawbot（二维码链接：{0}）"), qrCodeUrl);
                             Logger.LogWarning("打开微信 Clawbot 二维码链接失败: {Ex}", ex.Message);
                         }
                     });
                 },
                 _wechatClawbotBindCts.Token);
 
-            WechatClawbotStatus = "登录成功，正在等待绑定消息…";
+            WechatClawbotStatus = I18nService.Instance.Translate("登录成功，正在等待绑定消息…");
 
             var bind = await WechatClawbotHelper.BindAsync(
                 login.BotToken,
@@ -803,7 +803,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                 {
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        WechatClawbotStatus = $"请给 Clawbot 发送验证码 [{code}] 完成绑定";
+                        WechatClawbotStatus = string.Format(I18nService.Instance.Translate("请给 Clawbot 发送验证码 [{0}] 完成绑定"), code);
                     });
                 },
                 _wechatClawbotBindCts.Token);
@@ -823,17 +823,17 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
             // 确保通知器从独立存储重新加载最新 context_token。
             // 此处不再重复调用，避免第二次刷新销毁刚创建的会话导致 UI 卡死。
 
-            WechatClawbotStatus = "绑定成功";
-            Toast.Success("微信 Clawbot 绑定成功");
+            WechatClawbotStatus = I18nService.Instance.Translate("绑定成功");
+            Toast.Success(I18nService.Instance.Translate("微信 Clawbot 绑定成功"));
         }
         catch (OperationCanceledException)
         {
-            WechatClawbotStatus = "已取消登录/绑定";
+            WechatClawbotStatus = I18nService.Instance.Translate("已取消登录/绑定");
         }
         catch (System.Exception ex)
         {
-            WechatClawbotStatus = $"登录/绑定失败：{ex.Message}";
-            Toast.Error($"登录/绑定失败：{ex.Message}");
+            WechatClawbotStatus = string.Format(I18nService.Instance.Translate("登录/绑定失败：{0}"), ex.Message);
+            Toast.Error(string.Format(I18nService.Instance.Translate("登录/绑定失败：{0}"), ex.Message));
         }
         finally
         {
@@ -862,18 +862,18 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     {
         if (string.IsNullOrWhiteSpace(Config.NotificationConfig.QqAppId))
         {
-            Toast.Error("请先填写 QQ AppID");
+            Toast.Error(I18nService.Instance.Translate("请先填写 QQ AppID"));
             return;
         }
 
         if (string.IsNullOrWhiteSpace(Config.NotificationConfig.QqClientSecret))
         {
-            Toast.Error("请先填写 QQ AppSecret");
+            Toast.Error(I18nService.Instance.Translate("请先填写 QQ AppSecret"));
             return;
         }
 
         IsBindingGroup = true;
-        QqStatus = "正在连接 QQ 网关…";
+        QqStatus = I18nService.Instance.Translate("正在连接 QQ 网关…");
         _groupBindCts = new CancellationTokenSource();
 
         try
@@ -886,7 +886,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
                     // 回调在后台线程执行，需要编组回 UI 线程才能更新 ObservableProperty
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        QqStatus = $"请将机器人加入群聊，或在群里 @机器人 发送验证码 [{code}]";
+                        QqStatus = string.Format(I18nService.Instance.Translate("请将机器人加入群聊，或在群里 @机器人 发送验证码 [{0}]"), code);
                     });
                 },
                 status =>
@@ -900,19 +900,19 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
             // 绑定成功，自动回填群 OpenID（配置自动保存 + 刷新通知器）
             Config.NotificationConfig.QqGroupOpenId = groupOpenId;
-            QqStatus = "群绑定成功";
-            Toast.Success("QQ 群绑定成功");
+            QqStatus = I18nService.Instance.Translate("群绑定成功");
+            Toast.Success(I18nService.Instance.Translate("QQ 群绑定成功"));
         }
         catch (OperationCanceledException)
         {
             // 用户主动点击取消
-            QqStatus = "已取消群绑定";
+            QqStatus = I18nService.Instance.Translate("已取消群绑定");
         }
         catch (System.Exception ex)
         {
             // 超时或其他错误（超时已被 BindGroupAsync 转为 NotifierException）
-            QqStatus = $"群绑定失败：{ex.Message}";
-            Toast.Error($"群绑定失败：{ex.Message}");
+            QqStatus = string.Format(I18nService.Instance.Translate("群绑定失败：{0}"), ex.Message);
+            Toast.Error(string.Format(I18nService.Instance.Translate("群绑定失败：{0}"), ex.Message));
         }
         finally
         {

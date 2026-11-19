@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,6 +6,10 @@ using System.Linq;
 namespace BetterGenshinImpact.GameTask.Common.Resin;
 
 /// <summary>树脂设置摘要与执行报告的统一纯文本格式化，不依赖界面。</summary>
+/// <remarks>
+/// 展示给用户的摘要、说明按当前界面语言翻译；<see cref="DisplayName"/>、<see cref="ShortName"/>
+/// 同时作为游戏内文字识别的资源 Key，必须保持中文原文，不在此翻译。
+/// </remarks>
 public static class ResinUsageText
 {
     /// <summary>开始时树脂不足一次领奖的跳过文案。</summary>
@@ -21,68 +26,71 @@ public static class ResinUsageText
 
     /// <summary>格式化合成任务的保留设置；旧的非正数均表示默认合成。</summary>
     public static string CraftSummary(int minResinToKeep)
-        => minResinToKeep <= 0 ? "按默认数量合成" : $"合成后保留 {minResinToKeep} 原粹树脂";
+        => minResinToKeep <= 0
+            ? I18nService.Instance.Translate("按默认数量合成")
+            : string.Format(I18nService.Instance.Translate("合成后保留 {0} 原粹树脂"), minResinToKeep);
 
     /// <summary>使用方式的说明，不支持的方式优先显示能力给出的原因。</summary>
     public static string ModeDescription(ResinUsageMode mode, ResinUsageCapability capability)
     {
         if (!capability.Modes.Contains(mode))
             return mode == ResinUsageMode.PerType
-                ? capability.Hints.PerTypeUnsupportedReason ?? "此任务不支持按树脂分别指定"
-                : "此任务不支持此使用方式";
+                ? capability.Hints.PerTypeUnsupportedReason is { } perTypeReason ? I18nService.Instance.Translate(perTypeReason) : I18nService.Instance.Translate("此任务不支持按树脂分别指定")
+                : I18nService.Instance.Translate("此任务不支持此使用方式");
         return mode switch
         {
-            ResinUsageMode.Exhaust => "按顺序使用允许的树脂，不足一次领奖时结束",
-            ResinUsageMode.RunCount => "成功领奖达到次数后结束，树脂不足时提前结束",
-            _ => "每种树脂各领奖指定次数"
+            ResinUsageMode.Exhaust => I18nService.Instance.Translate("按顺序使用允许的树脂，不足一次领奖时结束"),
+            ResinUsageMode.RunCount => I18nService.Instance.Translate("成功领奖达到次数后结束，树脂不足时提前结束"),
+            _ => I18nService.Instance.Translate("每种树脂各领奖指定次数")
         };
     }
 
     /// <summary>树脂分组标题。</summary>
     public static string KindsHeader(ResinUsageMode mode)
-        => mode == ResinUsageMode.PerType ? "各树脂领奖次数" : "可用树脂";
+        => mode == ResinUsageMode.PerType ? I18nService.Instance.Translate("各树脂领奖次数") : I18nService.Instance.Translate("可用树脂");
 
     /// <summary>树脂分组的固定使用顺序及零值说明。</summary>
     public static string KindsDescription(ResinUsageMode mode)
-        => mode == ResinUsageMode.PerType ? "0 表示不使用此类树脂；某类不足时使用下一类" : "按从上到下的顺序使用";
+        => mode == ResinUsageMode.PerType ? I18nService.Instance.Translate("0 表示不使用此类树脂；某类不足时使用下一类") : I18nService.Instance.Translate("按从上到下的顺序使用");
 
     /// <summary>树脂行说明，区分直接领奖、战前补充、分别指定和任务不支持。</summary>
     public static string KindDescription(ResinKind kind, ResinUsageMode mode, ResinUsageCapability capability)
     {
         if (!capability.IsSupported(kind))
-            return capability.Hints.UnsupportedReasons[kind] ?? $"此任务不能使用{DisplayName(kind)}";
+            return capability.Hints.UnsupportedReasons[kind] is { } kindReason ? I18nService.Instance.Translate(kindReason) : string.Format(I18nService.Instance.Translate("此任务不能使用{0}"), LocalizedDisplayName(kind));
         if (mode == ResinUsageMode.PerType)
             return kind switch
             {
-                ResinKind.Condensed => "最先使用",
-                ResinKind.Original => "浓缩完成后使用",
-                ResinKind.Transient => "原粹完成后使用",
-                _ => "须臾完成后使用"
+                ResinKind.Condensed => I18nService.Instance.Translate("最先使用"),
+                ResinKind.Original => I18nService.Instance.Translate("浓缩完成后使用"),
+                ResinKind.Transient => I18nService.Instance.Translate("原粹完成后使用"),
+                _ => I18nService.Instance.Translate("须臾完成后使用")
             };
         if (capability.Kinds[kind] == ResinKindSupport.Replenish)
-            return kind == ResinKind.Transient ? "原粹不足 40 时，战前补充为原粹树脂" : "须臾不可用时，战前补充为原粹树脂";
+            return kind == ResinKind.Transient ? I18nService.Instance.Translate("原粹不足 40 时，战前补充为原粹树脂") : I18nService.Instance.Translate("须臾不可用时，战前补充为原粹树脂");
         if (capability.LockedKind == ResinKind.Original && kind == ResinKind.Original)
-            return "首领奖励固定消耗 40 原粹树脂";
+            return I18nService.Instance.Translate("首领奖励固定消耗 40 原粹树脂");
         var description = kind switch
         {
-            ResinKind.Condensed => "最先使用",
-            ResinKind.Original => "浓缩不足时使用",
-            ResinKind.Transient => "默认关闭，开启后浓缩和原粹不足时使用",
-            _ => "默认关闭，开启后须臾不可用时使用"
+            ResinKind.Condensed => I18nService.Instance.Translate("最先使用"),
+            ResinKind.Original => I18nService.Instance.Translate("浓缩不足时使用"),
+            ResinKind.Transient => I18nService.Instance.Translate("默认关闭，开启后浓缩和原粹不足时使用"),
+            _ => I18nService.Instance.Translate("默认关闭，开启后须臾不可用时使用")
         };
         return mode == ResinUsageMode.Exhaust && kind is ResinKind.Transient or ResinKind.Fragile
-            ? description + "，直到用完" : description;
+            ? description + I18nService.Instance.Translate("，直到用完") : description;
     }
 
     /// <summary>刷至耗尽时开启单类补充树脂的确认正文。</summary>
     public static string EnableSupplementMessage(ResinKind kind, ResinKindSupport support)
         => support == ResinKindSupport.Replenish
-            ? $"刷至树脂耗尽时，原粹不足 40 会持续用{DisplayName(kind)}补充，直到用完。\n确定开启吗？"
-            : $"刷至树脂耗尽时，浓缩和原粹不足后会持续使用{DisplayName(kind)}，直到用完。\n确定开启吗？";
+            ? string.Format(I18nService.Instance.Translate("刷至树脂耗尽时，原粹不足 40 会持续用{0}补充，直到用完。\n确定开启吗？"), LocalizedDisplayName(kind))
+            : string.Format(I18nService.Instance.Translate("刷至树脂耗尽时，浓缩和原粹不足后会持续使用{0}，直到用完。\n确定开启吗？"), LocalizedDisplayName(kind));
 
     /// <summary>已开启补充树脂时切换到耗尽方式的确认正文。</summary>
     public static string SwitchToExhaustMessage(IEnumerable<ResinKind> kinds)
-        => $"已开启{string.Join("、", kinds.Select(DisplayName))}。刷至树脂耗尽会持续使用它们，直到用完。\n是否继续使用？";
+        => string.Format(I18nService.Instance.Translate("已开启{0}。刷至树脂耗尽会持续使用它们，直到用完。\n是否继续使用？"),
+            string.Join(I18nService.Instance.Translate("、"), kinds.Select(LocalizedDisplayName)));
 
     /// <summary>按传入任务能力校验并格式化设置摘要；无效时返回对应提示。</summary>
     /// <param name="usage">树脂设置。</param>
@@ -96,15 +104,16 @@ public static class ResinUsageText
         var kinds = ResinKinds.InOrder.Where(kind => usage.Mode == ResinUsageMode.PerType
             ? usage.Counts[kind] > 0 : usage.Allowed[kind]);
         var sequence = string.Join(" → ", kinds.Select(kind => usage.Mode == ResinUsageMode.PerType
-            ? $"{ShortName(kind)} {usage.Counts[kind]} 次" : ShortName(kind)));
+            ? string.Format(I18nService.Instance.Translate("{0} {1} 次"), LocalizedShortName(kind), usage.Counts[kind])
+            : LocalizedShortName(kind)));
         var summary = usage.Mode switch
         {
-            ResinUsageMode.Exhaust => $"刷至树脂耗尽 · {sequence}",
-            ResinUsageMode.RunCount => $"领奖 {usage.RunCount} 次 · {sequence}",
+            ResinUsageMode.Exhaust => string.Format(I18nService.Instance.Translate("刷至树脂耗尽 · {0}"), sequence),
+            ResinUsageMode.RunCount => string.Format(I18nService.Instance.Translate("领奖 {0} 次 · {1}"), usage.RunCount, sequence),
             _ => sequence
         };
         return usage.OriginalTier == OriginalResinTier.Default
-            ? summary : $"{summary} · 原粹{TierDisplayName(usage.OriginalTier)}";
+            ? summary : string.Format(I18nService.Instance.Translate("{0} · 原粹{1}"), summary, TierDisplayName(usage.OriginalTier));
     }
 
     /// <summary>转发能力校验的无效原因，所有提示由 Validate 统一产生。</summary>
@@ -185,14 +194,38 @@ public static class ResinUsageText
         _ => throw new ArgumentOutOfRangeException(nameof(kind))
     };
 
+    /// <summary>获取按界面语言翻译的树脂全称，仅用于界面展示。</summary>
+    /// <param name="kind">树脂种类。</param>
+    /// <returns>翻译后的全称。</returns>
+    public static string LocalizedDisplayName(ResinKind kind) => kind switch
+    {
+        ResinKind.Condensed => I18nService.Instance.Translate("浓缩树脂"),
+        ResinKind.Original => I18nService.Instance.Translate("原粹树脂"),
+        ResinKind.Transient => I18nService.Instance.Translate("须臾树脂"),
+        ResinKind.Fragile => I18nService.Instance.Translate("脆弱树脂"),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind))
+    };
+
+    /// <summary>获取按界面语言翻译的树脂简称，仅用于界面展示。</summary>
+    /// <param name="kind">树脂种类。</param>
+    /// <returns>翻译后的简称。</returns>
+    private static string LocalizedShortName(ResinKind kind) => kind switch
+    {
+        ResinKind.Condensed => I18nService.Instance.Translate("浓缩"),
+        ResinKind.Original => I18nService.Instance.Translate("原粹"),
+        ResinKind.Transient => I18nService.Instance.Translate("须臾"),
+        ResinKind.Fragile => I18nService.Instance.Translate("脆弱"),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind))
+    };
+
     /// <summary>获取原粹档位的展示名称。</summary>
     /// <param name="tier">原粹档位。</param>
     /// <returns>统一档位名。</returns>
     public static string TierDisplayName(OriginalResinTier tier) => tier switch
     {
-        OriginalResinTier.Default => "默认",
-        OriginalResinTier.Prefer40 => "优先 40",
-        OriginalResinTier.Only20 => "只用 20",
+        OriginalResinTier.Default => I18nService.Instance.Translate("默认"),
+        OriginalResinTier.Prefer40 => I18nService.Instance.Translate("优先 40"),
+        OriginalResinTier.Only20 => I18nService.Instance.Translate("只用 20"),
         _ => throw new ArgumentOutOfRangeException(nameof(tier))
     };
 
@@ -201,9 +234,9 @@ public static class ResinUsageText
     /// <returns>统一方式名。</returns>
     public static string ModeDisplayName(ResinUsageMode mode) => mode switch
     {
-        ResinUsageMode.Exhaust => "刷至树脂耗尽",
-        ResinUsageMode.RunCount => "指定领奖次数",
-        ResinUsageMode.PerType => "按树脂分别指定",
+        ResinUsageMode.Exhaust => I18nService.Instance.Translate("刷至树脂耗尽"),
+        ResinUsageMode.RunCount => I18nService.Instance.Translate("指定领奖次数"),
+        ResinUsageMode.PerType => I18nService.Instance.Translate("按树脂分别指定"),
         _ => throw new ArgumentOutOfRangeException(nameof(mode))
     };
 }

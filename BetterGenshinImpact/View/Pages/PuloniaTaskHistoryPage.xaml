@@ -1,6 +1,7 @@
 <UserControl x:Class="BetterGenshinImpact.View.Pages.PuloniaTaskHistoryPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
              FontFamily="{StaticResource TextThemeFontFamily}"
@@ -17,8 +18,8 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <StackPanel Margin="0,0,0,14">
-            <TextBlock FontSize="26" FontWeight="SemiBold" Text="执行记录" />
-            <TextBlock Margin="0,4,0,0" Text="查看任务计划和一条龙每次执行的结果。记录只保存在本机，重启后仍可查看；各条路线的 CD 在账户页查看。"
+            <TextBlock FontSize="26" FontWeight="SemiBold" Text="{i18n:T 执行记录}" />
+            <TextBlock Margin="0,4,0,0" Text="{i18n:T '查看任务计划和一条龙每次执行的结果。记录只保存在本机，重启后仍可查看；各条路线的 CD 在账户页查看。'}"
                        TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
         </StackPanel>
         <controls:PuloniaTaskHistoryView Grid.Row="1" DataContext="{Binding ViewModel, Mode=OneWay}" />

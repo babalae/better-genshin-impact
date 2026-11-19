@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -26,8 +27,8 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
         TaskType = "javascript",
-        DisplayName = "JS 脚本",
-        Description = "从已拉取的脚本仓库选择 JS 项目，并配置脚本设置与队伍选项。",
+        DisplayName = I18nService.Key("JS 脚本"),
+        Description = I18nService.Key("从已拉取的脚本仓库选择 JS 项目，并配置脚本设置与队伍选项。"),
         RequiresGameSession = true,
         ResourceBaseDirectory = Global.ScriptPath(),
         DefaultParameters = new(PuloniaTaskCommonSettings.CreateDefaults("javascript"))
@@ -52,7 +53,7 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
         PuloniaTaskExecutionContext context, CancellationToken ct)
     {
         if (task.Resource is null && string.IsNullOrWhiteSpace(task.Path))
-            return PuloniaTaskOutcome.Failure("JS 节点没有固定项目。");
+            return PuloniaTaskOutcome.Failure(I18nService.Instance.Translate("JS 节点没有固定项目。"));
         // 脚本只使用本节点租约记录的运行环境；它已停止时当前节点失败
         if (!context.TryGetRuntime(out var runtime, out var runtimeError))
             return PuloniaTaskOutcome.Failure(runtimeError);
@@ -66,7 +67,7 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
         var relativeProjectPath = Path.GetRelativePath(scriptRoot, projectPath);
         if (relativeProjectPath == ".." || relativeProjectPath.StartsWith(".." + Path.DirectorySeparatorChar,
                 StringComparison.Ordinal) || Path.IsPathRooted(relativeProjectPath))
-            return PuloniaTaskOutcome.Failure("JS 项目必须位于 BetterGI 的 User\\JsScript 目录内。");
+            return PuloniaTaskOutcome.Failure(I18nService.Instance.Translate("JS 项目必须位于 BetterGI 的 User\\JsScript 目录内。"));
 
         var parameters = task.Parameters;
         var settings = parameters["settings"]?.ToObject<ExpandoObject>() ?? new ExpandoObject();
@@ -80,7 +81,7 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
         var project = new ScriptProject(relativeProjectPath, scriptRoot, repositoryResources);
         await project.ExecuteAsync(runtime, settings, partyConfig, ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
-        return PuloniaTaskOutcome.ExecutedUnverified("JS 项目已执行完成，但旧脚本没有结构化副作用证据。",
+        return PuloniaTaskOutcome.ExecutedUnverified(I18nService.Instance.Translate("JS 项目已执行完成，但旧脚本没有结构化副作用证据。"),
             new JObject { ["resource_version"] = task.ResourceVersion });
     }
 }

@@ -139,7 +139,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <ui:TextBlock Grid.Column="0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="状态" />
+                <ui:TextBlock Grid.Column="0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{i18n:T 状态}" />
                 <StackPanel Grid.Column="1">
                     <StackPanel Orientation="Horizontal">
                         <Ellipse Style="{StaticResource OverallStatusDotStyle}" Tag="{Binding Status.OverallStatusState, Mode=OneWay}" />
@@ -160,7 +160,7 @@
                     <ui:TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
                                   Text="{Binding Status.Validation, Mode=OneWay}" />
                 </StackPanel>
-                <ui:Button Grid.Column="2" Margin="12,0,8,0" VerticalAlignment="Top" Content="确认后端已重启"
+                <ui:Button Grid.Column="2" Margin="12,0,8,0" VerticalAlignment="Top" Content="{i18n:T 确认后端已重启}"
                            Command="{Binding ConfirmBackendRestartedCommand, Mode=OneWay}"
                            Visibility="{Binding Status.BackendUnknown, Mode=OneWay, Converter={StaticResource QuestVoiceCardBoolVisibility}}" />
             </Grid>
@@ -190,12 +190,12 @@
                 <Ellipse Grid.Row="0" Grid.Column="3" Style="{StaticResource StageNodeCircleStyle}" Tag="{Binding Status.RoutingStage, Mode=OneWay}" />
                 <Ellipse Grid.Row="0" Grid.Column="4" Style="{StaticResource StageNodeCircleStyle}" Tag="{Binding Status.TtsStage, Mode=OneWay}" />
                 <Ellipse Grid.Row="0" Grid.Column="5" Style="{StaticResource StageNodeCircleStyle}" Tag="{Binding Status.PlaybackStage, Mode=OneWay}" />
-                <ui:TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.SceneStage, Mode=OneWay}" Text="对话界面" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.SceneStage, Mode=OneWay}" Text="{i18n:T 对话界面}" />
                 <ui:TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.OcrStage, Mode=OneWay}" Text="OCR" />
-                <ui:TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.SpeakerStage, Mode=OneWay}" Text="角色" />
-                <ui:TextBlock Grid.Row="1" Grid.Column="3" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.RoutingStage, Mode=OneWay}" Text="声线" />
-                <ui:TextBlock Grid.Row="1" Grid.Column="4" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.TtsStage, Mode=OneWay}" Text="合成" />
-                <ui:TextBlock Grid.Row="1" Grid.Column="5" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.PlaybackStage, Mode=OneWay}" Text="播放" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.SpeakerStage, Mode=OneWay}" Text="{i18n:T 角色}" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="3" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.RoutingStage, Mode=OneWay}" Text="{i18n:T 声线}" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="4" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.TtsStage, Mode=OneWay}" Text="{i18n:T 合成}" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="5" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.PlaybackStage, Mode=OneWay}" Text="{i18n:T 播放}" />
             </Grid>
             <ui:TextBlock Margin="16,0,16,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
                           Text="{Binding Status.StageSummary, Mode=OneWay}" />
@@ -206,7 +206,7 @@
                     <ColumnDefinition Width="88" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <ui:TextBlock Grid.Column="0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="当前" />
+                <ui:TextBlock Grid.Column="0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{i18n:T 当前}" />
                 <StackPanel Grid.Column="1">
                     <ui:TextBlock TextWrapping="Wrap">
                         <Run Text="{Binding Status.Character, Mode=OneWay}" FontWeight="SemiBold" />
@@ -216,9 +216,9 @@
                     <ui:TextBlock Margin="0,4,0,0" Text="{Binding Status.Dialogue, Mode=OneWay}" TextWrapping="Wrap" />
                     <ui:TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap">
                         <Run Text="{Binding Status.DialogueState, Mode=OneWay}" />
-                        <Run Text=" · 合成：" />
+                        <Run Text="{i18n:T ' · 合成：'}" />
                         <Run Text="{Binding Status.Tts, Mode=OneWay}" />
-                        <Run Text=" · 播放：" />
+                        <Run Text="{i18n:T ' · 播放：'}" />
                         <Run Text="{Binding Status.Playback, Mode=OneWay}" />
                     </ui:TextBlock>
                 </StackPanel>
@@ -230,7 +230,7 @@
                     <ColumnDefinition Width="88" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <ui:TextBlock Grid.Column="0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="最近事件" />
+                <ui:TextBlock Grid.Column="0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{i18n:T 最近事件}" />
                 <StackPanel Grid.Column="1">
                     <ItemsControl ItemsSource="{Binding Status.RecentEvents, Mode=OneWay}"
                                   Visibility="{Binding Status.HasRecentEvents, Mode=OneWay, Converter={StaticResource QuestVoiceCardBoolVisibility}}">
@@ -240,7 +240,7 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="暂无最近运行事件（最多保留 8 条）。" TextWrapping="Wrap">
+                    <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{i18n:T 暂无最近运行事件（最多保留 8 条）。}" TextWrapping="Wrap">
                         <ui:TextBlock.Style>
                             <Style TargetType="ui:TextBlock">
                                 <Setter Property="Visibility" Value="Collapsed" />
@@ -257,10 +257,10 @@
             <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
             <!-- 操作 -->
             <WrapPanel Margin="16,12">
-                <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="设置…" Icon="{ui:SymbolIcon Settings24}" Command="{Binding OpenSettingsCommand, Mode=OneWay}" />
-                <ui:Button Margin="0,0,8,4" Content="校验配置" Icon="{ui:SymbolIcon CheckmarkCircle24}" Command="{Binding ValidateCommand, Mode=OneWay}" />
-                <ui:Button Margin="0,0,8,4" Content="打开日志" Icon="{ui:SymbolIcon Document24}" Command="{Binding OpenLogFileCommand, Mode=OneWay}" />
-                <ui:Button Margin="0,0,8,4" Content="打开日志目录" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding OpenLogFolderCommand, Mode=OneWay}" />
+                <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="{i18n:T 设置…}" Icon="{ui:SymbolIcon Settings24}" Command="{Binding OpenSettingsCommand, Mode=OneWay}" />
+                <ui:Button Margin="0,0,8,4" Content="{i18n:T 校验配置}" Icon="{ui:SymbolIcon CheckmarkCircle24}" Command="{Binding ValidateCommand, Mode=OneWay}" />
+                <ui:Button Margin="0,0,8,4" Content="{i18n:T 打开日志}" Icon="{ui:SymbolIcon Document24}" Command="{Binding OpenLogFileCommand, Mode=OneWay}" />
+                <ui:Button Margin="0,0,8,4" Content="{i18n:T 打开日志目录}" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding OpenLogFolderCommand, Mode=OneWay}" />
             </WrapPanel>
         </StackPanel>
     </ui:CardExpander>

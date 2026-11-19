@@ -13,6 +13,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Infrastructure.Network;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using Newtonsoft.Json;
 using Wpf.Ui.Violeta.Controls;
@@ -52,7 +53,7 @@ public partial class FeedWindowViewModel : ViewModel
 
             if (codeList.Count == 0)
             {
-                Toast.Warning("暂无前瞻兑换码信息");
+                Toast.Warning(I18nService.Instance.Translate("暂无前瞻兑换码信息"));
                 return;
             }
 
@@ -63,7 +64,7 @@ public partial class FeedWindowViewModel : ViewModel
 
             var item = new FeedItem
             {
-                Title = "【实时获取】前瞻直播兑换码",
+                Title = I18nService.Instance.Translate("【实时获取】前瞻直播兑换码"),
                 Content = displayItems.Count > 0 ? string.Join("\n", displayItems) : string.Empty,
                 Time = DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
                 Codes = codeList.Select(c => c.Code).ToList()
@@ -83,11 +84,11 @@ public partial class FeedWindowViewModel : ViewModel
             }
 
 
-            Toast.Success("已实时获取前瞻兑换码");
+            Toast.Success(I18nService.Instance.Translate("已实时获取前瞻兑换码"));
         }
         catch (Exception ex)
         {
-            Toast.Error($"获取前瞻兑换码失败: {ex.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("获取前瞻兑换码失败: {0}"), ex.Message));
         }
         finally
         {
@@ -125,12 +126,12 @@ public partial class FeedWindowViewModel : ViewModel
                 var codes = string.Join("\n", item.Codes);
                 UIDispatcherHelper.Invoke(() => Clipboard.SetDataObject(codes));
                 RedeemCodeManager.AddNotDetectClipboardText(codes);
-                Toast.Information("兑换码已复制到剪贴板");
+                Toast.Information(I18nService.Instance.Translate("兑换码已复制到剪贴板"));
             }
         }
         catch (Exception ex)
         {
-            Toast.Error($"复制兑换码失败: {ex.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("复制兑换码失败: {0}"), ex.Message));
         }
     }
 
@@ -171,7 +172,7 @@ public partial class FeedWindowViewModel : ViewModel
         }
         catch (Exception ex)
         {
-            Toast.Error($"获取兑换码失败: {ex.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("获取兑换码失败: {0}"), ex.Message));
         }
         finally
         {

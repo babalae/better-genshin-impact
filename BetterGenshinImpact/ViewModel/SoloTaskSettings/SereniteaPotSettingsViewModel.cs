@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json.Linq;
 
@@ -13,7 +14,11 @@ public partial class SereniteaPotSettingsViewModel : SoloTaskSettingsViewModel
     public override string[] EditedParameterNames => ["teleport_type", "secret_treasure_objects"];
 
     /// <summary>洞天百宝支持的商品，顺序与原一条龙的商品勾选列表一致。</summary>
-    private static readonly string[] Goods = ["布匹", "须臾树脂", "大英雄的经验", "流浪者的经验", "精锻用魔矿", "摩拉", "祝圣精华", "祝圣油膏"];
+    private static readonly string[] Goods =
+    [
+        I18nService.Key("布匹"), I18nService.Key("须臾树脂"), I18nService.Key("大英雄的经验"), I18nService.Key("流浪者的经验"),
+        I18nService.Key("精锻用魔矿"), I18nService.Key("摩拉"), I18nService.Key("祝圣精华"), I18nService.Key("祝圣油膏")
+    ];
 
     /// <summary>载入时的进壶方式快照。</summary>
     private readonly string _originalTeleportType;
@@ -40,14 +45,18 @@ public partial class SereniteaPotSettingsViewModel : SoloTaskSettingsViewModel
     {
         _originalTeleportType = ReadString(Original, "teleport_type");
         _teleportType = _originalTeleportType;
-        TeleportTypeChoices = WithCurrentChoice(["地图传送", "尘歌壶道具"], _originalTeleportType);
+        TeleportTypeChoices = WithCurrentChoice([I18nService.Key("地图传送"), I18nService.Key("尘歌壶道具")], _originalTeleportType);
 
         // 数组首项是购买日期，后续项是商品；空配置只提供界面默认值，不自动生成购买参数。
         var purchase = (Original["secret_treasure_objects"] as JArray)?.Values<string>().OfType<string>().ToArray() ?? [];
-        _originalPurchaseSchedule = purchase.FirstOrDefault() ?? "每天重复";
+        _originalPurchaseSchedule = purchase.FirstOrDefault() ?? I18nService.Key("每天重复");
         _originalPurchaseItems = purchase.Skip(1).ToArray();
         _purchaseSchedule = _originalPurchaseSchedule;
-        PurchaseScheduleChoices = WithCurrentChoice(["每天重复", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"], _originalPurchaseSchedule);
+        PurchaseScheduleChoices = WithCurrentChoice(
+        [
+            I18nService.Key("每天重复"), I18nService.Key("星期一"), I18nService.Key("星期二"), I18nService.Key("星期三"),
+            I18nService.Key("星期四"), I18nService.Key("星期五"), I18nService.Key("星期六"), I18nService.Key("星期日")
+        ], _originalPurchaseSchedule);
         PurchaseItems = Goods.Concat(_originalPurchaseItems).Distinct(StringComparer.Ordinal)
             .Select(name => new SereniteaPotPurchaseItemViewModel(name, _originalPurchaseItems.Contains(name, StringComparer.Ordinal))).ToArray();
         TrackEdits(PurchaseItems);

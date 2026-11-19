@@ -650,7 +650,13 @@
                               Grid.Column="1"
                               Margin="0,0,8,0"
                               ItemsSource="{Binding ClickChatOptionNames}"
-                              SelectedItem="{Binding Config.AutoSkipConfig.ClickChatOption, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.AutoSkipConfig.ClickChatOption, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{i18n:TBinding}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -1079,12 +1085,18 @@
                                 Grid.Column="1"
                                 Margin="0,0,8,0"
                                 Orientation="Horizontal">
+                        <!-- 角色与结局名称作为配置键保存，仅在展示时翻译 -->
                         <ComboBox Width="120"
                                   MaxDropDownHeight="360"
                                   ScrollViewer.CanContentScroll="False"
                                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                                   ItemsSource="{Binding HangoutCharacters, Mode=OneWay}"
                                   SelectedItem="{Binding HangoutCharacter, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{i18n:TBinding}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
                             <b:Interaction.Behaviors>
                                 <behavior:ComboBoxPopupScrollBehavior />
                             </b:Interaction.Behaviors>
@@ -1096,6 +1108,11 @@
                                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                                   ItemsSource="{Binding HangoutEndings, Mode=OneWay}"
                                   SelectedItem="{Binding Config.AutoSkipConfig.AutoHangoutEndChoose, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{i18n:TBinding}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
                             <b:Interaction.Behaviors>
                                 <behavior:ComboBoxPopupScrollBehavior />
                             </b:Interaction.Behaviors>
@@ -1443,6 +1460,31 @@
                                      Grid.Column="1"
                                      Margin="0,0,8,0"
                                      IsChecked="{Binding Config.MapMaskConfig.MiniMapMaskEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16,0,16,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 隐藏已标记的标点}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 已标记的标点不再半透明显示，地图更简洁；不会修改标记}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,8,0"
+                                     IsChecked="{Binding Config.MapMaskConfig.HideMarkedPoints, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

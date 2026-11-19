@@ -14,6 +14,7 @@ using System.Linq;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.KeyMacro;
 
@@ -198,16 +199,16 @@ public partial class KeyMacroItemViewModel : ObservableObject, IDisposable
     /// <summary>
     /// 列表中显示的快捷键
     /// </summary>
-    public string ListHotkeyText => string.IsNullOrEmpty(Definition.Hotkey) ? "未设置快捷键" : Definition.Hotkey;
+    public string ListHotkeyText => string.IsNullOrEmpty(Definition.Hotkey) ? I18nService.Instance.Translate("未设置快捷键") : Definition.Hotkey;
 
     /// <summary>
     /// 触发方式名称
     /// </summary>
     public string ModeName => Definition.TriggerMode switch
     {
-        KeyMacroTriggerMode.Hold => "按住循环",
-        KeyMacroTriggerMode.Toggle => "切换循环",
-        _ => "单次"
+        KeyMacroTriggerMode.Hold => I18nService.Instance.Translate("按住循环"),
+        KeyMacroTriggerMode.Toggle => I18nService.Instance.Translate("切换循环"),
+        _ => I18nService.Instance.Translate("单次")
     };
 
     /// <summary>
@@ -222,7 +223,7 @@ public partial class KeyMacroItemViewModel : ObservableObject, IDisposable
 
         if (!_store.TryRename(Definition, value, out var error))
         {
-            Toast.Warning(error ?? "重命名失败");
+            Toast.Warning(error ?? I18nService.Instance.Translate("重命名失败"));
             EditingName = Definition.Name;
         }
     }
@@ -251,7 +252,7 @@ public partial class KeyMacroItemViewModel : ObservableObject, IDisposable
         {
             if (Definition.EffectiveHotkeyType == HotKeyTypeEnum.KeyboardMonitor && value.Modifiers != ModifierKeys.None)
             {
-                Toast.Warning("键鼠监听不支持组合键，请改用单键，或把类型切换为全局热键");
+                Toast.Warning(I18nService.Instance.Translate("键鼠监听不支持组合键，请改用单键，或把类型切换为全局热键"));
                 OnPropertyChanged();
                 return;
             }
@@ -325,9 +326,9 @@ public partial class KeyMacroItemViewModel : ObservableObject, IDisposable
     /// </summary>
     public string ModeDescription => Definition.TriggerMode switch
     {
-        KeyMacroTriggerMode.Hold => "按住时重复执行；松开立即终止，即使本轮没有执行完，并松开宏里按下的键。只能使用键鼠监听",
-        KeyMacroTriggerMode.Toggle => "按一下开始循环；再按一下立即终止，即使本轮没有执行完，并松开宏里按下的键",
-        _ => "按一下执行一遍；执行中再按会被忽略"
+        KeyMacroTriggerMode.Hold => I18nService.Instance.Translate("按住时重复执行；松开立即终止，即使本轮没有执行完，并松开宏里按下的键。只能使用键鼠监听"),
+        KeyMacroTriggerMode.Toggle => I18nService.Instance.Translate("按一下开始循环；再按一下立即终止，即使本轮没有执行完，并松开宏里按下的键"),
+        _ => I18nService.Instance.Translate("按一下执行一遍；执行中再按会被忽略")
     };
 
     /// <summary>
@@ -363,7 +364,7 @@ public partial class KeyMacroItemViewModel : ObservableObject, IDisposable
             if (HotKey.Modifiers != ModifierKeys.None)
             {
                 Definition.Hotkey = string.Empty;
-                Toast.Information("按住循环只能使用键鼠监听，原来的组合键已清空，请重新设置单键或鼠标侧键");
+                Toast.Information(I18nService.Instance.Translate("按住循环只能使用键鼠监听，原来的组合键已清空，请重新设置单键或鼠标侧键"));
             }
         }
 
@@ -382,22 +383,22 @@ public partial class KeyMacroItemViewModel : ObservableObject, IDisposable
         var isWarning = false;
         if (!_config.KeyMacroConfig.Enabled)
         {
-            status = "按键宏总开关已关闭";
+            status = I18nService.Instance.Translate("按键宏总开关已关闭");
             isWarning = true;
         }
         else if (!Definition.Enabled)
         {
-            status = "此宏已停用，打开右上角的开关后生效";
+            status = I18nService.Instance.Translate("此宏已停用，打开右上角的开关后生效");
             isWarning = true;
         }
         else if (string.IsNullOrEmpty(Definition.Hotkey))
         {
-            status = "还没有设置快捷键：点击输入框后按下要使用的键";
+            status = I18nService.Instance.Translate("还没有设置快捷键：点击输入框后按下要使用的键");
             isWarning = true;
         }
         else if (error != null)
         {
-            status = "快捷键未生效：" + error;
+            status = string.Format(I18nService.Instance.Translate("快捷键未生效：{0}"), error);
             isError = true;
         }
         else
@@ -407,16 +408,17 @@ public partial class KeyMacroItemViewModel : ObservableObject, IDisposable
                 : [];
             if (conflicts.Count > 0)
             {
-                status = "该键在原神中也有绑定，按下时游戏也会响应：" + string.Join("、", conflicts.Select(c => c.TrimStart('-', ' ')));
+                status = string.Format(I18nService.Instance.Translate("该键在原神中也有绑定，按下时游戏也会响应：{0}"),
+                    string.Join(I18nService.Instance.Translate("、"), conflicts.Select(c => c.TrimStart('-', ' '))));
                 isWarning = true;
             }
             else if (Definition.EffectiveHotkeyType == HotKeyTypeEnum.KeyboardMonitor)
             {
-                status = "已生效。键鼠监听需要先在启动页启动截图器，只在游戏位于前台时响应，按键会同时传给游戏";
+                status = I18nService.Instance.Translate("已生效。键鼠监听需要先在启动页启动截图器，只在游戏位于前台时响应，按键会同时传给游戏");
             }
             else
             {
-                status = "已生效。全局热键不会把按键传给游戏，只在游戏位于前台时执行";
+                status = I18nService.Instance.Translate("已生效。全局热键不会把按键传给游戏，只在游戏位于前台时执行");
             }
         }
 
@@ -482,7 +484,7 @@ public partial class KeyMacroItemViewModel : ObservableObject, IDisposable
         get
         {
             var first = Document.Diagnostics.FirstOrDefault(d => d.IsError);
-            return first == null ? string.Empty : $"脚本第 {first.Line} 行有错误，请在脚本视图修正，修正前步骤视图为只读";
+            return first == null ? string.Empty : string.Format(I18nService.Instance.Translate("脚本第 {0} 行有错误，请在脚本视图修正，修正前步骤视图为只读"), first.Line);
         }
     }
 
@@ -490,7 +492,7 @@ public partial class KeyMacroItemViewModel : ObservableObject, IDisposable
     /// 指令数量和每轮时长
     /// </summary>
     public string SummaryText =>
-        $"{Document.Commands.Count} 条指令 · 每轮约 {KeyMacroScriptWriter.FormatSeconds(Document.TotalWaitMs)} 秒";
+        string.Format(I18nService.Instance.Translate("{0} 条指令 · 每轮约 {1} 秒"), Document.Commands.Count, KeyMacroScriptWriter.FormatSeconds(Document.TotalWaitMs));
 
     /// <summary>
     /// 状态栏文字
@@ -501,11 +503,11 @@ public partial class KeyMacroItemViewModel : ObservableObject, IDisposable
         {
             if (Document.HasError)
             {
-                return $"有 {Document.ErrorCount} 处错误，执行时会跳过出错的指令";
+                return string.Format(I18nService.Instance.Translate("有 {0} 处错误，执行时会跳过出错的指令"), Document.ErrorCount);
             }
 
             var warnings = Document.Diagnostics.Count(d => !d.IsError);
-            return warnings > 0 ? $"语法正确，有 {warnings} 条提醒" : "语法正确";
+            return warnings > 0 ? string.Format(I18nService.Instance.Translate("语法正确，有 {0} 条提醒"), warnings) : I18nService.Instance.Translate("语法正确");
         }
     }
 

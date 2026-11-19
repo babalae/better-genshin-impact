@@ -17,6 +17,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Infrastructure.WebView;
+using BetterGenshinImpact.Service.I18n;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
 using Wpf.Ui.Violeta.Controls;
@@ -122,7 +123,7 @@ public partial class HtmlMaskWindow : Window
         {
             TaskControl.Logger.LogWarning("未安装 Microsoft Edge WebView2 运行时，无法打开 HTML 遮罩");
             Application.Current.Dispatcher.Invoke(() =>
-                Toast.Warning("脚本遮罩需要 Microsoft Edge WebView2 运行时，请安装后重试"));
+                Toast.Warning(I18nService.Instance.Translate("脚本遮罩需要 Microsoft Edge WebView2 运行时，请安装后重试")));
             throw new InvalidOperationException("未安装 Microsoft Edge WebView2 运行时，无法打开 HTML 遮罩");
         }
 
@@ -461,7 +462,7 @@ public partial class HtmlMaskWindow : Window
         {
             TaskControl.Logger.LogError(e, "WebView2 初始化失败");
             // 告诉用户遮罩为什么没有出现，不再静默关闭
-            Toast.Error($"脚本遮罩网页初始化失败：{e.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("脚本遮罩网页初始化失败：{0}"), e.Message));
             if (!_isClosing)
             {
                 Close();

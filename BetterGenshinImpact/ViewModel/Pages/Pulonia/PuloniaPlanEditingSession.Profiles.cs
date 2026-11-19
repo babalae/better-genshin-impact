@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
@@ -47,7 +48,8 @@ public partial class PuloniaPlanEditingSession
     internal IReadOnlyList<string> GetProfileUsages(string profileId)
         => AllDocuments.SelectMany(document => document.EnumerateNodes()
                 .Where(node => node.Model.ProfileId == profileId)
-                .Select(node => $"计划「{document.Name}」· " + (node.IsRoot ? "计划级设置" : $"「{node.Name}」")))
+                .Select(node => string.Format(I18nService.Instance.Translate("计划「{0}」· "), I18nService.Instance.Translate(document.Name))
+                    + (node.IsRoot ? I18nService.Instance.Translate("计划级设置") : $"「{I18nService.Instance.Translate(node.Name)}」")))
             .ToArray();
 
     /// <summary>
@@ -60,6 +62,7 @@ public partial class PuloniaPlanEditingSession
         foreach (var document in AllDocuments)
             document.SetProfiles(_profiles);
         if (result.Failures.Count > 0)
-            ReportStatus($"有 {result.Failures.Count} 个设置方案文件无法读取，已跳过：" + string.Join("；", result.Failures.Select(item => item.ToString())));
+            ReportStatus(string.Format(I18nService.Instance.Translate("有 {0} 个设置方案文件无法读取，已跳过："), result.Failures.Count)
+                + string.Join("；", result.Failures.Select(item => item.ToString())));
     }
 }

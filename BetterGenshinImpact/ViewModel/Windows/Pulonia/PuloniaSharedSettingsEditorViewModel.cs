@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -118,10 +119,10 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
     public bool HasProfileWarning => !string.IsNullOrEmpty(ProfileWarning);
 
     /// <summary>“只看修改”筛选的文字。</summary>
-    public string OnlyOverriddenLabel => ShowsInheritance ? "只看本节点修改" : "只看已设置";
+    public string OnlyOverriddenLabel => ShowsInheritance ? I18nService.Instance.Translate("只看本节点修改") : I18nService.Instance.Translate("只看已设置");
 
     /// <summary>批量恢复按钮的文字。</summary>
-    public string ResetAllText => ShowsInheritance ? "全部恢复继承" : "清空方案";
+    public string ResetAllText => ShowsInheritance ? I18nService.Instance.Translate("全部恢复继承") : I18nService.Instance.Translate("清空方案");
 
     /// <summary>当前挂了可编辑的方案。</summary>
     public bool CanEditProfile => SelectedProfileOption?.Id is { } id && _session?.Profiles.Any(item => item.Id == id) == true;
@@ -172,7 +173,7 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
         }
         catch (Exception ex) when (ex is PuloniaTaskValidationException or InvalidOperationException or ArgumentException)
         {
-            Message = $"“{row.DisplayName}”未生效：{ex.Message}";
+            Message = string.Format(I18nService.Instance.Translate("“{0}”未生效：{1}"), row.DisplayName, ex.Message);
             Refresh();
         }
     }
@@ -218,7 +219,7 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
         catch (Exception ex) when (ex is PuloniaTaskValidationException or FormatException or ArgumentException or OverflowException
                                        or InvalidOperationException)
         {
-            Message = "路线 CD 未生效：" + ex.Message;
+            Message = I18nService.Instance.Translate("路线 CD 未生效：") + ex.Message;
         }
     }
 
@@ -231,7 +232,7 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
         try
         {
             _target.ResetAll();
-            Message = ShowsInheritance ? "已恢复全部继承，可以撤销。" : "已清空方案中的全部设置。";
+            Message = ShowsInheritance ? I18nService.Instance.Translate("已恢复全部继承，可以撤销。") : I18nService.Instance.Translate("已清空方案中的全部设置。");
         }
         catch (InvalidOperationException ex) { Message = ex.Message; }
     }
@@ -245,7 +246,7 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
         try
         {
             var count = node.RemoveRedundant();
-            Message = count == 0 ? "没有与继承值相同的覆盖。" : $"已移除 {count} 项与继承值相同的覆盖，可以撤销。";
+            Message = count == 0 ? I18nService.Instance.Translate("没有与继承值相同的覆盖。") : string.Format(I18nService.Instance.Translate("已移除 {0} 项与继承值相同的覆盖，可以撤销。"), count);
         }
         catch (InvalidOperationException ex) { Message = ex.Message; }
     }
@@ -268,10 +269,10 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
             settings[property.Name] = property.Value.DeepClone();
         if (settings.Count == 0)
         {
-            Message = "本节点还没有设置过任何项，没有可保存的内容。";
+            Message = I18nService.Instance.Translate("本节点还没有设置过任何项，没有可保存的内容。");
             return;
         }
-        var name = PromptDialog.Prompt("请输入方案名称；方案可在任意计划的任意节点上使用。", "另存为设置方案",
+        var name = PromptDialog.Prompt(I18nService.Instance.Translate("请输入方案名称；方案可在任意计划的任意节点上使用。"), I18nService.Instance.Translate("另存为设置方案"),
             node.Node.IsRoot ? node.Document.Name : node.Node.Name).Trim();
         if (string.IsNullOrWhiteSpace(name))
             return;
@@ -279,15 +280,16 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
         {
             var saved = await _session.SaveProfileAsync(new PuloniaSettingsProfile { Name = name, Settings = settings });
             var replace = await ThemedMessageBox.QuestionAsync(
-                $"已保存方案「{saved.Name}」（{saved.Settings.Count} 项）。\n\n是否让本节点改用这个方案，并移除本节点上的 {node.OwnSettings.Count} 项覆盖？有效值不变，可以撤销。",
-                "另存为设置方案");
+                string.Format(I18nService.Instance.Translate("已保存方案「{0}」（{1} 项）。\n\n是否让本节点改用这个方案，并移除本节点上的 {2} 项覆盖？有效值不变，可以撤销。"), 
+                    saved.Name, saved.Settings.Count, node.OwnSettings.Count),
+                I18nService.Instance.Translate("另存为设置方案"));
             if (replace == MessageBoxResult.Yes)
                 node.Document.UseProfileInsteadOfSettings(node.Node, saved.Id);
-            Message = $"已保存方案「{saved.Name}」。";
+            Message = string.Format(I18nService.Instance.Translate("已保存方案「{0}」。"), saved.Name);
         }
         catch (Exception ex) when (ex is PuloniaTaskValidationException or InvalidOperationException or System.IO.IOException)
         {
-            Message = "保存方案失败：" + ex.Message;
+            Message = I18nService.Instance.Translate("保存方案失败：") + ex.Message;
         }
     }
 
@@ -344,7 +346,7 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
             OnPropertyChanged(nameof(Title));
             OnPropertyChanged(nameof(IsEditable));
             if (!IsEditable)
-                Message = "此节点已被删除或撤销，设置不能再修改。";
+                Message = I18nService.Instance.Translate("此节点已被删除或撤销，设置不能再修改。");
 
             // 1. 行：值、来源、是否覆盖、与继承值是否相同、启用条件
             _effective = _target.GetEffective();
@@ -372,8 +374,8 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
                 category.IsUnused = usage is not null && !usage.ContainsKey(category.Category.Id);
             }
             FooterText = ShowsInheritance
-                ? own.Count == 0 ? "本节点没有覆盖，全部沿用上层设置。" : $"本节点覆盖 {own.Count} 项。"
-                : own.Count == 0 ? "方案中还没有设置任何项。" : $"方案包含 {own.Count} 项设置。";
+                ? own.Count == 0 ? I18nService.Instance.Translate("本节点没有覆盖，全部沿用上层设置。") : string.Format(I18nService.Instance.Translate("本节点覆盖 {0} 项。"), own.Count)
+                : own.Count == 0 ? I18nService.Instance.Translate("方案中还没有设置任何项。") : string.Format(I18nService.Instance.Translate("方案包含 {0} 项设置。"), own.Count);
 
             // 3. 方案选项
             if (CanSelectProfile && _target is PuloniaNodeSharedSettingsTarget node)
@@ -389,14 +391,14 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
     /// <summary>重建方案选项；节点引用的方案不存在时追加警示项，不自动清除选择。</summary>
     private void RefreshProfileOptions(PuloniaNodeSharedSettingsTarget node)
     {
-        var options = new List<PuloniaSettingsProfileOptionViewModel> { new(null, "不使用方案") };
+        var options = new List<PuloniaSettingsProfileOptionViewModel> { new(null, I18nService.Instance.Translate("不使用方案")) };
         options.AddRange(_session!.Profiles.Select(profile => new PuloniaSettingsProfileOptionViewModel(profile.Id,
-            $"{profile.Name}（{profile.Settings.Count} 项）")));
+            string.Format(I18nService.Instance.Translate("{0}（{1} 项）"), profile.Name, profile.Settings.Count))));
         ProfileWarning = null;
         if (node.ProfileId is { } id && options.All(option => option.Id != id))
         {
-            options.Add(new PuloniaSettingsProfileOptionViewModel(id, "⚠ 方案已不存在：" + id));
-            ProfileWarning = "此节点使用的设置方案已不存在，运行前请重新选择；不会自动清除这项选择。";
+            options.Add(new PuloniaSettingsProfileOptionViewModel(id, I18nService.Instance.Translate("⚠ 方案已不存在：") + id));
+            ProfileWarning = I18nService.Instance.Translate("此节点使用的设置方案已不存在，运行前请重新选择；不会自动清除这项选择。");
         }
         if (!ProfileOptions.Select(option => option).SequenceEqual(options))
         {
@@ -419,14 +421,14 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
         if (distance is not null)
         {
             if (Find("hurry.approach_stop_distance") is { } approach && approach.LoadedValue.Value<double?>() > distance)
-                approach.Warning = $"大于赶路启用距离，运行时按 {distance} 米执行。";
+                approach.Warning = string.Format(I18nService.Instance.Translate("大于赶路启用距离，运行时按 {0} 米执行。"), distance);
             if (Find("hurry.mwk_jump_fly_distance") is { } jump && jump.LoadedValue.Value<double?>() <= distance)
-                jump.Warning = $"需大于赶路启用距离，运行时自动调整为 {distance + 1} 米。";
+                jump.Warning = string.Format(I18nService.Instance.Translate("需大于赶路启用距离，运行时自动调整为 {0} 米。"), distance + 1);
         }
         if (ValueOf("fight_end.rotate_find_enemy_enabled")?.Value<bool>() == true
             && ValueOf("fight_end.skip_check_when_enemy_visible")?.Value<bool>() == true)
         {
-            const string text = "与另一项互斥，同时开启时运行中以“敌人可见时跳过结束检查”为准。";
+            var text = I18nService.Instance.Translate("与另一项互斥，同时开启时运行中以“敌人可见时跳过结束检查”为准。");
             if (Find("fight_end.rotate_find_enemy_enabled") is { } rotate) rotate.Warning = text;
             if (Find("fight_end.skip_check_when_enemy_visible") is { } skip) skip.Warning = text;
         }
@@ -454,14 +456,14 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
                 VisibleRows.Add(row);
         }
 
-        ListHeader = searching ? $"搜索“{search}”" : SelectedCategory?.DisplayName ?? string.Empty;
+        ListHeader = searching ? string.Format(I18nService.Instance.Translate("搜索“{0}”"), search) : SelectedCategory?.DisplayName ?? string.Empty;
         ListHint = searching ? null
-            : SelectedCategory is { IsUnused: true } ? "本组下目前没有使用这些设置的任务；设置后对以后加入的任务生效。"
+            : SelectedCategory is { IsUnused: true } ? I18nService.Instance.Translate("本组下目前没有使用这些设置的任务；设置后对以后加入的任务生效。")
             : SelectedCategory?.UsageText;
         IsEmpty = visible.Count == 0;
-        EmptyText = searching ? "没有匹配的设置。"
-            : ShowOnlyOverridden ? (ShowsInheritance ? "本类别没有本节点修改的项。" : "本类别没有设置过的项。")
-            : "本类别的设置项都在“显示高级设置”中，或当前条件下不需要设置。";
+        EmptyText = searching ? I18nService.Instance.Translate("没有匹配的设置。")
+            : ShowOnlyOverridden ? (ShowsInheritance ? I18nService.Instance.Translate("本类别没有本节点修改的项。") : I18nService.Instance.Translate("本类别没有设置过的项。"))
+            : I18nService.Instance.Translate("本类别的设置项都在“显示高级设置”中，或当前条件下不需要设置。");
     }
 
     /// <summary>判断一行是否显示；已覆盖的项总是显示，便于查看和恢复。</summary>

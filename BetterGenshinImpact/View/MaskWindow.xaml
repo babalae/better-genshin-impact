@@ -124,9 +124,10 @@
                     Grid.Column="0"
                     Grid.ColumnSpan="6"
                     ClipToBounds="True">
-                <controls:MiniMapPointsCanvas Visibility="{Binding Config.MapMaskConfig.MiniMapMaskEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
+                <controls:MiniMapPointsCanvas Visibility="{Binding ShowMiniMapPoints, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}"
                                               PointsSource="{Binding MapPoints}"
                                               LabelsSource="{Binding MapPointLabels}"
+                                              HideMarkedPoints="{Binding Config.MapMaskConfig.HideMarkedPoints, Mode=OneWay}"
                                               Viewport="{Binding MiniMapViewport}"
                                               IsHitTestVisible="False">
                     <Canvas.Left>
@@ -707,10 +708,11 @@
             <controls:PointsCanvas Grid.Row="0" Grid.Column="0" Grid.RowSpan="4" Grid.ColumnSpan="6"
                                    x:Name="PointsCanvasControl"
                                    x:FieldModifier="private"
-                                   Visibility="{Binding IsInBigMapUi, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                   Visibility="{Binding ShowBigMapPoints, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}"
                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                    PointsSource="{Binding MapPoints}"
                                    LabelsSource="{Binding MapPointLabels}"
+                                   HideMarkedPoints="{Binding Config.MapMaskConfig.HideMarkedPoints, Mode=OneWay}"
                                    Viewport="{Binding BigMapViewport}"
                                    PointClickCommand="{Binding PointClickCommand}"
                                    PointRightClickCommand="{Binding PointRightClickCommand}"
@@ -1076,6 +1078,62 @@
                             </Grid>
                         </Viewbox>
 
+                        <!--  临时隐藏/显示全部标点：只影响显示，不修改标记；隐藏时按钮高亮提示  -->
+                        <Viewbox Grid.Row="3"
+                                 Grid.Column="2"
+                                 Stretch="Uniform"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Stretch">
+                            <Grid Width="58"
+                                  Height="58">
+                                <Border BorderBrush="#77FDF5E4"
+                                        BorderThickness="6"
+                                        CornerRadius="28.5">
+                                    <Border.Effect>
+                                        <DropShadowEffect Opacity="0.25" BlurRadius="2" ShadowDepth="0" Color="#8C8C8C" />
+                                    </Border.Effect>
+                                    <Border Width="46"
+                                            Height="46"
+                                            CornerRadius="23">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#ECE5D8" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding AreMapPointsTemporarilyHidden, Mode=OneWay}" Value="True">
+                                                        <Setter Property="Background" Value="#FFD3BC8E" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <ui:Button Background="Transparent"
+                                                   Foreground="#3B4255"
+                                                   BorderBrush="Transparent"
+                                                   BorderThickness="0"
+                                                   Padding="8,0,0,0"
+                                                   FontSize="30"
+                                                   Cursor="Hand"
+                                                   Command="{Binding ToggleMapPointsTemporarilyHiddenCommand}">
+                                            <ui:Button.Style>
+                                                <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                    <Setter Property="Appearance" Value="Transparent" />
+                                                    <Setter Property="MouseOverBackground" Value="#1A000000" />
+                                                    <Setter Property="PressedBackground" Value="#33000000" />
+                                                    <Setter Property="Icon" Value="{ui:SymbolIcon Eye24}" />
+                                                    <Setter Property="ToolTip" Value="{i18n:T 临时隐藏全部标点}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding AreMapPointsTemporarilyHidden, Mode=OneWay}" Value="True">
+                                                            <Setter Property="Icon" Value="{ui:SymbolIcon EyeOff24}" />
+                                                            <Setter Property="ToolTip" Value="{i18n:T 显示全部标点}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ui:Button.Style>
+                                        </ui:Button>
+                                    </Border>
+                                </Border>
+                            </Grid>
+                        </Viewbox>
+
                         <Popup AllowsTransparency="True"
                                IsOpen="{Binding IsMapPointPickerOpen}"
                                PlacementTarget="{Binding ElementName=MapPointPickerToggleViewbox}"
@@ -1091,13 +1149,13 @@
                                     </MultiBinding>
                                 </Grid.Height>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="540" />
+                                    <ColumnDefinition Width="640" />
                                     <ColumnDefinition Width="12" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
                                 <Border Grid.Column="0"
-                                        Width="540"
+                                        Width="640"
                                         Background="#C81F232A"
                                         BorderBrush="#26FFFFFF"
                                         BorderThickness="1"
@@ -1107,6 +1165,7 @@
                                     </Border.Effect>
                                     <Grid>
                                         <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
@@ -1175,6 +1234,31 @@
                                                            ToolTip="{i18n:T 全部显示}"
                                                            IsEnabled="{Binding HasHiddenMapPoints}"
                                                            Command="{Binding ShowAllMapPointsCommand}" />
+                                                <!--  隐藏已标记的标点：开启时按钮高亮，已标记的点位不再半透明显示  -->
+                                                <ui:Button Width="32"
+                                                           Height="32"
+                                                           Margin="0,0,6,0"
+                                                           Foreground="White"
+                                                           Cursor="Hand"
+                                                           Icon="{ui:SymbolIcon CheckmarkCircle24}"
+                                                           Command="{Binding ToggleHideMarkedPointsCommand}">
+                                                    <ui:Button.Style>
+                                                        <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                            <Setter Property="Background" Value="#FF2B2F37" />
+                                                            <Setter Property="MouseOverBackground" Value="#FF3A3F4A" />
+                                                            <Setter Property="PressedBackground" Value="#FF24272E" />
+                                                            <Setter Property="ToolTip" Value="{i18n:T 隐藏已标记的标点}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Config.MapMaskConfig.HideMarkedPoints, Mode=OneWay}" Value="True">
+                                                                    <Setter Property="Background" Value="#FFB08A45" />
+                                                                    <Setter Property="MouseOverBackground" Value="#FFC29A52" />
+                                                                    <Setter Property="PressedBackground" Value="#FF9A783B" />
+                                                                    <Setter Property="ToolTip" Value="{i18n:T 显示已标记的标点}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ui:Button.Style>
+                                                </ui:Button>
                                                 <ui:Button
                                                            Width="32"
                                                            Height="32"
@@ -1186,9 +1270,55 @@
                                             </StackPanel>
                                         </Grid>
 
-                                        <Grid Grid.Row="1" Margin="12,0,12,12">
+                                        <!--  HoYoLAB 账号：登录后右键标记同步到账号  -->
+                                        <StackPanel Grid.Row="1" Margin="12,0,12,8" Orientation="Horizontal">
+                                                <ui:Button Height="28"
+                                                           Margin="0,0,6,0"
+                                                           Background="#FF2B2F37"
+                                                           Foreground="White"
+                                                           Cursor="Hand"
+                                                           Icon="{ui:SymbolIcon Person24}"
+                                                           Content="{i18n:T 登录 HoYoLAB}"
+                                                           Visibility="{Binding ShowHoYoLabLoginButton, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                           Command="{Binding LoginHoYoLabCommand}" />
+                                            <StackPanel Orientation="Horizontal"
+                                                        Visibility="{Binding ShowHoYoLabAccountPanel, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock VerticalAlignment="Center"
+                                                           Margin="0,0,8,0"
+                                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                           Text="{Binding HoYoLabAccountText, Mode=OneWay}" />
+                                                <ui:Button Height="28"
+                                                           Margin="0,0,6,0"
+                                                           Background="#FF2B2F37"
+                                                           Foreground="White"
+                                                           Cursor="Hand"
+                                                           Width="32"
+                                                           Padding="0"
+                                                           Icon="{ui:SymbolIcon ArrowSync24}"
+                                                           ToolTip="{i18n:T 刷新账号标记}"
+                                                           Command="{Binding RefreshHoYoLabMarksCommand}" />
+                                                <ui:Button Height="28"
+                                                           Margin="0,0,6,0"
+                                                           Background="#FF2B2F37"
+                                                           Foreground="White"
+                                                           Cursor="Hand"
+                                                           Icon="{ui:SymbolIcon CloudArrowUp24}"
+                                                           Content="{i18n:T 上传本地标记}"
+                                                           Command="{Binding UploadLocalMarksCommand}" />
+                                                <ui:Button Height="28"
+                                                           Margin="0,0,6,0"
+                                                           Background="#FF2B2F37"
+                                                           Foreground="White"
+                                                           Cursor="Hand"
+                                                           Icon="{ui:SymbolIcon SignOut24}"
+                                                           Content="{i18n:T 退出登录}"
+                                                           Command="{Binding LogoutHoYoLabCommand}" />
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <Grid Grid.Row="2" Margin="12,0,12,12">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="140" />
+                                                <ColumnDefinition Width="170" />
                                                 <ColumnDefinition Width="12" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
@@ -1206,6 +1336,7 @@
                                                              Background="Transparent"
                                                              BorderThickness="0"
                                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                              Cursor="Hand"
                                                              PreviewMouseLeftButtonDown="MapLabelCategoriesListView_OnPreviewMouseLeftButtonDown">
                                                     <ui:ListView.ItemTemplate>
@@ -1213,8 +1344,11 @@
                                                             <Border Margin="0,1"
                                                                     Padding="6,6"
                                                                     Background="Transparent">
+                                                                <!--  长名称（如葡萄牙语）换行显示，悬停显示全名  -->
                                                                 <TextBlock Foreground="White"
                                                                            Text="{Binding Name}"
+                                                                           ToolTip="{Binding Name}"
+                                                                           TextWrapping="Wrap"
                                                                            TextTrimming="CharacterEllipsis" />
                                                             </Border>
                                                         </DataTemplate>
@@ -1250,18 +1384,40 @@
                                                             </ItemsControl.ItemsPanel>
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate>
-                                                                    <Button Width="160"
+                                                                    <ui:Button Width="190"
                                                                             Height="54"
+                                                                            ToolTip="{Binding Name}"
                                                                             Margin="0,0,8,8"
-                                                                            Background="#B22C323C"
-                                                                            BorderBrush="#403A424F"
-                                                                            BorderThickness="1"
                                                                             Padding="8,0"
                                                                             HorizontalContentAlignment="Stretch"
                                                                             VerticalContentAlignment="Center"
                                                                             Cursor="Hand"
                                                                             Command="{Binding DataContext.SelectMapLabelItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                             CommandParameter="{Binding}">
+                                                                        <!--  已选中（正在地图上显示）的分类用蓝色边框和底色高亮  -->
+                                                                        <!--  悬停/按下颜色：WPF-UI 默认会改成灰色，这里按当前状态给出更亮/更暗的同色系  -->
+                                                                        <ui:Button.Style>
+                                                                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                                                <Setter Property="Background" Value="#B22C323C" />
+                                                                                <Setter Property="BorderBrush" Value="#403A424F" />
+                                                                                <Setter Property="BorderThickness" Value="1" />
+                                                                                <Setter Property="MouseOverBackground" Value="#CC3A424F" />
+                                                                                <Setter Property="MouseOverBorderBrush" Value="#806B7586" />
+                                                                                <Setter Property="PressedBackground" Value="#CC232831" />
+                                                                                <Setter Property="PressedBorderBrush" Value="#806B7586" />
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsSelected, Mode=OneWay}" Value="True">
+                                                                                        <Setter Property="Background" Value="#CC1F4E7A" />
+                                                                                        <Setter Property="BorderBrush" Value="#FF4AA3FF" />
+                                                                                        <Setter Property="BorderThickness" Value="2" />
+                                                                                        <Setter Property="MouseOverBackground" Value="#DD2A5F91" />
+                                                                                        <Setter Property="MouseOverBorderBrush" Value="#FF4AA3FF" />
+                                                                                        <Setter Property="PressedBackground" Value="#CC1A4268" />
+                                                                                        <Setter Property="PressedBorderBrush" Value="#FF4AA3FF" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </ui:Button.Style>
                                                                         <DockPanel HorizontalAlignment="Stretch"
                                                                                    VerticalAlignment="Center"
                                                                                    LastChildFill="True">
@@ -1278,21 +1434,27 @@
                                                                             </Border>
 
                                                                             <TextBlock DockPanel.Dock="Right"
-                                                                                       Width="42"
+                                                                                       MinWidth="24"
+                                                                                       Margin="4,0,0,0"
                                                                                        VerticalAlignment="Center"
                                                                                        HorizontalAlignment="Right"
                                                                                        TextAlignment="Right"
                                                                                        Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                                                       Text="{Binding PointCount}" />
+                                                                                       Text="{Binding PointCountText, Mode=OneWay}" />
 
+                                                                            <!--  名称最多两行，超出部分省略；完整名称见按钮提示  -->
                                                                             <TextBlock VerticalAlignment="Center"
                                                                                        Foreground="White"
                                                                                        HorizontalAlignment="Stretch"
                                                                                        TextAlignment="Left"
                                                                                        Text="{Binding Name}"
+                                                                                       TextWrapping="Wrap"
+                                                                                       MaxHeight="40"
+                                                                                       LineHeight="18"
+                                                                                       LineStackingStrategy="BlockLineHeight"
                                                                                        TextTrimming="CharacterEllipsis" />
                                                                         </DockPanel>
-                                                                    </Button>
+                                                                    </ui:Button>
                                                                 </DataTemplate>
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System;
 using System.IO;
@@ -67,7 +68,8 @@ internal static class PuloniaOneDragonSettingChoices
             "training_guide_fallback_sunday_selected_value" => ["", "1", "2", "3"],
             "boss_name" => ["", .. AutoBossData.SupportedBossNames],
             "country" when taskType == LeyLineTaskType => [.. TaskSettingsPageViewModel.LeyLineOutcropCountryList],
-            "ley_line_outcrop_type" => ["启示之花", "藏金之花"],
+            // 选项是保存值，保持中文原值，只标记为 i18n Key，下拉框通过 TBinding 翻译展示
+            "ley_line_outcrop_type" => [I18nService.Key("启示之花"), I18nService.Key("藏金之花")],
             // 战斗策略使用独立字段形态，由选择控件扫描目录。
             "sunday_selected_value" => ["", "1", "2", "3"],
             "max_artifact_star" => ["1", "2", "3", "4"],
@@ -78,26 +80,27 @@ internal static class PuloniaOneDragonSettingChoices
             // 外部导入的暂不可用选项仍显示，用户可以主动选择替代项。
             result["enum"] = new JArray(choices.Concat(value?.Type == JTokenType.String ? [value.Value<string>()!] : Array.Empty<string>()).Distinct());
         }
+        // 说明只用于界面展示，按当前界面语言翻译；能力 Schema 自带的说明原样保留
         result["description"] = key switch
         {
-            "domain_name" => "选择要刷取的秘境。",
-            "boss_name" => "选择要讨伐的首领。",
-            "country" => "选择任务前往的国家。",
-            "party_name" or "team_name" or "team" or "fight_team_name" => "填写游戏内队伍名称，留空时使用当前队伍。",
-            "strategy_name" or "combat_strategy_path" => "选择当前任务使用的战斗策略。",
-            "boss_num" => "选择幽境危战中的首领序号（1—3）。",
-            "fight_config" or "finish_detect_config" => "展开设置当前任务的战斗与结束检测方式。",
-            "training_guide_run_preference" => "0：适量刷取，依靠合成天赋收益补足材料；1：充分刷取，直到满足养成计划需求。",
-            "training_guide_crafting_bonus_reserve_percent" => "适量刷取时为合成额外收益预留的比例，范围 0–20。",
-            "training_guide_reward_recognition_enabled" => "每轮领奖后识别奖励并更新库存，减少多刷；需要 1920×1080 分辨率。",
-            "training_guide_reward_failure_budget_enabled" => "奖励识别失败时按首次估算的预算继续，关闭时识别失败即结束。",
-            "training_guide_low_ar_adaptation_enabled" => "冒险等阶较低时检查入口是否解锁，并自动降低难度。",
-            "training_guide_fallback_domain_name" => "养成需求全部满足后，用剩余树脂刷取的秘境；留空则保留剩余树脂。",
-            "training_guide_fallback_sunday_selected_value" => "备选秘境在周日或限时全开时领取的奖励序号。",
+            "domain_name" => I18nService.Instance.Translate("选择要刷取的秘境。"),
+            "boss_name" => I18nService.Instance.Translate("选择要讨伐的首领。"),
+            "country" => I18nService.Instance.Translate("选择任务前往的国家。"),
+            "party_name" or "team_name" or "team" or "fight_team_name" => I18nService.Instance.Translate("填写游戏内队伍名称，留空时使用当前队伍。"),
+            "strategy_name" or "combat_strategy_path" => I18nService.Instance.Translate("选择当前任务使用的战斗策略。"),
+            "boss_num" => I18nService.Instance.Translate("选择幽境危战中的首领序号（1—3）。"),
+            "fight_config" or "finish_detect_config" => I18nService.Instance.Translate("展开设置当前任务的战斗与结束检测方式。"),
+            "training_guide_run_preference" => I18nService.Instance.Translate("0：适量刷取，依靠合成天赋收益补足材料；1：充分刷取，直到满足养成计划需求。"),
+            "training_guide_crafting_bonus_reserve_percent" => I18nService.Instance.Translate("适量刷取时为合成额外收益预留的比例，范围 0–20。"),
+            "training_guide_reward_recognition_enabled" => I18nService.Instance.Translate("每轮领奖后识别奖励并更新库存，减少多刷；需要 1920×1080 分辨率。"),
+            "training_guide_reward_failure_budget_enabled" => I18nService.Instance.Translate("奖励识别失败时按首次估算的预算继续，关闭时识别失败即结束。"),
+            "training_guide_low_ar_adaptation_enabled" => I18nService.Instance.Translate("冒险等阶较低时检查入口是否解锁，并自动降低难度。"),
+            "training_guide_fallback_domain_name" => I18nService.Instance.Translate("养成需求全部满足后，用剩余树脂刷取的秘境；留空则保留剩余树脂。"),
+            "training_guide_fallback_sunday_selected_value" => I18nService.Instance.Translate("备选秘境在周日或限时全开时领取的奖励序号。"),
             // 移涌活动秘境的来源说明随单选项变化，见 PuloniaOneDragonParameterFieldViewModel.DomainSourceDescription
-            "material_overflow_domain_name" => "盛材移涌期间用原粹领取当天的双倍。",
-            "blessing_overflow_domain_name" => "祝圣移涌期间用原粹领取当天的双倍。",
-            _ => result.Value<string>("description") ?? "未修改的设置继续使用参数来源中的值。"
+            "material_overflow_domain_name" => I18nService.Instance.Translate("盛材移涌期间用原粹领取当天的双倍。"),
+            "blessing_overflow_domain_name" => I18nService.Instance.Translate("祝圣移涌期间用原粹领取当天的双倍。"),
+            _ => result.Value<string>("description") ?? I18nService.Instance.Translate("未修改的设置继续使用参数来源中的值。")
         };
         if (value is JObject values && key != "settings")
         {

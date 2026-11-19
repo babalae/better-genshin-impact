@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -131,13 +132,18 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
     /// 列表为空时的解释，不把计划过滤无结果误显示为历史丢失。
     /// </summary>
     public string EmptyText => PlanFilterId is null
-        ? "暂无执行记录\n执行任务计划或一条龙后，结果会显示在这里。"
-        : "这个计划还没有执行记录\n开始执行后，结果会显示在这里。";
+        ? I18nService.Instance.Translate("暂无执行记录\n执行任务计划或一条龙后，结果会显示在这里。")
+        : I18nService.Instance.Translate("这个计划还没有执行记录\n开始执行后，结果会显示在这里。");
 
     /// <summary>
     /// 当前显示的记录数，按时间从新到旧排列。
     /// </summary>
-    public string CountText => $"共 {Runs.Count} 条";
+    public string CountText => string.Format(I18nService.Instance.Translate("共 {0} 条"), Runs.Count);
+
+    /// <summary>
+    /// 记录数旁的悬停说明：记录在本机的保存目录。
+    /// </summary>
+    public string StorageDirectoryToolTip => string.Format(I18nService.Instance.Translate("记录保存在本机：{0}"), StorageDirectory);
 
     /// <summary>
     /// 记录卡片是否展示计划名标题；计划页固定只看当前计划，标题与页面计划名重复，仅全局页跨计划展示时显示。
@@ -323,20 +329,20 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
         {
             if (selected.StopAccess == PuloniaRunStopAccess.Dispatched && _dispatcher is { } dispatcher)
             {
-                StatusMessage = $"正在请求“{selected.InstanceText}”停止……";
+                StatusMessage = string.Format(I18nService.Instance.Translate("正在请求“{0}”停止……"), selected.InstanceText);
                 await dispatcher.CancelAsync(selected.RunId);
                 await RefreshAsync(selected.RunId);
-                StatusMessage = "已请求停止，执行实例结束运行后状态会自动更新。";
+                StatusMessage = I18nService.Instance.Translate("已请求停止，执行实例结束运行后状态会自动更新。");
                 return;
             }
-            StatusMessage = "正在停止，等待当前任务退出……";
+            StatusMessage = I18nService.Instance.Translate("正在停止，等待当前任务退出……");
             await _taskService.CancelAsync(selected.RunId);
             await RefreshAsync(selected.RunId);
-            StatusMessage = "已停止。";
+            StatusMessage = I18nService.Instance.Translate("已停止。");
         }
         catch (Exception ex)
         {
-            await ShowOperationErrorAsync("停止失败：", ex);
+            await ShowOperationErrorAsync(I18nService.Instance.Translate("停止失败："), ex);
         }
     }
 
@@ -353,11 +359,11 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
         {
             var runId = await _taskService.ResumeAsync(selected.Run.RunId);
             await RevealRunAsync(runId);
-            StatusMessage = "已开始续跑：沿用这次运行当时的设置，继续未完成的任务。";
+            StatusMessage = I18nService.Instance.Translate("已开始续跑：沿用这次运行当时的设置，继续未完成的任务。");
         }
         catch (Exception ex)
         {
-            await ShowOperationErrorAsync("续跑失败：", ex);
+            await ShowOperationErrorAsync(I18nService.Instance.Translate("续跑失败："), ex);
         }
     }
 
@@ -376,9 +382,9 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
             selected.Run.NodeResults);
         // 显式起点会重放其后的节点，已确认成功也可能重复，普通历史同样需要确认。
         var result = await ThemedMessageBox.ShowAsync(
-            $"将沿用这次运行当时的设置，从“{node.TaskName}”开始重新执行，它和之后的任务都会再执行一次。"
-            + (allowUncertainReplay ? "\n这次运行有结果无法确认的任务，请先在游戏中核对。" : "")
-            + "\n是否继续？", "从选中任务开始", MessageBoxButton.YesNo,
+            string.Format(I18nService.Instance.Translate("将沿用这次运行当时的设置，从“{0}”开始重新执行，它和之后的任务都会再执行一次。"), I18nService.Instance.Translate(node.TaskName))
+            + (allowUncertainReplay ? "\n" + I18nService.Instance.Translate("这次运行有结果无法确认的任务，请先在游戏中核对。") : "")
+            + "\n" + I18nService.Instance.Translate("是否继续？"), I18nService.Instance.Translate("从选中任务开始"), MessageBoxButton.YesNo,
             ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
         if (result != MessageBoxResult.Yes)
             return;
@@ -386,11 +392,11 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
         {
             var runId = await _taskService.ResumeAsync(selected.Run.RunId, node.TaskAddress, allowUncertainReplay);
             await RevealRunAsync(runId);
-            StatusMessage = $"已开始续跑：沿用这次运行当时的设置，从“{node.TaskName}”开始。";
+            StatusMessage = string.Format(I18nService.Instance.Translate("已开始续跑：沿用这次运行当时的设置，从“{0}”开始。"), I18nService.Instance.Translate(node.TaskName));
         }
         catch (Exception ex)
         {
-            await ShowOperationErrorAsync("从选中任务开始失败：", ex);
+            await ShowOperationErrorAsync(I18nService.Instance.Translate("从选中任务开始失败："), ex);
         }
     }
 
@@ -459,7 +465,7 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
         }
         catch (Exception ex)
         {
-            StatusMessage = "刷新执行记录失败：" + ex.Message;
+            StatusMessage = I18nService.Instance.Translate("刷新执行记录失败：") + ex.Message;
             _lastRefreshFailed = true;
         }
         finally
@@ -501,7 +507,7 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
     private static string? DescribeStateFailures(IReadOnlyList<PuloniaTaskFileLoadFailure> failures)
         => failures.Count == 0
             ? null
-            : $"有 {failures.Count} 个实例的运行状态无法读取，已跳过这些实例排队和运行中的记录（文件未改动）："
+            : string.Format(I18nService.Instance.Translate("有 {0} 个实例的运行状态无法读取，已跳过这些实例排队和运行中的记录（文件未改动）："), failures.Count)
               + string.Join("；", failures.Select(failure =>
                   PuloniaInstanceKey.DescribeDirectory(Path.GetFileName(Path.GetDirectoryName(failure.Path)) ?? "") + "：" + failure.Message));
 
@@ -547,7 +553,7 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
     private async Task ShowOperationErrorAsync(string prefix, Exception ex)
     {
         StatusMessage = prefix + ex.Message;
-        await ThemedMessageBox.ErrorAsync(StatusMessage, "执行记录操作失败");
+        await ThemedMessageBox.ErrorAsync(StatusMessage, I18nService.Instance.Translate("执行记录操作失败"));
     }
 
     /// <summary>

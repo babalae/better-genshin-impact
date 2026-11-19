@@ -16,6 +16,7 @@ using BetterGenshinImpact.GameTask.Music.Model;
 using BetterGenshinImpact.GameTask.Music.Service;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
+using BetterGenshinImpact.Service.I18n;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.View;
@@ -58,7 +59,8 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
     private const int VkOem6 = 0xDD;
     private const int VkR = 0x52;
 
-    private const string DefaultHint = "照着圈起来的琴键弹，整段弹对后自动显示下一段";
+    /// <summary>默认提示文字（按当前界面语言翻译）。</summary>
+    private static string DefaultHint => I18nService.Instance.Translate("照着圈起来的琴键弹，整段弹对后自动显示下一段");
 
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
@@ -279,12 +281,12 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
         }
 
         SegmentText.Text = total <= 0
-            ? "本段键位"
-            : $"第 {index + 1} / {total} 段 · 本段 {presses.Count} 次按键";
+            ? I18nService.Instance.Translate("本段键位")
+            : string.Format(I18nService.Instance.Translate("第 {0} / {1} 段 · 本段 {2} 次按键"), index + 1, total, presses.Count);
         TrackText.Text = trackName;
         UnmappedText.Text = missing.Count == 0
             ? string.Empty
-            : $"当前乐器没有这些键：{string.Join(' ', missing)}";
+            : string.Format(I18nService.Instance.Translate("当前乐器没有这些键：{0}"), string.Join(' ', missing));
         UnmappedText.Visibility = missing.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
         RefreshChips(_segmentPresses);
@@ -361,8 +363,8 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
 
         HintText.Foreground = ErrorBrush;
         HintText.Text = string.IsNullOrEmpty(wrongKeys)
-            ? "按错了，本段重新来一次"
-            : $"按错（{wrongKeys}），本段重新来一次";
+            ? I18nService.Instance.Translate("按错了，本段重新来一次")
+            : string.Format(I18nService.Instance.Translate("按错（{0}），本段重新来一次"), wrongKeys);
 
         foreach (var chip in _chips)
         {
@@ -399,8 +401,8 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
         }
 
         ShowTransientHint(HeldRingBrush, string.IsNullOrEmpty(expectedKeys)
-            ? "按顺序弹：先弹前面还没弹完的那次按键"
-            : $"按顺序弹：先按 {expectedKeys}");
+            ? I18nService.Instance.Translate("按顺序弹：先弹前面还没弹完的那次按键")
+            : string.Format(I18nService.Instance.Translate("按顺序弹：先按 {0}"), expectedKeys));
     }
 
     public void UpdateCompleted(string trackName)
@@ -417,8 +419,8 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
 
         HintText.Foreground = SatisfiedBrush;
         HintText.Text = string.IsNullOrEmpty(trackName)
-            ? "整首曲子都弹完了！"
-            : $"《{trackName}》整首都弹完了！";
+            ? I18nService.Instance.Translate("整首曲子都弹完了！")
+            : string.Format(I18nService.Instance.Translate("《{0}》整首都弹完了！"), trackName);
 
         ClearRings();
     }
@@ -452,7 +454,7 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
         }
 
         HintText.Foreground = HintBrush;
-        HintText.Text = string.IsNullOrEmpty(reason) ? "引导式跟弹已结束" : $"引导式跟弹已结束：{reason}";
+        HintText.Text = string.IsNullOrEmpty(reason) ? I18nService.Instance.Translate("引导式跟弹已结束") : string.Format(I18nService.Instance.Translate("引导式跟弹已结束：{0}"), reason);
 
         ClearRings();
     }
@@ -863,7 +865,7 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
             if (!await _session.RedetectKeysAsync())
             {
                 HintText.Foreground = HintBrush;
-                HintText.Text = "没能从画面里认出琴键，仍按当前参数画圈";
+                HintText.Text = I18nService.Instance.Translate("没能从画面里认出琴键，仍按当前参数画圈");
                 ScheduleHintRestore();
             }
         }
@@ -917,8 +919,9 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
             return;
         }
 
-        ShowTransientHint(AccentBrush, $"键位：X {layout.BaseX:0}  Y {layout.BaseY:0} · 键距 {layout.ColumnSpacing:0} · "
-                                       + $"排距 {layout.RowSpacing:0} · 缩进 {layout.RowIndent:0} · 圈 {layout.RingRadius:0}（已自动保存，下次打开沿用）");
+        ShowTransientHint(AccentBrush, string.Format(
+            I18nService.Instance.Translate("键位：X {0:0}  Y {1:0} · 键距 {2:0} · 排距 {3:0} · 缩进 {4:0} · 圈 {5:0}（已自动保存，下次打开沿用）"),
+            layout.BaseX, layout.BaseY, layout.ColumnSpacing, layout.RowSpacing, layout.RowIndent, layout.RingRadius));
     }
 
     /// <summary>在提示行上显示一句话，几秒后自动恢复成默认提示</summary>

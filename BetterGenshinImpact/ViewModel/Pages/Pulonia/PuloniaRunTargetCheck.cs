@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -110,10 +111,10 @@ public sealed class PuloniaRunTargetCheck
         // 3. 有问题：说明并询问是否坚持提交；选择返回时展开“运行于”，在那里就地修改各实例的当前账户
         if (findings.Problems.Count > 0)
         {
-            var message = "提交前发现以下情况，相关的运行开始时可能进入待处理：\n\n"
+            var message = I18nService.Instance.Translate("提交前发现以下情况，相关的运行开始时可能进入待处理：") + "\n\n"
                           + string.Join("\n", findings.Problems.Select(problem => "• " + problem))
-                          + "\n\n仍然提交吗？选择“否”可以先修改各实例的当前账户（在“运行于”或标题栏中修改）。";
-            if (await ThemedMessageBox.ShowAsync(message, "检查运行账户", MessageBoxButton.YesNo,
+                          + "\n\n" + I18nService.Instance.Translate("仍然提交吗？选择“否”可以先修改各实例的当前账户（在“运行于”或标题栏中修改）。");
+            if (await ThemedMessageBox.ShowAsync(message, I18nService.Instance.Translate("检查运行账户"), MessageBoxButton.YesNo,
                     ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
             {
                 returnToChoice();
@@ -124,7 +125,7 @@ public sealed class PuloniaRunTargetCheck
         // 4. 本实例的运行切换时会把其他在线实例挤下线：确认后本次本地请求带上确认标记
         if (findings.LocalDisplacement is { } displacement)
         {
-            if (await ThemedMessageBox.ShowAsync(displacement + "\n\n是否继续？", "切换账户", MessageBoxButton.YesNo,
+            if (await ThemedMessageBox.ShowAsync(displacement + "\n\n" + I18nService.Instance.Translate("是否继续？"), I18nService.Instance.Translate("切换账户"), MessageBoxButton.YesNo,
                     ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
                 return null;
             return new PuloniaRunTargetConfirmation(true);
@@ -149,24 +150,24 @@ public sealed class PuloniaRunTargetCheck
     {
         var problems = new List<string>();
         string? localDisplacement = null;
-        string Name(string? accountId) => accounts.FirstOrDefault(account => account.Id == accountId)?.Name ?? "未确定";
+        string Name(string? accountId) => accounts.FirstOrDefault(account => account.Id == accountId)?.Name ?? I18nService.Instance.Translate("未确定");
 
         // 1. 跟随当前账户：当前账户未确定的实例无法确定运行账户
         foreach (var target in targets.Where(target => target.RunAccountId is null))
-            problems.Add($"{target.InstanceName}的当前账户未确定，请先为它选择当前账户。");
+            problems.Add(string.Format(I18nService.Instance.Translate("{0}的当前账户未确定，请先为它选择当前账户。"), target.InstanceName));
 
         // 2. 几个目标为同一账户运行：同一账户不能同时在两个实例运行，后开始的会进入待处理
         foreach (var group in targets.Where(target => target.RunAccountId is not null)
                      .GroupBy(target => target.RunAccountId!, StringComparer.Ordinal).Where(group => group.Count() > 1))
-            problems.Add($"{string.Join("、", group.Select(target => target.InstanceName))}都会为“{Name(group.Key)}”运行，"
-                         + "同一账户不能同时在两个实例运行，后开始的会进入待处理。");
+            problems.Add(string.Format(I18nService.Instance.Translate("{0}都会为“{1}”运行，同一账户不能同时在两个实例运行，后开始的会进入待处理。"),
+                string.Join(I18nService.Instance.Translate("、"), group.Select(target => target.InstanceName)), Name(group.Key)));
 
         // 3. 预期运行账户正被其他实例占用；被目标实例自己占用时只是在它的队列中排在后面，不提示
         foreach (var target in targets.Where(target => target.RunAccountId is not null))
         {
             if (occupantOf(target.RunAccountId!) is { } occupant && occupant.InstanceKey != target.InstanceKey)
-                problems.Add($"账户“{Name(target.RunAccountId)}”正在{PuloniaAccountService.DescribeOccupant(occupant)}运行，"
-                             + $"{target.InstanceName}的运行开始时会进入待处理。");
+                problems.Add(string.Format(I18nService.Instance.Translate("账户“{0}”正在{1}运行，{2}的运行开始时会进入待处理。"),
+                    Name(target.RunAccountId), PuloniaAccountService.DescribeOccupant(occupant), target.InstanceName));
         }
 
         // 4. 指定账户：云原神不能切换；其他实例切换时可能把在线实例挤下线
@@ -176,7 +177,7 @@ public sealed class PuloniaRunTargetCheck
             {
                 if (target.IsWebView)
                 {
-                    problems.Add($"{target.InstanceName}的当前账户是“{Name(target.CurrentAccountId)}”，云原神实例不能切换到“{Name(planAccountId)}”。");
+                    problems.Add(string.Format(I18nService.Instance.Translate("{0}的当前账户是“{1}”，云原神实例不能切换到“{2}”。"), target.InstanceName, Name(target.CurrentAccountId), Name(planAccountId)));
                     continue;
                 }
                 var displaced = online.Where(instance => instance.InstanceKey != target.InstanceKey
@@ -184,13 +185,13 @@ public sealed class PuloniaRunTargetCheck
                     .Select(instance => PuloniaInstanceKey.Describe(instance.InstanceKey)).ToArray();
                 if (displaced.Length == 0)
                     continue;
-                var text = $"{string.Join("、", displaced)}的当前账户是“{Name(planAccountId)}”且正在线，"
-                           + $"{target.InstanceName}切换到“{Name(planAccountId)}”会把它挤下线。";
+                var text = string.Format(I18nService.Instance.Translate("{0}的当前账户是“{1}”且正在线，{2}切换到“{1}”会把它挤下线。"),
+                    string.Join(I18nService.Instance.Translate("、"), displaced), Name(planAccountId), target.InstanceName);
                 // 本实例的运行可以在这里确认；下发到子实例的运行不能确认，切换前会进入待处理
                 if (target.IsLocal)
                     localDisplacement = text;
                 else
-                    problems.Add(text + "下发的运行不会挤下线，会进入待处理。");
+                    problems.Add(text + I18nService.Instance.Translate("下发的运行不会挤下线，会进入待处理。"));
             }
         }
         return new PuloniaRunTargetFindings(problems, localDisplacement);

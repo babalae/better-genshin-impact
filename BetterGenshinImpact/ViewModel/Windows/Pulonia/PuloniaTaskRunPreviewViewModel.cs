@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -42,7 +43,7 @@ public partial class PuloniaTaskRunPreviewViewModel : ObservableObject
     private int _loadGeneration;
 
     /// <summary>窗口标题。</summary>
-    public string Title => $"预览本次执行 · {_document.Name}";
+    public string Title => string.Format(I18nService.Instance.Translate("预览本次执行 · {0}"), I18nService.Instance.Translate(_document.Name));
 
     /// <summary>当前显示的节点。</summary>
     [ObservableProperty]
@@ -50,7 +51,7 @@ public partial class PuloniaTaskRunPreviewViewModel : ObservableObject
     private IReadOnlyList<PuloniaTaskRunPreviewItemViewModel> _items = [];
 
     /// <summary>汇总说明。</summary>
-    [ObservableProperty] private string _summaryText = "正在按当前配置准备预览…";
+    [ObservableProperty] private string _summaryText = I18nService.Instance.Translate("正在按当前配置准备预览…");
 
     /// <summary>准备失败的原因，例如资源需要先确认更新。</summary>
     [ObservableProperty]
@@ -105,7 +106,7 @@ public partial class PuloniaTaskRunPreviewViewModel : ObservableObject
 
     /// <summary>临时查看其他账户时的说明；按计划设置预测时为 null。</summary>
     public string? AccountNotice => PreviewAccountId is not null && _planAccountName is not null
-        ? $"仅改变本窗口显示，开始执行后仍按“{_planAccountName}”判定"
+        ? string.Format(I18nService.Instance.Translate("仅改变本窗口显示，开始执行后仍按“{0}”判定"), _planAccountName)
         : null;
 
     /// <summary>是否显示临时查看的说明。</summary>
@@ -147,7 +148,7 @@ public partial class PuloniaTaskRunPreviewViewModel : ObservableObject
             if (_document.IsDirty && !await _session.SaveDocumentAsync(_document))
             {
                 if (generation != _loadGeneration) return;
-                ErrorText = "计划保存失败，无法按当前配置预览。";
+                ErrorText = I18nService.Instance.Translate("计划保存失败，无法按当前配置预览。");
                 return;
             }
             // 2. 与提交相同地准备快照并逐项判定
@@ -164,8 +165,8 @@ public partial class PuloniaTaskRunPreviewViewModel : ObservableObject
             var now = DateTimeOffset.UtcNow;
             _allItems = preview.Items.Select((item, index) => new PuloniaTaskRunPreviewItemViewModel(item, index + 1,
                 _typeNames.GetValueOrDefault(item.TaskType) ?? item.TaskType, preview.AccountId, now)).ToArray();
-            SummaryText = $"预计执行 {preview.ExecuteCount} 项 · 因路线 CD 跳过 {preview.CooldownSkipCount} 项"
-                          + (preview.UnmatchedCount > 0 ? $" · {preview.UnmatchedCount} 项路线未识别刷新规则（会执行）" : string.Empty)
+            SummaryText = string.Format(I18nService.Instance.Translate("预计执行 {0} 项 · 因路线 CD 跳过 {1} 项"), preview.ExecuteCount, preview.CooldownSkipCount)
+                          + (preview.UnmatchedCount > 0 ? string.Format(I18nService.Instance.Translate(" · {0} 项路线未识别刷新规则（会执行）"), preview.UnmatchedCount) : string.Empty)
                           + $"（{PuloniaCooldownText.Account(preview.AccountName)}）"
                           + (preview.AccountNotice is { } notice ? "\n" + notice : string.Empty);
             ApplyFilter();
@@ -176,7 +177,7 @@ public partial class PuloniaTaskRunPreviewViewModel : ObservableObject
             // 准备失败（资源待确认更新、引用缺失、计划无效、所选账户已删除等）只在窗口内显示原因，不中断页面
             _allItems = [];
             ApplyFilter();
-            SummaryText = "无法预览。";
+            SummaryText = I18nService.Instance.Translate("无法预览。");
             ErrorText = ex.Message;
         }
         finally
@@ -202,10 +203,10 @@ public partial class PuloniaTaskRunPreviewViewModel : ObservableObject
             .OfType<PuloniaCooldownRecordKey>().Distinct().ToArray() ?? [];
         if (keys.Length == 0)
         {
-            ErrorText = "选中的项没有路线 CD 记录。";
+            ErrorText = I18nService.Instance.Translate("选中的项没有路线 CD 记录。");
             return;
         }
-        if (await _session.ClearCooldownRecordsAsync(keys, "选中路线") > 0)
+        if (await _session.ClearCooldownRecordsAsync(keys, I18nService.Instance.Translate("选中路线")) > 0)
             await LoadAsync();
     }
 
@@ -276,19 +277,19 @@ public sealed class PuloniaTaskRunPreviewItemViewModel
                     && item.Cooldown?.State == PuloniaRouteCooldownState.Unmatched;
         if (item.Rule is { } refreshRule && item.Cooldown?.Completion is not null)
             CooldownKey = new PuloniaCooldownRecordKey(accountId, refreshRule.FileIdentity);
-        var rule = item.Rule is { } p ? $"{p.MaterialName ?? "未识别"} · {p.Description}" : string.Empty;
+        var rule = item.Rule is { } p ? $"{p.MaterialName ?? I18nService.Instance.Translate("未识别")} · {p.DisplayDescription}" : string.Empty;
         (OutcomeText, DetailText) = item.Outcome switch
         {
-            PuloniaTaskPreviewOutcome.Disabled => ("已关闭", "节点自身或上级分组已关闭。"),
+            PuloniaTaskPreviewOutcome.Disabled => (I18nService.Instance.Translate("已关闭"), I18nService.Instance.Translate("节点自身或上级分组已关闭。")),
             PuloniaTaskPreviewOutcome.CoolingDown when item.Cooldown?.NextEligibleAt is { } next =>
-                ("跳过 · CD 中", $"下次可执行：{PuloniaCooldownText.Next(next, now)} · {rule}"),
-            PuloniaTaskPreviewOutcome.Completed => ("跳过 · 已完成", "一次性路线已成功执行，不再自动执行。"),
+                (I18nService.Instance.Translate("跳过 · CD 中"), string.Format(I18nService.Instance.Translate("下次可执行：{0} · {1}"), PuloniaCooldownText.Next(next, now), rule)),
+            PuloniaTaskPreviewOutcome.Completed => (I18nService.Instance.Translate("跳过 · 已完成"), I18nService.Instance.Translate("一次性路线已成功执行，不再自动执行。")),
             PuloniaTaskPreviewOutcome.RepeatedInRun =>
-                ("跳过 · 本次重复", $"与“{item.RepeatedTaskName}”是同一路线文件，前一项成功后跳过。"),
-            _ when item.Rule is null => ("执行", string.Empty),
-            _ when IsCaution => ("执行", "未识别刷新规则：成功后不会跳过，可在共享设置中选择自定义周期。"),
-            _ when item.Cooldown?.LastSuccessAt is { } last => ("执行", $"上次成功 {PuloniaCooldownText.Time(last)}，已可执行 · {rule}"),
-            _ => ("执行", rule)
+                (I18nService.Instance.Translate("跳过 · 本次重复"), string.Format(I18nService.Instance.Translate("与“{0}”是同一路线文件，前一项成功后跳过。"), item.RepeatedTaskName)),
+            _ when item.Rule is null => (I18nService.Instance.Translate("执行"), string.Empty),
+            _ when IsCaution => (I18nService.Instance.Translate("执行"), I18nService.Instance.Translate("未识别刷新规则：成功后不会跳过，可在共享设置中选择自定义周期。")),
+            _ when item.Cooldown?.LastSuccessAt is { } last => (I18nService.Instance.Translate("执行"), string.Format(I18nService.Instance.Translate("上次成功 {0}，已可执行 · {1}"), PuloniaCooldownText.Time(last), rule)),
+            _ => (I18nService.Instance.Translate("执行"), rule)
         };
     }
 }

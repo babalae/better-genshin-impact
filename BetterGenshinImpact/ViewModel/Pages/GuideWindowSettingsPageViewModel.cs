@@ -131,39 +131,41 @@ public partial class GuideWindowSettingsPageViewModel : ViewModel
     /// <summary>进入游戏时自动打开</summary>
     public GuideSettingOption[] AutoOpenOptions { get; } =
     [
-        new(GuideAutoOpenMode.RestoreLast, "恢复上次状态"),
-        new(GuideAutoOpenMode.Always, "总是打开"),
-        new(GuideAutoOpenMode.Never, "不自动打开"),
+        new(GuideAutoOpenMode.RestoreLast, I18nService.Instance.Translate("恢复上次状态")),
+        new(GuideAutoOpenMode.Always, I18nService.Instance.Translate("总是打开")),
+        new(GuideAutoOpenMode.Never, I18nService.Instance.Translate("不自动打开")),
     ];
 
     /// <summary>位置模式</summary>
     public GuideSettingOption[] PositionModeOptions { get; } =
     [
-        new(GuidePositionMode.FollowGame, "跟随游戏窗口"),
-        new(GuidePositionMode.Free, "自由放置"),
+        new(GuidePositionMode.FollowGame, I18nService.Instance.Translate("跟随游戏窗口")),
+        new(GuidePositionMode.Free, I18nService.Instance.Translate("自由放置")),
     ];
 
     /// <summary>续播</summary>
     public GuideSettingOption[] ResumeModeOptions { get; } =
     [
-        new(GuideResumeMode.FromLibrary, "从收藏或观看记录打开时"),
-        new(GuideResumeMode.Always, "打开任何看过的视频时"),
-        new(GuideResumeMode.Never, "不续播"),
+        new(GuideResumeMode.FromLibrary, I18nService.Instance.Translate("从收藏或观看记录打开时")),
+        new(GuideResumeMode.Always, I18nService.Instance.Translate("打开任何看过的视频时")),
+        new(GuideResumeMode.Never, I18nService.Instance.Translate("不续播")),
     ];
 
     /// <summary>交互模式自动结束</summary>
     public GuideSettingOption[] InteractionExitOptions { get; } =
     [
-        new(1, "鼠标离开 1 秒后"),
-        new(2, "鼠标离开 2 秒后"),
-        new(5, "鼠标离开 5 秒后"),
-        new(0, "不自动结束"),
+        new(1, string.Format(I18nService.Instance.Translate("鼠标离开 {0} 秒后"), 1)),
+        new(2, string.Format(I18nService.Instance.Translate("鼠标离开 {0} 秒后"), 2)),
+        new(5, string.Format(I18nService.Instance.Translate("鼠标离开 {0} 秒后"), 5)),
+        new(0, I18nService.Instance.Translate("不自动结束")),
     ];
 
     /// <summary>快进、快退步长</summary>
     public GuideSettingOption[] SeekOptions { get; } =
     [
-        new(3, "3 秒"), new(5, "5 秒"), new(10, "10 秒"), new(15, "15 秒"), new(30, "30 秒"),
+        new(3, string.Format(I18nService.Instance.Translate("{0} 秒"), 3)), new(5, string.Format(I18nService.Instance.Translate("{0} 秒"), 5)),
+        new(10, string.Format(I18nService.Instance.Translate("{0} 秒"), 10)), new(15, string.Format(I18nService.Instance.Translate("{0} 秒"), 15)),
+        new(30, string.Format(I18nService.Instance.Translate("{0} 秒"), 30)),
     ];
 
     /// <summary>倍速步长</summary>
@@ -412,12 +414,12 @@ public partial class GuideWindowSettingsPageViewModel : ViewModel
 
         if (record.Finished)
         {
-            return "已看完";
+            return I18nService.Instance.Translate("已看完");
         }
 
         return record.Duration > 0
-            ? $"看到 {GuideWindowState.FormatTime(record.Position)} / {GuideWindowState.FormatTime(record.Duration)}"
-            : $"看到 {GuideWindowState.FormatTime(record.Position)}";
+            ? string.Format(I18nService.Instance.Translate("看到 {0} / {1}"), GuideWindowState.FormatTime(record.Position), GuideWindowState.FormatTime(record.Duration))
+            : string.Format(I18nService.Instance.Translate("看到 {0}"), GuideWindowState.FormatTime(record.Position));
     }
 
     #endregion

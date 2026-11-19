@@ -1,5 +1,6 @@
 <UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaTaskTriggerView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -65,12 +66,12 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <StackPanel Margin="0,0,0,12">
             <WrapPanel>
-                <Button Margin="0,0,8,6" Content="新增定时触发" Command="{Binding AddScheduleTriggerCommand, Mode=OneWay}" />
-                <Button Margin="0,0,8,6" Content="新增快捷键触发" Command="{Binding AddHotkeyTriggerCommand, Mode=OneWay}"
-                        ToolTip="默认使用键鼠监听 F8，可在右侧切换为全局热键" />
+                <Button Margin="0,0,8,6" Content="{i18n:T 新增定时触发}" Command="{Binding AddScheduleTriggerCommand, Mode=OneWay}" />
+                <Button Margin="0,0,8,6" Content="{i18n:T 新增快捷键触发}" Command="{Binding AddHotkeyTriggerCommand, Mode=OneWay}"
+                        ToolTip="{i18n:T 默认使用键鼠监听 F8，可在右侧切换为全局热键}" />
             </WrapPanel>
             <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       Text="仅在 BGI 运行时生效。新触发器默认关闭：先保存配置，再使用列表卡片上的开关启用。开关会立即保存，不提交右侧未保存的修改。" />
+                       Text="{i18n:T 仅在 BGI 运行时生效。新触发器默认关闭：先保存配置，再使用列表卡片上的开关启用。开关会立即保存，不提交右侧未保存的修改。}" />
         </StackPanel>
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions><ColumnDefinition Width="200" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
@@ -80,7 +81,7 @@
                 <ListBox.ContextMenu>
                     <!-- ContextMenu 不在可视树内，从 PlacementTarget 取回触发器列表的数据上下文。 -->
                     <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                        <MenuItem Header="删除"
+                        <MenuItem Header="{i18n:T 删除}"
                                   Command="{Binding DeleteTriggerCommand, Mode=OneWay}"
                                   CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
                     </ContextMenu>
@@ -93,14 +94,14 @@
                             <ui:ToggleSwitch Grid.Column="1" OnContent="" OffContent="" VerticalAlignment="Center"
                                              IsChecked="{Binding Enabled, Mode=OneWay}"
                                              Command="{Binding Data.ToggleTriggerEnabledCommand, Source={StaticResource TriggerPageProxy}, Mode=OneWay}"
-                                             CommandParameter="{Binding}" ToolTip="启用 / 停用（立即保存）"
+                                             CommandParameter="{Binding}" ToolTip="{i18n:T 启用 / 停用（立即保存）}"
                                              AutomationProperties.Name="启用或停用触发器" />
                         </Grid>
                         <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding RuntimeText, Mode=OneWay}" />
                     </StackPanel>
                 </DataTemplate></ListBox.ItemTemplate>
             </ListBox>
-            <TextBlock Grid.Column="2" Margin="18" Text="选择触发器查看配置，或点击上方按钮新增。">
+            <TextBlock Grid.Column="2" Margin="18" Text="{i18n:T 选择触发器查看配置，或点击上方按钮新增。}">
                 <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding TriggerEditor, Mode=OneWay}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
             </TextBlock>
             <Grid Grid.Column="2">
@@ -111,14 +112,14 @@
                         <StackPanel Visibility="{Binding IsSchedule, Mode=OneWay, Converter={StaticResource BoolVisibility}}">
                             <!-- 定时触发只保存控件输出的一份 Cron，快捷设置不会建立额外日程状态。 -->
                             <controls:PuloniaCronEditor DataContext="{Binding CronEditor, Mode=OneWay}" />
-                            <TextBlock Style="{StaticResource Label}" Text="服务器时区（Cron 按此时区计算）" />
+                            <TextBlock Style="{StaticResource Label}" Text="{i18n:T 服务器时区（Cron 按此时区计算）}" />
                             <ComboBox ItemsSource="{Binding ServerTimeZones, Mode=OneWay}" DisplayMemberPath="Value" SelectedValuePath="Key"
                                       SelectedValue="{Binding ServerTimeZone, Mode=TwoWay}" />
                             <!--
                                 执行实例（统筹设计 9.5）：列出主实例、桌面分身与已建立的云原神实例，不要求在线。
                                 计划跟随当前账户时可多选，指定账户时只能选一个（单选按钮，互斥由视图模型处理）。
                             -->
-                            <TextBlock Style="{StaticResource Label}" Text="执行实例" />
+                            <TextBlock Style="{StaticResource Label}" Text="{i18n:T 执行实例}" />
                             <ItemsControl ItemsSource="{Binding InstanceOptions, Mode=OneWay}" AutomationProperties.Name="执行实例">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -137,38 +138,38 @@
                                        Text="{Binding InstanceHint, Mode=OneWay}" />
                         </StackPanel>
                         <StackPanel Visibility="{Binding IsHotkey, Mode=OneWay, Converter={StaticResource BoolVisibility}}">
-                            <TextBlock Style="{StaticResource Label}" Text="快捷键（点击类型按钮可切换模式）" />
+                            <TextBlock Style="{StaticResource Label}" Text="{i18n:T 快捷键（点击类型按钮可切换模式）}" />
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <ui:Button Margin="0,0,8,0" MinHeight="36" Content="{Binding LocalizedHotkeyTypeName, Mode=OneWay}"
-                                           Command="{Binding SwitchHotkeyTypeCommand, Mode=OneWay}" ToolTip="切换全局热键 / 键鼠监听；切换后需重新设置键值" />
+                                           Command="{Binding SwitchHotkeyTypeCommand, Mode=OneWay}" ToolTip="{i18n:T 切换全局热键 / 键鼠监听；切换后需重新设置键值}" />
                                 <!-- 显式复用现有热键控件样式及类型名称，避免白底和错误捕获规则。 -->
                                 <hotkey:HotKeyTextBox Grid.Column="1" MinWidth="56" MinHeight="36" Padding="12,6"
                                                       Style="{StaticResource DefaultTextBoxStyle}" TextAlignment="Center" VerticalContentAlignment="Center"
                                                       HotKeyTypeName="{Binding HotkeyTypeName, Mode=OneWay}" Hotkey="{Binding Hotkey, Mode=TwoWay}"
-                                                      ToolTip="点击后按下快捷键；Delete / Backspace / Esc 清空。键鼠监听支持鼠标侧键。" />
+                                                      ToolTip="{i18n:T 点击后按下快捷键；Delete / Backspace / Esc 清空。键鼠监听支持鼠标侧键。}" />
                             </Grid>
                             <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" Text="{Binding HotkeyHelp, Mode=OneWay}" />
                             <!-- 热键触发器没有执行实例：计划热键只在主实例注册和执行。 -->
                             <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" Text="{Binding InstanceHint, Mode=OneWay}" />
                         </StackPanel>
                         <Border Margin="0,12,0,0" Padding="12" CornerRadius="6" Background="{DynamicResource SubtleFillColorSecondaryBrush}"><TextBlock Text="{Binding PreviewText, Mode=OneWay}" /></Border>
-                        <TextBlock Style="{StaticResource Label}" Text="运行范围" />
+                        <TextBlock Style="{StaticResource Label}" Text="{i18n:T 运行范围}" />
                         <ComboBox ItemsSource="{Binding Targets, Mode=OneWay}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding TargetTaskId, Mode=TwoWay}" />
                         <!-- 触发器不再选择账户：运行账户由计划的运行账户设置和实例当前账户决定。 -->
-                        <TextBlock Style="{StaticResource Label}" Text="同一计划已忙碌时" />
+                        <TextBlock Style="{StaticResource Label}" Text="{i18n:T 同一计划已忙碌时}" />
                         <ComboBox ItemsSource="{Binding BusyPolicies, Mode=OneWay}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding BusyPolicy, Mode=TwoWay}" />
-                        <TextBlock Margin="0,6,0,0" FontSize="12" Text="不同计划自动排队依次执行，不会同时操作游戏。选择“停止当前任务”时，保存或启用前会再次确认。" />
-                        <TextBlock Style="{StaticResource Label}" Text="允许延迟启动（分钟）" />
+                        <TextBlock Margin="0,6,0,0" FontSize="12" Text="{i18n:T 不同计划自动排队依次执行，不会同时操作游戏。选择“停止当前任务”时，保存或启用前会再次确认。}" />
+                        <TextBlock Style="{StaticResource Label}" Text="{i18n:T 允许延迟启动（分钟）}" />
                         <ui:TextBox Text="{Binding WindowMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <CheckBox Margin="0,10,0,0" Content="离线 / 睡眠后，只补仍可延迟启动的最近一次" IsChecked="{Binding CatchUp, Mode=TwoWay}"
+                        <CheckBox Margin="0,10,0,0" Content="{i18n:T 离线 / 睡眠后，只补仍可延迟启动的最近一次}" IsChecked="{Binding CatchUp, Mode=TwoWay}"
                                   Visibility="{Binding IsSchedule, Mode=OneWay, Converter={StaticResource BoolVisibility}}" />
                     </StackPanel>
                 </ScrollViewer>
                 <WrapPanel Grid.Row="1" Margin="0,12,0,0">
-                    <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="保存配置" Command="{Binding SaveTriggerCommand, Mode=OneWay}" IsEnabled="{Binding TriggerEditor.IsValid, Mode=OneWay}" />
-                    <ui:Button Margin="0,0,8,4" Content="取消" Command="{Binding CancelTriggerEditCommand, Mode=OneWay}" />
-                    <ui:Button Margin="0,0,0,4" Appearance="Danger" Content="删除" Command="{Binding DeleteTriggerCommand, Mode=OneWay}">
+                    <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="{i18n:T 保存配置}" Command="{Binding SaveTriggerCommand, Mode=OneWay}" IsEnabled="{Binding TriggerEditor.IsValid, Mode=OneWay}" />
+                    <ui:Button Margin="0,0,8,4" Content="{i18n:T 取消}" Command="{Binding CancelTriggerEditCommand, Mode=OneWay}" />
+                    <ui:Button Margin="0,0,0,4" Appearance="Danger" Content="{i18n:T 删除}" Command="{Binding DeleteTriggerCommand, Mode=OneWay}">
                         <ui:Button.Style><Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}"><Style.Triggers><DataTrigger Binding="{Binding SelectedTrigger, Mode=OneWay}" Value="{x:Null}"><Setter Property="IsEnabled" Value="False" /></DataTrigger></Style.Triggers></Style></ui:Button.Style>
                     </ui:Button>
                 </WrapPanel>

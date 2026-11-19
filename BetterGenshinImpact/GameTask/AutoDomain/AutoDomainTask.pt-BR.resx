@@ -1,0 +1,228 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="地脉异常" xml:space="preserve">
+    <value>Desordem</value>
+  </data>
+  <data name="挑战达成" xml:space="preserve">
+    <value>(Desafio|Conclu[ií]do)</value>
+  </data>
+  <data name="点击任意位置关闭" xml:space="preserve">
+    <value>fechar</value>
+  </data>
+  <data name="自动退出" xml:space="preserve">
+    <value>Saindo</value>
+  </data>
+  <data name="跳过" xml:space="preserve">
+    <value>Pular</value>
+  </data>
+  <data name="单人挑战" xml:space="preserve">
+    <value>DesafioSingle</value>
+  </data>
+  <data name="开始挑战" xml:space="preserve">
+    <value>Iniciar</value>
+  </data>
+  <data name="是否仍要.*挑战.*秘境" xml:space="preserve">
+    <value>Dom[ií]nio</value>
+  </data>
+  <data name="石化古树" xml:space="preserve">
+    <value>etrificada</value>
+  </data>
+  <data name="数量不足" xml:space="preserve">
+    <value>insuficiente</value>
+  </data>
+  <data name="补充原粹树脂" xml:space="preserve">
+    <value>Reabastecer.*Resinas?.*Origina</value>
+  </data>
+  <data name="取消" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="使用" xml:space="preserve">
+    <value>Usar</value>
+  </data>
+  <data name="浓缩树脂" xml:space="preserve">
+    <value>Resinas?\s*(Condensad|Concentrad)</value>
+  </data>
+  <data name="原粹树脂" xml:space="preserve">
+    <value>Resinas?\s*Origina(l|is)</value>
+  </data>
+  <data name="须臾树脂" xml:space="preserve">
+    <value>Resinas?\s*Transiente</value>
+  </data>
+  <data name="脆弱树脂" xml:space="preserve">
+    <value>Resinas?\s*Fr[aá]g(il|eis)</value>
+  </data>
+  <data name="地脉花_溢口" xml:space="preserve">
+    <value>Afloramento|Linha\s*Ley</value>
+  </data>
+  <data name="地脉花_交互提示" xml:space="preserve">
+    <value>(?i)Linha\s*Ley|Flor|abertura</value>
+  </data>
+  <data name="地脉花_地脉之花" xml:space="preserve">
+    <value>Flor\s*de\s*Linha\s*Ley|Flor</value>
+  </data>
+  <data name="地脉花_领奖标题" xml:space="preserve">
+    <value>Linha\s*Ley|Flor|Ativ</value>
+  </data>
+  <data name="地脉花_领奖内容" xml:space="preserve">
+    <value>Resina|Linha\s*Ley|Ativ|Reabastec</value>
+  </data>
+  <data name="地脉花_原粹" xml:space="preserve">
+    <value>Original</value>
+  </data>
+  <data name="地脉花_双倍" xml:space="preserve">
+    <value>Dupl|2x|x2</value>
+  </data>
+  <data name="地脉花_复苏" xml:space="preserve">
+    <value>Reviv</value>
+  </data>
+  <data name="地脉花_停止追踪" xml:space="preserve">
+    <value>Cancelar|Parar</value>
+  </data>
+  <data name="地脉花_追踪目标" xml:space="preserve">
+    <value>Linha\s*Ley|Afloramento</value>
+  </data>
+  <data name="地脉花_战斗提示" xml:space="preserve">
+    <value>Elimin|Derrot|inimigos|oponentes</value>
+  </data>
+  <data name="地脉花_国家_蒙德" xml:space="preserve">
+    <value>Mondstadt</value>
+  </data>
+  <data name="地脉花_国家_璃月" xml:space="preserve">
+    <value>Liyue</value>
+  </data>
+  <data name="地脉花_国家_稻妻" xml:space="preserve">
+    <value>Inazuma</value>
+  </data>
+  <data name="地脉花_国家_须弥" xml:space="preserve">
+    <value>Sumeru</value>
+  </data>
+  <data name="地脉花_国家_枫丹" xml:space="preserve">
+    <value>Fontaine</value>
+  </data>
+  <data name="地脉花_国家_纳塔" xml:space="preserve">
+    <value>Natlan</value>
+  </data>
+  <data name="地脉花_国家_挪德卡莱" xml:space="preserve">
+    <value>Nod\W?Krai</value>
+  </data>
+  <data name="地脉花_国家_至冬" xml:space="preserve">
+    <value>Snezhnaya</value>
+  </data>
+</root>

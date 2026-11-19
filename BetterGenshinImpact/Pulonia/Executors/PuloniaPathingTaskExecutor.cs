@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -39,8 +40,8 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
         TaskType = "pathing",
-        DisplayName = "地图追踪",
-        Description = "从已拉取的脚本仓库选择路线，并配置队伍、自动拾取与自动战斗选项。",
+        DisplayName = I18nService.Key("地图追踪"),
+        Description = I18nService.Key("从已拉取的脚本仓库选择路线，并配置队伍、自动拾取与自动战斗选项。"),
         RequiresGameSession = true,
         ResourceBaseDirectory = MapPathingViewModel.PathJsonPath,
         DefaultParameters = PuloniaTaskCommonSettings.CreateDefaults("pathing"),
@@ -68,7 +69,7 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
         PuloniaTaskExecutionContext context, CancellationToken ct)
     {
         if (task.Resource is null && string.IsNullOrWhiteSpace(task.Path))
-            return PuloniaTaskOutcome.Failure("地图追踪节点没有固定资源。");
+            return PuloniaTaskOutcome.Failure(I18nService.Instance.Translate("地图追踪节点没有固定资源。"));
         // 路线只使用本节点租约记录的运行环境；它已停止时当前节点失败
         if (!context.TryGetRuntime(out var runtime, out var runtimeError))
             return PuloniaTaskOutcome.Failure(runtimeError);
@@ -76,7 +77,7 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
             ? await ReadRepositoryRouteAsync(resource, ct).ConfigureAwait(false)
             : PathingTask.BuildFromFilePath(task.Path!);
         if (pathingTask is null)
-            return PuloniaTaskOutcome.Failure("路线版本高于当前 BetterGI，已拒绝执行。");
+            return PuloniaTaskOutcome.Failure(I18nService.Instance.Translate("路线版本高于当前 BetterGI，已拒绝执行。"));
 
         var parameters = task.Parameters;
         var partyConfig = PuloniaTaskCommonSettings.FromParameters("pathing", parameters).PathingConfig;
@@ -114,7 +115,7 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
         var data = JObject.FromObject(result);
         data["resource_version"] = resourceVersion;
         return result.IsSuccess
-            ? PuloniaTaskOutcome.Success("地图追踪文件完整执行成功，按整份文件执行成功估算采集完成。", data)
-            : PuloniaTaskOutcome.Failure(result.ErrorMessage ?? "地图追踪路线未完整执行。", data);
+            ? PuloniaTaskOutcome.Success(I18nService.Instance.Translate("地图追踪文件完整执行成功，按整份文件执行成功估算采集完成。"), data)
+            : PuloniaTaskOutcome.Failure(result.ErrorMessage ?? I18nService.Instance.Translate("地图追踪路线未完整执行。"), data);
     }
 }

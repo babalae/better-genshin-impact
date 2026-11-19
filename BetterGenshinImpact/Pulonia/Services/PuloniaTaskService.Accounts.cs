@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Pulonia.Services;
@@ -98,7 +99,7 @@ public sealed partial class PuloniaTaskService
         }
         // 日切时区取计划指定账户的服务器（快照固定的账户资料），与核验结果一起落盘
         ApplyAccountServerTime(state, account);
-        SetCurrentTask(state, address, "正在准备原神账户：“" + account.Name + "”。");
+        SetCurrentTask(state, address, string.Format(I18nService.Instance.Translate("正在准备原神账户：“{0}”。"), account.Name));
         // 1. 切换之前取得目标账户的占用（4.5）：避免切换后才发现它正在别处运行；失败时直接进入待处理
         AcquireAccountOccupancy(state, account, specified: true);
         // 2. 切换前检查（4.6）：另一个在线实例的当前账户就是目标账户时，切换会把它挤下线。
@@ -137,7 +138,7 @@ public sealed partial class PuloniaTaskService
         {
             state.VerifiedUid = uid;
             state.NodeResults.Add(new PuloniaTaskNodeResult(address, "切换账户", "genshin.account.prepare", 1,
-                PuloniaTaskNodeStatus.Succeeded, "账户已核验，实际 UID：" + uid, state.StartedAt!.Value, DateTimeOffset.UtcNow));
+                PuloniaTaskNodeStatus.Succeeded, I18nService.Instance.Translate("账户已核验，实际 UID：") + uid, state.StartedAt!.Value, DateTimeOffset.UtcNow));
         }
         await PersistCriticalStateAsync().ConfigureAwait(false);
         // 5. 核验成功后实例当前账户就是目标账户
@@ -155,7 +156,7 @@ public sealed partial class PuloniaTaskService
     private async Task ResolveInstanceCurrentAccountAsync(RunState state, string instanceKey, CancellationToken ct)
     {
         var address = state.Snapshot.RootTask.TaskAddress + "/account";
-        SetCurrentTask(state, address, "正在确定运行账户。");
+        SetCurrentTask(state, address, I18nService.Instance.Translate("正在确定运行账户。"));
         // 1. 读取最新的实例当前账户；读不出时同样不能确定运行账户
         PuloniaGenshinAccountProfile? current;
         try { current = await _accounts.GetCurrentAccountAsync(instanceKey, ct).ConfigureAwait(false); }
@@ -192,7 +193,7 @@ public sealed partial class PuloniaTaskService
         // 4. UID 比对：账户有 UID 时只读地读取一次（不按键，最多约 3 秒）；读不到时记为未比对
         if (current.Uid is { } expected)
         {
-            SetCurrentTask(state, address, "正在比对游戏中的 UID。");
+            SetCurrentTask(state, address, I18nService.Instance.Translate("正在比对游戏中的 UID。"));
             if (await _localNodes.TryReadUidAsync(ct).ConfigureAwait(false) is { } observed)
             {
                 var matched = observed == expected;

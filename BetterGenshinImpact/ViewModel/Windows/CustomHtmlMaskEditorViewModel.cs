@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -33,7 +34,7 @@ public partial class CustomHtmlMaskEditorViewModel : ObservableObject
         CustomHtmlMaskContent = content;
     }
 
-    public string PreviewButtonText => CustomHtmlMaskPreviewOpen ? "关闭预览" : "预览 HTML";
+    public string PreviewButtonText => CustomHtmlMaskPreviewOpen ? I18nService.Instance.Translate("关闭预览") : I18nService.Instance.Translate("预览 HTML");
 
     public bool HasUnsavedChanges => !string.Equals(CustomHtmlMaskContent, _savedCustomHtmlMaskContent, StringComparison.Ordinal);
 
@@ -111,8 +112,8 @@ public partial class CustomHtmlMaskEditorViewModel : ObservableObject
         }
 
         var result = ThemedMessageBox.Show(
-            "你还有未保存的 HTML 遮罩修改。\r\n\r\n现在关闭会丢失这些内容，要继续关闭吗？",
-            "关闭编辑器？",
+            I18nService.Instance.Translate("你还有未保存的 HTML 遮罩修改。\r\n\r\n现在关闭会丢失这些内容，要继续关闭吗？"),
+            I18nService.Instance.Translate("关闭编辑器？"),
             MessageBoxButton.YesNo,
             ThemedMessageBox.MessageBoxIcon.Question,
             MessageBoxResult.No,

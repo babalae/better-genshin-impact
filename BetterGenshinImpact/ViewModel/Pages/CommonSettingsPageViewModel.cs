@@ -101,7 +101,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     /// 设置页“存储空间”卡片的说明文字。
     /// </summary>
     [ObservableProperty]
-    private string _storageSummaryText = "正在计算占用…";
+    private string _storageSummaryText = I18nService.Instance.Translate("正在计算占用…");
 
     private readonly TpConfig _tpConfig;
 
@@ -109,13 +109,15 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
 
     private string _selectedCountry = string.Empty;
-    [ObservableProperty] private List<string> _adventurersGuildCountry = ["无", "枫丹", "稻妻", "璃月", "蒙德"];
+    // 冒险家协会国家名是保存值（OtherConfig.AutoFetchDispatchAdventurersGuildCountry），仅展示时翻译
+    [ObservableProperty] private List<string> _adventurersGuildCountry = [I18nService.Key("无"), I18nService.Key("枫丹"), I18nService.Key("稻妻"), I18nService.Key("璃月"), I18nService.Key("蒙德")];
     
     [ObservableProperty] private List<Tuple<TimeSpan, string>> _serverTimeZones =
     [
-        Tuple.Create(TimeSpan.FromHours(8), "其他 UTC+08"),
-        Tuple.Create(TimeSpan.FromHours(1), "欧服 UTC+01"),
-        Tuple.Create(TimeSpan.FromHours(-5), "美服 UTC-05")
+        // 只保存 Item1（时差），Item2 为显示名，界面通过 TBinding 翻译
+        Tuple.Create(TimeSpan.FromHours(8), I18nService.Key("其他 UTC+08")),
+        Tuple.Create(TimeSpan.FromHours(1), I18nService.Key("欧服 UTC+01")),
+        Tuple.Create(TimeSpan.FromHours(-5), I18nService.Key("美服 UTC-05"))
     ];
 
     public IReadOnlyDictionary<ItemIconRecognitionMode, string> ItemIconRecognitionModes { get; } =
@@ -193,7 +195,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
             var token = Config.ExternalAccessConfig.AccessToken;
             if (string.IsNullOrEmpty(token))
             {
-                return "尚未生成";
+                return I18nService.Instance.Translate("尚未生成");
             }
 
             return token.Length <= 8
@@ -206,9 +208,10 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     /// <summary>
     /// 原神游戏语言的可选项。与界面语言无关，意大利语迁移为插件后游戏语言仍保留 it。
+    /// 游戏内文字识别依赖对应语言的资源（GameTask 下各任务的 .resx）。
     /// </summary>
     [ObservableProperty] private FrozenDictionary<string, string> _gameLanguageDict =
-        new[] { "zh-Hans", "zh-Hant", "en", "ja", "ru", "it"  }
+        new[] { "zh-Hans", "zh-Hant", "en", "ja", "ru", "it", "pt-BR" }
             .ToFrozenDictionary(c => c, c => CultureInfoNameToKVPConverter.GetDisplayName(c));
 
     /// <summary>
@@ -257,7 +260,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         //            Owner = this,
         WebpageWindow cookieWin = new()
         {
-            Title = "日志分析",
+            Title = I18nService.Instance.Translate("日志分析"),
             Width = 800,
             Height = 600,
 
@@ -276,12 +279,12 @@ public partial class CommonSettingsPageViewModel : ViewModel
         var token = Config.ExternalAccessConfig.AccessToken;
         if (string.IsNullOrEmpty(token))
         {
-            ThemedMessageBox.Warning("访问令牌尚未生成。请先启用 HTTP API 或 MCP 后重启，或者点击“重新生成”。");
+            ThemedMessageBox.Warning(I18nService.Instance.Translate("访问令牌尚未生成。请先启用 HTTP API 或 MCP 后重启，或者点击“重新生成”。"));
             return;
         }
 
         Clipboard.SetDataObject(token);
-        ThemedMessageBox.Information("访问令牌已复制到剪贴板。");
+        ThemedMessageBox.Information(I18nService.Instance.Translate("访问令牌已复制到剪贴板。"));
     }
 
     /// <summary>
@@ -292,7 +295,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         _externalAccessTokenService.RegenerateToken();
         OnPropertyChanged(nameof(MaskedExternalAccessToken));
-        ThemedMessageBox.Information("访问令牌已重新生成，旧令牌立即失效。");
+        ThemedMessageBox.Information(I18nService.Instance.Translate("访问令牌已重新生成，旧令牌立即失效。"));
     }
 
     private void InitializeMiyousheCookie()
@@ -333,6 +336,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         SelectedArea = string.Empty;
         if (string.IsNullOrEmpty(country)) return;
 
+        // 区域名是保存值，界面展示时由 {i18n:TBinding} 翻译，Key 登记见 StatueOfTheSevenI18nKeys
         var areas = MapLazyAssets.Get().GoddessPositions.Values
             .Where(g => g.Country == country)
             .OrderBy(g => int.TryParse(g.Id, out var id) ? id : int.MaxValue)
@@ -521,12 +525,12 @@ public partial class CommonSettingsPageViewModel : ViewModel
         {
             var areas = _storageService.GetAreas().Where(area => StorageSummaryGroups.Contains(area.Group)).ToList();
             var sizes = await Task.WhenAll(areas.Select(area => _storageService.MeasureAsync(area, CancellationToken.None)));
-            StorageSummaryText = $"缓存、下载、网页数据和临时文件共占用 {ByteSizeFormatter.Format(sizes.Sum())}";
+            StorageSummaryText = string.Format(I18nService.Instance.Translate("缓存、下载、网页数据和临时文件共占用 {0}"), ByteSizeFormatter.Format(sizes.Sum()));
             _storageSummaryUpdatedAt = DateTime.UtcNow;
         }
         catch (Exception)
         {
-            StorageSummaryText = "查看和清理缓存、下载、网页数据与临时文件";
+            StorageSummaryText = I18nService.Instance.Translate("查看和清理缓存、下载、网页数据与临时文件");
         }
         finally
         {
@@ -553,7 +557,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
         var dialog = new OpenFileDialog
         {
-            Title = "选择脚本仓库压缩包",
+            Title = I18nService.Instance.Translate("选择脚本仓库压缩包"),
             Filter = "Zip Files (*.zip)|*.zip",
             Multiselect = false
         };
@@ -563,11 +567,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
             try
             {
                 await ScriptRepoUpdater.Instance.ImportLocalRepoZip(dialog.FileName);
-                ThemedMessageBox.Information("脚本仓库离线包导入成功！");
+                ThemedMessageBox.Information(I18nService.Instance.Translate("脚本仓库离线包导入成功！"));
             }
             catch (Exception ex)
             {
-                ThemedMessageBox.Error($"脚本仓库离线包导入失败：{ex.Message}");
+                ThemedMessageBox.Error(string.Format(I18nService.Instance.Translate("脚本仓库离线包导入失败：{0}"), ex.Message));
             }
         }
     }
@@ -602,7 +606,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task CheckUpdateAlphaAsync()
     {
-        var result = await ThemedMessageBox.ShowAsync("测试版本非常不稳定！\n测试版本非常不稳定！\n测试版本非常不稳定！\n\n是否继续检查更新？", "警告", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning);
+        var result = await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("测试版本非常不稳定！\n测试版本非常不稳定！\n测试版本非常不稳定！\n\n是否继续检查更新？"), I18nService.Instance.Translate("警告"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning);
         if (result != MessageBoxResult.Yes)
         {
             return;
@@ -636,6 +640,24 @@ public partial class CommonSettingsPageViewModel : ViewModel
         Config.OtherConfig.UiCultureInfoName = value.Code;
         _i18nService.ChangeLanguage(value.Code);
         _configService.Save();
+        _ = AskRestartAfterUiLanguageChangedAsync();
+    }
+
+    /// <summary>
+    /// 切换界面语言后询问是否立即重启。
+    /// </summary>
+    private async Task AskRestartAfterUiLanguageChangedAsync()
+    {
+        // 大部分文字已即时切换；启动时生成的文字（日志、托盘、已创建的窗口等）需重启才会更新，询问是否立即重启
+        var result = await ThemedMessageBox.QuestionAsync(
+            I18nService.Instance.Translate("部分界面文字需要重启 BetterGI 后才会切换为新语言。\n是否立即重启？正在运行的任务会被中断。"),
+            I18nService.Instance.Translate("切换语言"),
+            MessageBoxButton.YesNo,
+            MessageBoxResult.No);
+        if (result == MessageBoxResult.Yes)
+        {
+            SystemControl.RestartApplication([], graceful: true);
+        }
     }
 
     /// <summary>
@@ -694,8 +716,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         var dialog = new OpenFileDialog
         {
-            Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.gif",
-            Title = "选择准星图片"
+            Filter = I18nService.Instance.Translate("图片文件") + "|*.png;*.jpg;*.jpeg;*.bmp;*.gif",
+            Title = I18nService.Instance.Translate("选择准星图片")
         };
         if (dialog.ShowDialog() == true)
         {
@@ -709,8 +731,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
         var dialog = new OpenFileDialog
         {
             // 注意：不声明 *.webp —— WPF BitmapImage 原生不支持 WebP 解码，声明了会导致用户选中后加载失败
-            Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.gif",
-            Title = "选择主窗口背景图片"
+            Filter = I18nService.Instance.Translate("图片文件") + "|*.png;*.jpg;*.jpeg;*.bmp;*.gif",
+            Title = I18nService.Instance.Translate("选择主窗口背景图片")
         };
         if (dialog.ShowDialog() == true)
         {
@@ -804,79 +826,79 @@ public sealed class OverlayStyleSettingGroup : ObservableObject
     {
         return
         [
-            new OverlayStyleSettingGroup("全局遮罩配置", "控制整个遮罩窗口的通用显示效果。", OverlayStyleSettingGroupKind.Global, CreateGlobalItems(config, onChanged)),
-            new OverlayStyleSettingGroup("日志遮罩", "显示运行日志，方便查看当前任务执行到哪一步。", OverlayStyleSettingGroupKind.Log, [
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogPanelBackgroundColor), "日志区域背景色", "日志窗口底色。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogPanelBorderColor), "日志区域边框颜色", "日志窗口边框颜色。边框粗细为 0 时不会显示边框。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogPanelBorderThickness), "日志区域边框粗细", "日志窗口边框线宽。填 0 表示不显示边框。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogTextColor), "日志文字颜色", "日志内容的文字颜色。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogFontSize), "日志文字大小", "日志内容字号。", onChanged),
-                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.LogShadowEnabled), "显示日志阴影", "开启后文字和区域更容易从游戏背景中区分出来。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogShadowColor), "日志阴影颜色", "日志阴影颜色。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogShadowOpacity), "日志阴影透明度", "日志阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogShadowBlurRadius), "日志阴影模糊半径", "日志阴影的扩散范围，数值越大阴影越柔和。", onChanged),
+            new OverlayStyleSettingGroup(I18nService.Instance.Translate("全局遮罩配置"), I18nService.Instance.Translate("控制整个遮罩窗口的通用显示效果。"), OverlayStyleSettingGroupKind.Global, CreateGlobalItems(config, onChanged)),
+            new OverlayStyleSettingGroup(I18nService.Instance.Translate("日志遮罩"), I18nService.Instance.Translate("显示运行日志，方便查看当前任务执行到哪一步。"), OverlayStyleSettingGroupKind.Log, [
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogPanelBackgroundColor), I18nService.Instance.Translate("日志区域背景色"), I18nService.Instance.Translate("日志窗口底色。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogPanelBorderColor), I18nService.Instance.Translate("日志区域边框颜色"), I18nService.Instance.Translate("日志窗口边框颜色。边框粗细为 0 时不会显示边框。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogPanelBorderThickness), I18nService.Instance.Translate("日志区域边框粗细"), I18nService.Instance.Translate("日志窗口边框线宽。填 0 表示不显示边框。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogTextColor), I18nService.Instance.Translate("日志文字颜色"), I18nService.Instance.Translate("日志内容的文字颜色。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogFontSize), I18nService.Instance.Translate("日志文字大小"), I18nService.Instance.Translate("日志内容字号。"), onChanged),
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.LogShadowEnabled), I18nService.Instance.Translate("显示日志阴影"), I18nService.Instance.Translate("开启后文字和区域更容易从游戏背景中区分出来。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.LogShadowColor), I18nService.Instance.Translate("日志阴影颜色"), I18nService.Instance.Translate("日志阴影颜色。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogShadowOpacity), I18nService.Instance.Translate("日志阴影透明度"), I18nService.Instance.Translate("日志阴影强度，0 表示没有阴影，1 表示最明显。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.LogShadowBlurRadius), I18nService.Instance.Translate("日志阴影模糊半径"), I18nService.Instance.Translate("日志阴影的扩散范围，数值越大阴影越柔和。"), onChanged),
             ], config, nameof(MaskWindowConfig.ShowLogBox), onChanged),
-            new OverlayStyleSettingGroup("状态遮罩", "显示实时任务的启用状态，用来快速确认当前有哪些功能正在工作。", OverlayStyleSettingGroupKind.Status, [
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusPanelBackgroundColor), "任务状态栏背景色", "状态栏底色。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusPanelBorderColor), "任务状态栏边框颜色", "状态栏边框颜色。边框粗细为 0 时不会显示边框。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusPanelBorderThickness), "任务状态栏边框粗细", "状态栏边框线宽。填 0 表示不显示边框。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusDisabledTextColor), "未启用状态文字颜色", "任务未启用时图标和文字的颜色。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusEnabledTextColor), "已启用状态文字颜色", "任务启用时图标和文字的颜色。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusFontSize), "状态文字大小", "状态栏字号。", onChanged),
-                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.StatusShadowEnabled), "显示状态栏阴影", "开启后状态栏在复杂背景上更容易看清。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusShadowColor), "状态栏阴影颜色", "状态栏阴影颜色。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusShadowOpacity), "状态栏阴影透明度", "状态栏阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusShadowBlurRadius), "状态栏阴影模糊半径", "状态栏阴影的扩散范围，数值越大阴影越柔和。", onChanged),
+            new OverlayStyleSettingGroup(I18nService.Instance.Translate("状态遮罩"), I18nService.Instance.Translate("显示实时任务的启用状态，用来快速确认当前有哪些功能正在工作。"), OverlayStyleSettingGroupKind.Status, [
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusPanelBackgroundColor), I18nService.Instance.Translate("任务状态栏背景色"), I18nService.Instance.Translate("状态栏底色。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusPanelBorderColor), I18nService.Instance.Translate("任务状态栏边框颜色"), I18nService.Instance.Translate("状态栏边框颜色。边框粗细为 0 时不会显示边框。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusPanelBorderThickness), I18nService.Instance.Translate("任务状态栏边框粗细"), I18nService.Instance.Translate("状态栏边框线宽。填 0 表示不显示边框。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusDisabledTextColor), I18nService.Instance.Translate("未启用状态文字颜色"), I18nService.Instance.Translate("任务未启用时图标和文字的颜色。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusEnabledTextColor), I18nService.Instance.Translate("已启用状态文字颜色"), I18nService.Instance.Translate("任务启用时图标和文字的颜色。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusFontSize), I18nService.Instance.Translate("状态文字大小"), I18nService.Instance.Translate("状态栏字号。"), onChanged),
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.StatusShadowEnabled), I18nService.Instance.Translate("显示状态栏阴影"), I18nService.Instance.Translate("开启后状态栏在复杂背景上更容易看清。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.StatusShadowColor), I18nService.Instance.Translate("状态栏阴影颜色"), I18nService.Instance.Translate("状态栏阴影颜色。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusShadowOpacity), I18nService.Instance.Translate("状态栏阴影透明度"), I18nService.Instance.Translate("状态栏阴影强度，0 表示没有阴影，1 表示最明显。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.StatusShadowBlurRadius), I18nService.Instance.Translate("状态栏阴影模糊半径"), I18nService.Instance.Translate("状态栏阴影的扩散范围，数值越大阴影越柔和。"), onChanged),
             ], config, nameof(MaskWindowConfig.ShowStatus), onChanged),
-            new OverlayStyleSettingGroup("性能指标遮罩", "显示帧率、处理耗时和硬件占用等运行指标。", OverlayStyleSettingGroupKind.Metrics, [
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsPanelBackgroundColor), "指标栏背景色", "指标栏底色。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsPanelBorderColor), "指标栏边框颜色", "指标栏边框颜色。边框粗细为 0 时不会显示边框。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsPanelBorderThickness), "指标栏边框粗细", "指标栏边框线宽。填 0 表示不显示边框。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsTextColor), "指标文字颜色", "指标文字颜色。", onChanged),
-                OverlayStyleSettingItem.Slider(config, nameof(MaskWindowConfig.MetricsFontScale), "指标栏缩放率", "启用遮罩缩放后，在指标字号和布局尺寸的基础上叠加缩放，范围为 0.5-3.0 倍。", MaskWindowConfig.MinLogFontScale, MaskWindowConfig.MaxLogFontScale, 0.1, onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsFontSize), "指标文字大小", "指标栏字号。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsLineHeight), "指标单行高度", "每一行指标占用的高度。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsItemWidth), "单个指标项宽度", "每个指标项占用的宽度。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsNameColumnWidth), "指标名称列宽度", "指标名称这一列的宽度。", onChanged),
-                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.MetricsShadowEnabled), "显示指标栏阴影", "开启后指标栏在复杂背景上更容易看清。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsShadowColor), "指标栏阴影颜色", "指标栏阴影颜色。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsShadowOpacity), "指标栏阴影透明度", "指标栏阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsShadowBlurRadius), "指标栏阴影模糊半径", "指标栏阴影的扩散范围，数值越大阴影越柔和。", onChanged),
+            new OverlayStyleSettingGroup(I18nService.Instance.Translate("性能指标遮罩"), I18nService.Instance.Translate("显示帧率、处理耗时和硬件占用等运行指标。"), OverlayStyleSettingGroupKind.Metrics, [
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsPanelBackgroundColor), I18nService.Instance.Translate("指标栏背景色"), I18nService.Instance.Translate("指标栏底色。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsPanelBorderColor), I18nService.Instance.Translate("指标栏边框颜色"), I18nService.Instance.Translate("指标栏边框颜色。边框粗细为 0 时不会显示边框。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsPanelBorderThickness), I18nService.Instance.Translate("指标栏边框粗细"), I18nService.Instance.Translate("指标栏边框线宽。填 0 表示不显示边框。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsTextColor), I18nService.Instance.Translate("指标文字颜色"), I18nService.Instance.Translate("指标文字颜色。"), onChanged),
+                OverlayStyleSettingItem.Slider(config, nameof(MaskWindowConfig.MetricsFontScale), I18nService.Instance.Translate("指标栏缩放率"), I18nService.Instance.Translate("启用遮罩缩放后，在指标字号和布局尺寸的基础上叠加缩放，范围为 0.5-3.0 倍。"), MaskWindowConfig.MinLogFontScale, MaskWindowConfig.MaxLogFontScale, 0.1, onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsFontSize), I18nService.Instance.Translate("指标文字大小"), I18nService.Instance.Translate("指标栏字号。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsLineHeight), I18nService.Instance.Translate("指标单行高度"), I18nService.Instance.Translate("每一行指标占用的高度。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsItemWidth), I18nService.Instance.Translate("单个指标项宽度"), I18nService.Instance.Translate("每个指标项占用的宽度。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsNameColumnWidth), I18nService.Instance.Translate("指标名称列宽度"), I18nService.Instance.Translate("指标名称这一列的宽度。"), onChanged),
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.MetricsShadowEnabled), I18nService.Instance.Translate("显示指标栏阴影"), I18nService.Instance.Translate("开启后指标栏在复杂背景上更容易看清。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.MetricsShadowColor), I18nService.Instance.Translate("指标栏阴影颜色"), I18nService.Instance.Translate("指标栏阴影颜色。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsShadowOpacity), I18nService.Instance.Translate("指标栏阴影透明度"), I18nService.Instance.Translate("指标栏阴影强度，0 表示没有阴影，1 表示最明显。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.MetricsShadowBlurRadius), I18nService.Instance.Translate("指标栏阴影模糊半径"), I18nService.Instance.Translate("指标栏阴影的扩散范围，数值越大阴影越柔和。"), onChanged),
             ], config, nameof(MaskWindowConfig.ShowOverlayMetrics), onChanged),
-            new OverlayStyleSettingGroup("方位遮罩", "在小地图周围显示东、南、西、北文字，辅助判断朝向。", OverlayStyleSettingGroupKind.Direction, [
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.DirectionTextColor), "方位文字颜色", "小地图周围方位文字的颜色。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionFontSize), "方位文字大小", "小地图方位文字字号。", onChanged),
-                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.DirectionShadowEnabled), "显示方位文字阴影", "开启后方位文字在复杂背景上更容易看清。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.DirectionShadowColor), "方位文字阴影颜色", "方位文字阴影颜色。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionShadowOpacity), "方位文字阴影透明度", "方位文字阴影强度，0 表示没有阴影，1 表示最明显。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionShadowBlurRadius), "方位文字阴影模糊半径", "方位文字阴影的扩散范围，数值越大阴影越柔和。", onChanged),
+            new OverlayStyleSettingGroup(I18nService.Instance.Translate("方位遮罩"), I18nService.Instance.Translate("在小地图周围显示东、南、西、北文字，辅助判断朝向。"), OverlayStyleSettingGroupKind.Direction, [
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.DirectionTextColor), I18nService.Instance.Translate("方位文字颜色"), I18nService.Instance.Translate("小地图周围方位文字的颜色。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionFontSize), I18nService.Instance.Translate("方位文字大小"), I18nService.Instance.Translate("小地图方位文字字号。"), onChanged),
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.DirectionShadowEnabled), I18nService.Instance.Translate("显示方位文字阴影"), I18nService.Instance.Translate("开启后方位文字在复杂背景上更容易看清。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.DirectionShadowColor), I18nService.Instance.Translate("方位文字阴影颜色"), I18nService.Instance.Translate("方位文字阴影颜色。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionShadowOpacity), I18nService.Instance.Translate("方位文字阴影透明度"), I18nService.Instance.Translate("方位文字阴影强度，0 表示没有阴影，1 表示最明显。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.DirectionShadowBlurRadius), I18nService.Instance.Translate("方位文字阴影模糊半径"), I18nService.Instance.Translate("方位文字阴影的扩散范围，数值越大阴影越柔和。"), onChanged),
             ], config, nameof(MaskWindowConfig.DirectionsEnabled), onChanged),
-            new OverlayStyleSettingGroup("识别结果遮罩", "显示图像识别的框线和文字。", OverlayStyleSettingGroupKind.Recognition, [
-                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.RecognitionUseDrawableStyle), "统一识别框线颜色", "关闭时保留任务自己指定的颜色；开启后使用下面设置的统一颜色。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.RecognitionRectStrokeColor), "识别矩形边框颜色", "开启统一颜色后，识别矩形框使用的颜色。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.RecognitionRectStrokeThickness), "识别矩形线宽", "开启统一颜色后，识别矩形框的线宽。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.RecognitionLineStrokeColor), "识别线条颜色", "开启统一颜色后，识别线条使用的颜色。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.RecognitionLineStrokeThickness), "识别线条线宽", "开启统一颜色后，识别线条的线宽。", onChanged),
-                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.RecognitionTextColor), "识别文字颜色", "普通识别结果文字的颜色。", onChanged),
-                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.RecognitionTextFontSize), "识别文字大小", "普通识别结果文字的基础字号。", onChanged),
+            new OverlayStyleSettingGroup(I18nService.Instance.Translate("识别结果遮罩"), I18nService.Instance.Translate("显示图像识别的框线和文字。"), OverlayStyleSettingGroupKind.Recognition, [
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.RecognitionUseDrawableStyle), I18nService.Instance.Translate("统一识别框线颜色"), I18nService.Instance.Translate("关闭时保留任务自己指定的颜色；开启后使用下面设置的统一颜色。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.RecognitionRectStrokeColor), I18nService.Instance.Translate("识别矩形边框颜色"), I18nService.Instance.Translate("开启统一颜色后，识别矩形框使用的颜色。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.RecognitionRectStrokeThickness), I18nService.Instance.Translate("识别矩形线宽"), I18nService.Instance.Translate("开启统一颜色后，识别矩形框的线宽。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.RecognitionLineStrokeColor), I18nService.Instance.Translate("识别线条颜色"), I18nService.Instance.Translate("开启统一颜色后，识别线条使用的颜色。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.RecognitionLineStrokeThickness), I18nService.Instance.Translate("识别线条线宽"), I18nService.Instance.Translate("开启统一颜色后，识别线条的线宽。"), onChanged),
+                OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.RecognitionTextColor), I18nService.Instance.Translate("识别文字颜色"), I18nService.Instance.Translate("普通识别结果文字的颜色。"), onChanged),
+                OverlayStyleSettingItem.Number(config, nameof(MaskWindowConfig.RecognitionTextFontSize), I18nService.Instance.Translate("识别文字大小"), I18nService.Instance.Translate("普通识别结果文字的基础字号。"), onChanged),
             ], config, nameof(MaskWindowConfig.DisplayRecognitionResultsOnMask), onChanged),
-            new OverlayStyleSettingGroup("自定义 HTML 遮罩", "用 HTML 制作遮罩。", OverlayStyleSettingGroupKind.CustomHtml, [
-                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.CustomHtmlMaskClickThrough), "HTML 遮罩鼠标穿透", "开启后鼠标可穿透遮罩；关闭后 HTML 内容可以接收点击和输入。", onChanged),
-                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.CustomHtmlMaskAutoReloadOnSave), "保存后自动刷新 HTML", "开启后保存 HTML 会立即刷新已经打开的自定义遮罩。", onChanged),
+            new OverlayStyleSettingGroup(I18nService.Instance.Translate("自定义 HTML 遮罩"), I18nService.Instance.Translate("用 HTML 制作遮罩。"), OverlayStyleSettingGroupKind.CustomHtml, [
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.CustomHtmlMaskClickThrough), I18nService.Instance.Translate("HTML 遮罩鼠标穿透"), I18nService.Instance.Translate("开启后鼠标可穿透遮罩；关闭后 HTML 内容可以接收点击和输入。"), onChanged),
+                OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.CustomHtmlMaskAutoReloadOnSave), I18nService.Instance.Translate("保存后自动刷新 HTML"), I18nService.Instance.Translate("开启后保存 HTML 会立即刷新已经打开的自定义遮罩。"), onChanged),
             ], config, nameof(MaskWindowConfig.CustomHtmlMaskEnabled), onChanged),
         ];
     }
 
     private static IEnumerable<OverlayStyleSettingItem> CreateGlobalItems(MaskWindowConfig config, Action onChanged)
     {
-        yield return OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.OverlayScalingEnabled), "启用遮罩字体缩放", "开启后根据游戏分辨率和系统 DPI 缩放日志、状态、FPS 与指标栏的字体大小；关闭后直接使用各项基础尺寸。", onChanged);
-        yield return OverlayStyleSettingItem.Slider(config, nameof(MaskWindowConfig.LogFontScale), "遮罩字体缩放率", "启用遮罩字体缩放后，在日志、状态和 FPS 基础字号上叠加缩放，范围为 0.5-3.0 倍。", MaskWindowConfig.MinLogFontScale, MaskWindowConfig.MaxLogFontScale, 0.1, onChanged);
-        yield return OverlayStyleSettingItem.Slider(config, nameof(MaskWindowConfig.TextOpacity), "遮罩文字透明度", "调整遮罩上所有文字的透明度，1 表示完全不透明，0 表示完全透明。", 0, 1, 0.1, onChanged);
-        yield return OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.OverlayWindowBackgroundColor), "主遮罩窗口背景色", "遮罩窗口本身的背景色。", onChanged);
+        yield return OverlayStyleSettingItem.Bool(config, nameof(MaskWindowConfig.OverlayScalingEnabled), I18nService.Instance.Translate("启用遮罩字体缩放"), I18nService.Instance.Translate("开启后根据游戏分辨率和系统 DPI 缩放日志、状态、FPS 与指标栏的字体大小；关闭后直接使用各项基础尺寸。"), onChanged);
+        yield return OverlayStyleSettingItem.Slider(config, nameof(MaskWindowConfig.LogFontScale), I18nService.Instance.Translate("遮罩字体缩放率"), I18nService.Instance.Translate("启用遮罩字体缩放后，在日志、状态和 FPS 基础字号上叠加缩放，范围为 0.5-3.0 倍。"), MaskWindowConfig.MinLogFontScale, MaskWindowConfig.MaxLogFontScale, 0.1, onChanged);
+        yield return OverlayStyleSettingItem.Slider(config, nameof(MaskWindowConfig.TextOpacity), I18nService.Instance.Translate("遮罩文字透明度"), I18nService.Instance.Translate("调整遮罩上所有文字的透明度，1 表示完全不透明，0 表示完全透明。"), 0, 1, 0.1, onChanged);
+        yield return OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.OverlayWindowBackgroundColor), I18nService.Instance.Translate("主遮罩窗口背景色"), I18nService.Instance.Translate("遮罩窗口本身的背景色。"), onChanged);
 
         if (WinePlatformAddon.IsRunningOnWine)
         {
-            yield return OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.WineOverlayBackgroundColor), "Wine 兼容背景色", "仅在 Wine 环境下使用的兼容背景色。", onChanged);
+            yield return OverlayStyleSettingItem.Color(config, nameof(MaskWindowConfig.WineOverlayBackgroundColor), I18nService.Instance.Translate("Wine 兼容背景色"), I18nService.Instance.Translate("仅在 Wine 环境下使用的兼容背景色。"), onChanged);
         }
     }
 }
@@ -885,26 +907,26 @@ public sealed class OverlayStyleSettingItem : ObservableObject
 {
     private static readonly IReadOnlyList<OverlayStyleColorOption> BaseColorOptions =
     [
-        new("透明", MaskWindowConfig.DefaultTransparentColor),
-        new("几乎透明黑色", MaskWindowConfig.DefaultOverlayWindowBackgroundColor),
-        new("半透明黑色", MaskWindowConfig.DefaultPanelBorderColor),
-        new("浅灰色", "LightGray"),
-        new("白色", "White"),
-        new("黑色", "Black"),
-        new("纯黑色", MaskWindowConfig.DefaultShadowColor),
-        new("浅绿色", "LightGreen"),
-        new("绿色", "Green"),
-        new("红色", "Red"),
-        new("橙色", "Orange"),
-        new("黄色", "Yellow"),
-        new("天蓝色", "DeepSkyBlue"),
-        new("蓝色", "DodgerBlue"),
-        new("紫色", "Purple"),
-        new("粉色", "HotPink")
+        new(I18nService.Key("透明"), MaskWindowConfig.DefaultTransparentColor),
+        new(I18nService.Key("几乎透明黑色"), MaskWindowConfig.DefaultOverlayWindowBackgroundColor),
+        new(I18nService.Key("半透明黑色"), MaskWindowConfig.DefaultPanelBorderColor),
+        new(I18nService.Key("浅灰色"), "LightGray"),
+        new(I18nService.Key("白色"), "White"),
+        new(I18nService.Key("黑色"), "Black"),
+        new(I18nService.Key("纯黑色"), MaskWindowConfig.DefaultShadowColor),
+        new(I18nService.Key("浅绿色"), "LightGreen"),
+        new(I18nService.Key("绿色"), "Green"),
+        new(I18nService.Key("红色"), "Red"),
+        new(I18nService.Key("橙色"), "Orange"),
+        new(I18nService.Key("黄色"), "Yellow"),
+        new(I18nService.Key("天蓝色"), "DeepSkyBlue"),
+        new(I18nService.Key("蓝色"), "DodgerBlue"),
+        new(I18nService.Key("紫色"), "Purple"),
+        new(I18nService.Key("粉色"), "HotPink")
     ];
 
     private static readonly OverlayStyleColorOption WineColorOption =
-        new("Wine 兼容半透明黑色", MaskWindowConfig.DefaultWineOverlayBackgroundColor);
+        new(I18nService.Key("Wine 兼容半透明黑色"), MaskWindowConfig.DefaultWineOverlayBackgroundColor);
 
     private readonly MaskWindowConfig _config;
     private readonly System.Reflection.PropertyInfo _property;
@@ -970,7 +992,7 @@ public sealed class OverlayStyleSettingItem : ObservableObject
                 return commonColorOptions;
             }
 
-            return [.. commonColorOptions, new OverlayStyleColorOption($"当前自定义颜色（{currentValue}）", currentValue)];
+            return [.. commonColorOptions, new OverlayStyleColorOption(string.Format(I18nService.Instance.Translate("当前自定义颜色（{0}）"), currentValue), currentValue)];
         }
     }
 
@@ -1106,12 +1128,20 @@ public sealed class OverlayStyleColorOption
 
     public OverlayStyleColorOption(string displayName, string value)
     {
-        DisplayName = displayName;
+        _displayName = displayName;
         Value = value;
         SwatchBrush = CreateSwatchBrush(value);
     }
 
-    public string DisplayName { get; }
+    /// <summary>
+    /// 颜色名称（i18n Key 或已翻译的文字）。
+    /// </summary>
+    private readonly string _displayName;
+
+    /// <summary>
+    /// 按界面语言显示的颜色名称；预设颜色列表是静态的，因此在取值时翻译。
+    /// </summary>
+    public string DisplayName => I18nService.Instance.Translate(_displayName);
 
     public string Value { get; }
 
@@ -1168,8 +1198,8 @@ public sealed class OverlayMetricSettingItem : ObservableObject
         _config = config;
         _onChanged = onChanged;
         Item = item;
-        DisplayName = OverlayMetricItemDefaults.GetDisplayName(item);
-        ToolTipText = OverlayMetricItemDefaults.GetToolTipText(item);
+        DisplayName = I18nService.Instance.Translate(OverlayMetricItemDefaults.GetDisplayName(item));
+        ToolTipText = I18nService.Instance.Translate(OverlayMetricItemDefaults.GetToolTipText(item));
         _isEnabled = config.IsOverlayMetricEnabled(item);
     }
 

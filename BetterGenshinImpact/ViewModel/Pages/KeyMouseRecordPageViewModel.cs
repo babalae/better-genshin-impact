@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
 using BetterGenshinImpact.Core.Config;
@@ -146,7 +147,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         }
         try
         {
-            var str = PromptDialog.Prompt("请输入要修改为的名称（实际就是文件名）", "修改名称");
+            var str = PromptDialog.Prompt(I18nService.Instance.Translate("请输入要修改为的名称（实际就是文件名）"), I18nService.Instance.Translate("修改名称"));
             if (!string.IsNullOrEmpty(str))
             {
                 // 检查原始文件是否存在
@@ -156,8 +157,8 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
                     // 重命名文件
                     File.Move(originalFilePath, Path.Combine(Path.GetDirectoryName(originalFilePath)!, str + ".json"));
                     _snackbarService.Show(
-                        "修改名称成功",
-                        $"脚本名称 {item.Name} 修改为 {str}",
+                        I18nService.Instance.Translate("修改名称成功"),
+                        string.Format(I18nService.Instance.Translate("脚本名称 {0} 修改为 {1}"), item.Name, str),
                         ControlAppearance.Success,
                         null,
                         TimeSpan.FromSeconds(2)
@@ -168,8 +169,8 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         catch (Exception)
         {
             _snackbarService.Show(
-                "修改失败",
-                $"{item.Name} 修改失败",
+                I18nService.Instance.Translate("修改失败"),
+                string.Format(I18nService.Instance.Translate("{0} 修改失败"), item.Name),
                 ControlAppearance.Danger,
                 null,
                 TimeSpan.FromSeconds(3)
@@ -192,8 +193,8 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         {
             File.Delete(item.Path);
             _snackbarService.Show(
-                "删除成功",
-                $"{item.Name} 已经被删除",
+                I18nService.Instance.Translate("删除成功"),
+                string.Format(I18nService.Instance.Translate("{0} 已经被删除"), item.Name),
                 ControlAppearance.Success,
                 null,
                 TimeSpan.FromSeconds(2)
@@ -202,8 +203,8 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         catch (Exception)
         {
             _snackbarService.Show(
-                "删除失败",
-                $"{item.Name} 删除失败",
+                I18nService.Instance.Translate("删除失败"),
+                string.Format(I18nService.Instance.Translate("{0} 删除失败"), item.Name),
                 ControlAppearance.Danger,
                 null,
                 TimeSpan.FromSeconds(3)

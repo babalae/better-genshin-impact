@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -27,19 +28,25 @@ public partial class NcnnTuningViewModel : ObservableObject
 
     public string Description { get; }
 
+    /// <summary>CPU 模式线程数下拉框的标签（含本套标题）。</summary>
+    public string CpuThreadsLabel => string.Format(I18nService.Instance.Translate("{0} CPU 模式线程数"), Title);
+
+    /// <summary>Vulkan 模式线程数下拉框的标签（含本套标题）。</summary>
+    public string VulkanThreadsLabel => string.Format(I18nService.Instance.Translate("{0} Vulkan 模式线程数"), Title);
+
     /// <summary>可绑定的草稿参数（XAML 直接绑定 <c>DetTuning.Settings.UseFp16Packed</c>）。</summary>
     public NcnnTuningSettings Settings { get; }
 
     public bool HasChanges => !Settings.Equals(_baseline);
 
-    public string ChangeSummary => HasChanges ? "已修改" : "与已保存一致";
+    public string ChangeSummary => HasChanges ? I18nService.Instance.Translate("已修改") : I18nService.Instance.Translate("与已保存一致");
 
     /// <summary>INT8 只有对应量化模型才真正生效，UI 用该提示避免误导。</summary>
-    public string Int8Hint => "需 int8 量化模型；未量化模型不会因为开启而变快。";
+    public string Int8Hint => I18nService.Instance.Translate("需 int8 量化模型；未量化模型不会因为开启而变快。");
 
-    public string PackingHint => "packing layout 仅在 ARM 等支持打包的平台上带来收益，x86 显卡通常无变化。";
+    public string PackingHint => I18nService.Instance.Translate("packing layout 仅在 ARM 等支持打包的平台上带来收益，x86 显卡通常无变化。");
 
-    public string PixelInputHint => "像素直输省掉一次 CHW 浮点写入，但要求模型输入为 0–255（自带归一化），默认关闭。";
+    public string PixelInputHint => I18nService.Instance.Translate("像素直输省掉一次 CHW 浮点写入，但要求模型输入为 0–255（自带归一化），默认关闭。");
 
     /// <summary>恢复本套参数为 ncnn 默认值（不影响其他两套）。</summary>
     [RelayCommand]

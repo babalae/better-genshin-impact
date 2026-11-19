@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Infrastructure.Storage;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Service.Instance;
 
@@ -25,13 +26,13 @@ public sealed class CloudGameStorageAreaProvider(
 
         foreach (var name in store.List())
         {
-            yield return new StorageArea($"webview:cloud-game:{name}", $"云原神 · {name}", StorageGroup.WebData,
+            yield return new StorageArea($"webview:cloud-game:{name}", string.Format(I18nService.Instance.Translate("云原神 · {0}"), name), StorageGroup.WebData,
                 WebViewInstanceStore.GetCacheFolders(name))
             {
-                Description = "该实例的网页缓存，保留登录状态",
-                CleanupEffect = "下次打开时重新加载页面资源",
+                Description = I18nService.Key("该实例的网页缓存，保留登录状态"),
+                CleanupEffect = I18nService.Key("下次打开时重新加载页面资源"),
                 IncludedInQuickCleanup = false,
-                GetBusyReason = () => WebViewInstanceStore.IsRunning(name) ? "实例正在运行，请先关闭该实例" : null,
+                GetBusyReason = () => WebViewInstanceStore.IsRunning(name) ? I18nService.Instance.Translate("实例正在运行，请先关闭该实例") : null,
                 CleanupAsync = ct => Task.Run(() => store.ClearCache(name), ct),
             };
         }

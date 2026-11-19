@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script.Repositories;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -12,7 +13,7 @@ public partial class PuloniaRemoteRepositoryDialogViewModel : ViewModel
     /// <summary>已有仓库的注册存储，添加过程不调用远程同步。</summary>
     private readonly ScriptRepositoryStore _repositories;
     /// <summary>新仓库的展示名称。</summary>
-    [ObservableProperty] private string _repositoryName = "第三方脚本仓库";
+    [ObservableProperty] private string _repositoryName = I18nService.Instance.Translate("第三方脚本仓库");
     /// <summary>用户填写的 Git 远程地址。</summary>
     [ObservableProperty] private string _remoteUrl = string.Empty;
     /// <summary>首次同步将使用的分支。</summary>
@@ -75,7 +76,7 @@ public partial class PuloniaRemoteRepositoryDialogViewModel : ViewModel
         ErrorMessage = string.Empty;
         ScriptRepositoryRegistration? added = null;
         try { added = await _repositories.AddRemoteRepositoryAsync(RepositoryName, RemoteUrl, Branch); }
-        catch (Exception ex) { ErrorMessage = "添加远程仓库失败：" + ex.Message; }
+        catch (Exception ex) { ErrorMessage = I18nService.Instance.Translate("添加远程仓库失败：") + ex.Message; }
         finally { IsBusy = false; }
         // 先解除忙碌状态，再通知窗口接受结果，关闭时不会中断注册。
         AddedRepository = added;

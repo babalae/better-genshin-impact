@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
@@ -95,7 +96,7 @@ public sealed partial class PuloniaTaskService
                     {
                         await AdvanceCursorAsync(cursor, now, ct).ConfigureAwait(false);
                         SetTriggerStatus(plan, trigger, PuloniaTaskTriggerOutcome.Missed,
-                            "遗漏的时间已超过允许延迟启动时间，未启动任务。", PuloniaTaskSchedule.Next(trigger, now));
+                            I18nService.Instance.Translate("遗漏的时间已超过允许延迟启动时间，未启动任务。"), PuloniaTaskSchedule.Next(trigger, now));
                     }
                     else
                         SetNextOccurrence(plan, trigger, next);
@@ -106,7 +107,7 @@ public sealed partial class PuloniaTaskService
                 {
                     await AdvanceCursorAsync(cursor, due.Value, ct).ConfigureAwait(false);
                     SetTriggerStatus(plan, trigger, PuloniaTaskTriggerOutcome.Missed,
-                        "未启用补触发，已跳过遗漏时间。", PuloniaTaskSchedule.Next(trigger, due.Value));
+                        I18nService.Instance.Translate("未启用补触发，已跳过遗漏时间。"), PuloniaTaskSchedule.Next(trigger, due.Value));
                     continue;
                 }
                 await SubmitTriggerAsync(plan, trigger, cursor, due.Value, ct).ConfigureAwait(false);
@@ -214,7 +215,7 @@ public sealed partial class PuloniaTaskService
             if (FindLatestTriggerRunId(plan.Id, trigger) is { } runId)
                 SetTriggerStatus(plan, trigger, PuloniaTaskTriggerOutcome.Submitted, string.Empty, null, runId);
             else if (trigger.Kind == PuloniaTaskTriggerKind.Schedule)
-                SetTriggerStatus(plan, trigger, PuloniaTaskTriggerOutcome.Waiting, "配置已生效。", null);
+                SetTriggerStatus(plan, trigger, PuloniaTaskTriggerOutcome.Waiting, I18nService.Instance.Translate("配置已生效。"), null);
         }
     }
 
@@ -321,7 +322,7 @@ public sealed partial class PuloniaTaskService
         {
             await AdvanceCursorAsync(cursor, occurrence, ct).ConfigureAwait(false);
             SetTriggerStatus(plan, trigger, PuloniaTaskTriggerOutcome.Merged,
-                "同一计划已有请求，按忙碌策略跳过重复触发。", next);
+                I18nService.Instance.Translate("同一计划已有请求，按忙碌策略跳过重复触发。"), next);
             return;
         }
         try
@@ -339,7 +340,7 @@ public sealed partial class PuloniaTaskService
             if (cursor is not null) cursor.LastOccurrenceUtc = occurrence;
             var runId = await EnqueueCoreAsync(request,
                 cursor is null ? null : (state, _) => PutCursor(state, cursor), ct).ConfigureAwait(false);
-            SetTriggerStatus(plan, trigger, PuloniaTaskTriggerOutcome.Submitted, "请求与调度游标已一并保存。", next, runId);
+            SetTriggerStatus(plan, trigger, PuloniaTaskTriggerOutcome.Submitted, I18nService.Instance.Translate("请求与调度游标已一并保存。"), next, runId);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -367,7 +368,7 @@ public sealed partial class PuloniaTaskService
                 // 复核期间已被取消的请求由取消流程收尾，不重复结束。
                 if (state.Status != PuloniaTaskRunStatus.Queued) return false;
                 state.Status = PuloniaTaskRunStatus.NeedsAttention;
-                state.Message = "无法复核触发配置，未启动任务：" + ex.Message;
+                state.Message = I18nService.Instance.Translate("无法复核触发配置，未启动任务：") + ex.Message;
                 state.FinishedAt = now;
             }
             await CompleteStateAsync(state).ConfigureAwait(false);
@@ -384,7 +385,7 @@ public sealed partial class PuloniaTaskService
             {
                 if (state.Status != PuloniaTaskRunStatus.Queued) return false;
                 state.Status = invalid ? PuloniaTaskRunStatus.Cancelled : PuloniaTaskRunStatus.Expired;
-                state.Message = invalid ? "触发器已删除、禁用或调整，旧排队请求未启动。" : "已超过允许延迟启动时间，未启动任何执行器。";
+                state.Message = invalid ? I18nService.Instance.Translate("触发器已删除、禁用或调整，旧排队请求未启动。") : I18nService.Instance.Translate("已超过允许延迟启动时间，未启动任何执行器。");
                 state.FinishedAt = now;
             }
             await CompleteStateAsync(state).ConfigureAwait(false);

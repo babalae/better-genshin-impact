@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.ComponentModel;
 using System.Linq;
@@ -28,7 +29,7 @@ public partial class GptSovitsSettingsViewModel : ObservableObject
     /// <summary>唯一 Profile 草稿及自动保存状态。</summary>
     public QuestVoiceManagementViewModel Management => Owner.Management;
     /// <summary>连接状态仅由显式测试更新，不代表真实推理或后端空闲。</summary>
-    [ObservableProperty] private string _connectionStatus = "尚未检测连接";
+    [ObservableProperty] private string _connectionStatus = I18nService.Instance.Translate("尚未检测连接");
     /// <summary>URL 输入草稿，非法输入不会替换有效宿主配置。</summary>
     [ObservableProperty] private string _serviceUrl;
     /// <summary>地址校验提示；为空表示当前输入有效。</summary>
@@ -64,7 +65,7 @@ public partial class GptSovitsSettingsViewModel : ObservableObject
         {
             Interlocked.Increment(ref _connectionGeneration);
             if (ServiceUrl != ActiveServiceUrl && e.PropertyName == nameof(QuestVoiceConfig.UseRemoteService)) ServiceUrl = ActiveServiceUrl;
-            ConnectionStatus = "连接设置已更改，请主动测试";
+            ConnectionStatus = I18nService.Instance.Translate("连接设置已更改，请主动测试");
         }
     }
 
@@ -73,7 +74,7 @@ public partial class GptSovitsSettingsViewModel : ObservableObject
     {
         Interlocked.Increment(ref _connectionGeneration);
         if (!EngineSettingsViewModel.IsValidUrl(value))
-        { UrlValidationMessage = "请输入有效的 HTTP/HTTPS 地址（不含账号、查询参数或片段）"; return; }
+        { UrlValidationMessage = I18nService.Instance.Translate("请输入有效的 HTTP/HTTPS 地址（不含账号、查询参数或片段）"); return; }
         ActiveServiceUrl = value.Trim();
         UrlValidationMessage = "";
     }
@@ -85,11 +86,11 @@ public partial class GptSovitsSettingsViewModel : ObservableObject
         var generation = Interlocked.Increment(ref _connectionGeneration);
         try
         {
-            if (ServiceUrl.Trim() != ActiveServiceUrl.Trim()) { ConnectionStatus = "请先输入有效 URL"; return; }
+            if (ServiceUrl.Trim() != ActiveServiceUrl.Trim()) { ConnectionStatus = I18nService.Instance.Translate("请先输入有效 URL"); return; }
             var result = await _service.ProbeAsync(_factory.CreateProviderSettings("gpt-sovits", false), token);
             if (generation == _connectionGeneration) ConnectionStatus = result;
         }
         catch (OperationCanceledException) { }
-        catch { if (generation == _connectionGeneration) ConnectionStatus = "连接失败，请检查服务、URL 和超时。"; }
+        catch { if (generation == _connectionGeneration) ConnectionStatus = I18nService.Instance.Translate("连接失败，请检查服务、URL 和超时。"); }
     }
 }

@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -80,7 +81,7 @@ public partial class JsListViewModel : ViewModel
             }
             catch (Exception e)
             {
-                Toast.Warning($"脚本 {f.Name} 载入失败：{e.Message}");
+                Toast.Warning(string.Format(I18nService.Instance.Translate("脚本 {0} 载入失败：{1}"), f.Name, e.Message));
             }
         }
     }
@@ -124,7 +125,7 @@ public partial class JsListViewModel : ViewModel
 
         if (!string.IsNullOrEmpty(item.Manifest.SettingsUi) || !string.IsNullOrEmpty(item.Manifest.SettingsHtml))
         {
-            Toast.Information("此脚本存在配置，不配置可能无法正常运行，建议请添加至【调度器】，并右键修改配置后使用！");
+            Toast.Information(I18nService.Instance.Translate("此脚本存在配置，不配置可能无法正常运行，建议请添加至【调度器】，并右键修改配置后使用！"));
             _logger.LogWarning("此脚本存在配置，可能无法直接从脚本界面运行，建议请添加至【调度器】，并右键修改配置后使用！");
         }
 
@@ -149,10 +150,10 @@ public partial class JsListViewModel : ViewModel
         // 显示确认对话框
         var messageBox = new Wpf.Ui.Controls.MessageBox
         {
-            Title = "删除确认",
-            Content = $"确定要删除脚本 \"{item.Manifest.Name}\" 吗？\n\n此操作将永久删除脚本文件夹及其所有内容，无法恢复！",
-            PrimaryButtonText = "删除",
-            CloseButtonText = "取消",
+            Title = I18nService.Instance.Translate("删除确认"),
+            Content = string.Format(I18nService.Instance.Translate("确定要删除脚本 \"{0}\" 吗？\n\n此操作将永久删除脚本文件夹及其所有内容，无法恢复！"), item.Manifest.Name),
+            PrimaryButtonText = I18nService.Instance.Translate("删除"),
+            CloseButtonText = I18nService.Instance.Translate("取消"),
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
@@ -167,7 +168,7 @@ public partial class JsListViewModel : ViewModel
                 if (Directory.Exists(item.ProjectPath))
                 {
                     Directory.Delete(item.ProjectPath, true);
-                    Toast.Success($"已删除脚本: {item.Manifest.Name}");
+                    Toast.Success(string.Format(I18nService.Instance.Translate("已删除脚本: {0}"), item.Manifest.Name));
                     _logger.LogInformation("已删除脚本: {Name} ({Path})", item.Manifest.Name, item.ProjectPath);
                     
                     // 刷新列表
@@ -175,12 +176,12 @@ public partial class JsListViewModel : ViewModel
                 }
                 else
                 {
-                    Toast.Warning("脚本目录不存在");
+                    Toast.Warning(I18nService.Instance.Translate("脚本目录不存在"));
                 }
             }
             catch (Exception ex)
             {
-                Toast.Error($"删除脚本失败: {ex.Message}");
+                Toast.Error(string.Format(I18nService.Instance.Translate("删除脚本失败: {0}"), ex.Message));
                 _logger.LogError(ex, "删除脚本失败");
             }
         }
@@ -308,7 +309,7 @@ public partial class JsListViewModel : ViewModel
 
             contentPanel.Children.Add(new TextBlock
             {
-                Text = $"版本: {scriptProject.Manifest.Version}",
+                Text = string.Format(I18nService.Instance.Translate("版本: {0}"), scriptProject.Manifest.Version),
                 Margin = new Thickness(0, 0, 0, 10)
             });
 

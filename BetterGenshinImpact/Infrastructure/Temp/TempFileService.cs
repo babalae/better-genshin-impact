@@ -9,6 +9,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Infrastructure.Storage;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Infrastructure.Temp;
 
@@ -131,8 +132,8 @@ public sealed class TempFileService : ITempFileService, IStorageAreaProvider, IH
             StorageGroup.Temp,
             processDirectories.Select(directory => Path.Combine(directory, category.Id)).Where(Directory.Exists).ToList())
         {
-            Description = "程序运行中产生的临时文件，退出时自动删除",
-            CleanupEffect = "正在使用的文件会跳过",
+            Description = I18nService.Key("程序运行中产生的临时文件，退出时自动删除"),
+            CleanupEffect = I18nService.Key("正在使用的文件会跳过"),
             CleanupAsync = ct => CleanupAsync(category, ct),
         }).ToList();
     }

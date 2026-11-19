@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -32,7 +33,7 @@ public partial class JsonMonoViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            ThemedMessageBox.Error("读取黑白名单出错：" + e.ToString());
+            ThemedMessageBox.Error(I18nService.Instance.Translate("读取黑白名单出错：") + e.ToString());
         }
     }
 
@@ -45,18 +46,18 @@ public partial class JsonMonoViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            ThemedMessageBox.Error("保存失败：" + e.ToString());
+            ThemedMessageBox.Error(I18nService.Instance.Translate("保存失败：") + e.ToString());
             return;
         }
 
         try
         {
             Global.WriteAllText(JsonPath, JsonText);
-            Toast.Success("保存成功");
+            Toast.Success(I18nService.Instance.Translate("保存成功"));
         }
         catch (Exception e)
         {
-            ThemedMessageBox.Error("保存失败：" + e.ToString());
+            ThemedMessageBox.Error(I18nService.Instance.Translate("保存失败：") + e.ToString());
         }
     }
 

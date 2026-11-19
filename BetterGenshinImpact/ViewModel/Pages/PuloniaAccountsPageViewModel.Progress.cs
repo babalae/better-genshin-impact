@@ -1,5 +1,6 @@
 using System.Linq;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -50,7 +51,7 @@ public partial class PuloniaAccountsPageViewModel
             if (Accounts.FirstOrDefault(item => item.Id == accountId) is { } account)
                 SelectedAccount = account;
             else
-                Message = "要查看的账户已不在账户目录中，显示的是当前选中账户的路线 CD。";
+                Message = I18nService.Instance.Translate("要查看的账户已不在账户目录中，显示的是当前选中账户的路线 CD。");
         }
         // 2. 再设置计划筛选（计划选项尚未建立时由总览在建立后应用），最后切换页签，页签显示时读取完成记录
         RouteCooldowns.SetPlanFilter(request.PlanId);

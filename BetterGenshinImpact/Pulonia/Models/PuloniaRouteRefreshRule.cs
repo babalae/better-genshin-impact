@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
@@ -64,4 +65,32 @@ public sealed class PuloniaRouteRefreshRule
             _ => "不检查 CD"
         }
     }) + (IsReference ? "（参考规则）" : string.Empty);
+
+    /// <summary>星期翻译键，下标 0 为周一；仅用于 <see cref="DisplayDescription"/>。</summary>
+    private static readonly string[] WeekdayDisplayKeys =
+    [
+        I18nService.Key("周一"), I18nService.Key("周二"), I18nService.Key("周三"), I18nService.Key("周四"),
+        I18nService.Key("周五"), I18nService.Key("周六"), I18nService.Key("周日")
+    ];
+
+    /// <summary>
+    /// 按当前界面语言翻译的规则说明，仅用于界面显示。
+    /// <see cref="Description"/> 会写入节点结果数据，保持中文原值不变。
+    /// </summary>
+    [JsonIgnore]
+    public string DisplayDescription => (Mode switch
+    {
+        PuloniaRouteRefreshMode.Rolling => string.Format(I18nService.Instance.Translate("成功后 {0:g} 小时"), Hours),
+        PuloniaRouteRefreshMode.Daily => string.Format(I18nService.Instance.Translate("服务器每日 {0:00}:00 重置"), ResetHour),
+        PuloniaRouteRefreshMode.CalendarDays => string.Format(I18nService.Instance.Translate("成功日期后第 {0} 天 00:00（午夜保守估算）"), Days),
+        PuloniaRouteRefreshMode.Weekly => string.Format(I18nService.Instance.Translate("服务器每{0} {1:00}:00 重置"),
+            I18nService.Instance.Translate(WeekdayDisplayKeys[ResetWeekday - 1]), ResetHour),
+        PuloniaRouteRefreshMode.Once => I18nService.Instance.Translate("一次性：成功后不再自动执行"),
+        _ => Source switch
+        {
+            PuloniaRouteRefreshRuleSource.Unmatched => I18nService.Instance.Translate("未识别刷新规则：不检查 CD，成功后仍记录时间，可手动设置"),
+            PuloniaRouteRefreshRuleSource.Mixed => I18nService.Instance.Translate("混合类别：不检查 CD"),
+            _ => I18nService.Instance.Translate("不检查 CD")
+        }
+    }) + (IsReference ? I18nService.Instance.Translate("（参考规则）") : string.Empty);
 }

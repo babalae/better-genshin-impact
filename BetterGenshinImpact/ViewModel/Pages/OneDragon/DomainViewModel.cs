@@ -1,8 +1,9 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using BetterGenshinImpact.Service.I18n;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages.OneDragon;
 
 public partial class DomainViewModel : OneDragonBaseViewModel
 {
-    public override string Title { get; } = "刷秘境";
+    public override string Title { get; } = I18nService.Instance.Translate("刷秘境");
 }

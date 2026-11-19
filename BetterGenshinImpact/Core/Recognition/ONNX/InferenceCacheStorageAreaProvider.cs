@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BetterGenshinImpact.Infrastructure.Storage;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
@@ -12,11 +13,11 @@ public sealed class InferenceCacheStorageAreaProvider : IStorageAreaProvider
     /// <inheritdoc />
     public IEnumerable<StorageArea> GetAreas()
     {
-        yield return new StorageArea("cache:inference", "识别模型编译缓存", StorageGroup.Cache,
+        yield return new StorageArea("cache:inference", I18nService.Key("识别模型编译缓存"), StorageGroup.Cache,
             [ResolvedInferenceRuntime.ModelCacheDirectory])
         {
-            Description = "启用 TensorRT 或 OpenVINO 加速时生成的模型编译结果",
-            CleanupEffect = "下次启动时清理，之后首次识别需要重新编译，会变慢",
+            Description = I18nService.Key("启用 TensorRT 或 OpenVINO 加速时生成的模型编译结果"),
+            CleanupEffect = I18nService.Key("下次启动时清理，之后首次识别需要重新编译，会变慢"),
             Timing = StorageCleanupTiming.NextStartup,
             IncludedInQuickCleanup = false,
         };

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Core.Script.Repositories;
+using BetterGenshinImpact.Service.I18n;
 using Newtonsoft.Json.Linq;
 using System.Globalization;
 
@@ -320,7 +321,7 @@ public sealed class PuloniaTaskResourceCatalog
         }
 
         var childCounts = BuildDirectoryChildCounts(root, directoryPaths, filePaths);
-        var rootDisplayName = taskType == "pathing" ? "全部路线" : "全部录制";
+        var rootDisplayName = taskType == "pathing" ? I18nService.Instance.Translate("全部路线") : I18nService.Instance.Translate("全部录制");
         var resources = new List<PuloniaTaskResourceDescriptor>(directoryPaths.Count + filePaths.Count);
         foreach (var path in directoryPaths)
         {
@@ -328,7 +329,7 @@ public sealed class PuloniaTaskResourceCatalog
             var relative = isRoot ? "." : Path.GetRelativePath(root, path);
             resources.Add(new PuloniaTaskResourceDescriptor(
                 isRoot ? rootDisplayName : Path.GetFileName(path), relative, path,
-                isRoot ? "资源根目录" : Path.GetDirectoryName(relative) ?? string.Empty,
+                isRoot ? I18nService.Instance.Translate("资源根目录") : Path.GetDirectoryName(relative) ?? string.Empty,
                 true, isRoot, 0, Directory.GetLastWriteTime(path), childCounts.GetValueOrDefault(path)));
         }
         foreach (var path in filePaths)

@@ -1,5 +1,6 @@
 <UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings"
              x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.ResinPlanSettingsView"
@@ -21,10 +22,10 @@
                         </StackPanel>
                     </ui:CardControl.Header>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <ui:Button Content="设置" MinWidth="72" Margin="0,0,12,0" Command="{Binding EditCommand, Mode=OneWay}"
-                                   AutomationProperties.Name="{Binding DisplayName, Mode=OneWay, StringFormat=设置{0}}"/>
+                        <ui:Button Content="{i18n:T 设置}" MinWidth="72" Margin="0,0,12,0" Command="{Binding EditCommand, Mode=OneWay}"
+                                   AutomationProperties.Name="{Binding EditAutomationName, Mode=OneWay}"/>
                         <ui:ToggleSwitch IsChecked="{Binding Enabled, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding DisplayName, Mode=OneWay, StringFormat={}{0}参与体力计划}"/>
+                                         AutomationProperties.Name="{Binding EnabledAutomationName, Mode=OneWay}"/>
                     </StackPanel>
                 </ui:CardControl>
             </DataTemplate>
@@ -41,11 +42,11 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0">
-                        <ui:TextBlock FontTypography="Body" Text="限定体力用量" TextWrapping="Wrap"/>
-                        <TextBlock Style="{StaticResource SoloDescription}" Text="关闭时用完当前全部原粹与浓缩树脂；开启后本次最多消耗下方树脂数量。"/>
+                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 限定体力用量}" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource SoloDescription}" Text="{i18n:T 关闭时用完当前全部原粹与浓缩树脂；开启后本次最多消耗下方树脂数量。}"/>
                     </StackPanel>
                     <ui:ToggleSwitch Grid.Column="1" Margin="12,0,16,0" IsChecked="{Binding LimitResin, Mode=TwoWay}"
-                                     AutomationProperties.Name="限定体力用量"/>
+                                     AutomationProperties.Name="{i18n:T 限定体力用量}"/>
                 </Grid>
             </ui:CardExpander.Header>
             <Grid Style="{StaticResource SoloRow}" IsEnabled="{Binding LimitResin, Mode=OneWay}">
@@ -54,12 +55,12 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Margin="0,0,16,0">
-                    <ui:TextBlock FontTypography="Body" Text="最多消耗" TextWrapping="Wrap"/>
-                    <TextBlock Style="{StaticResource SoloDescription}" Text="达到上限后不再领取；原粹按 20 点一档使用，不会超出。"/>
+                    <ui:TextBlock FontTypography="Body" Text="{i18n:T 最多消耗}" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="{i18n:T 达到上限后不再领取；原粹按 20 点一档使用，不会超出。}"/>
                 </StackPanel>
                 <ui:NumberBox Grid.Column="1" Width="150" VerticalAlignment="Center" Minimum="20" Maximum="2000" SmallChange="20" LargeChange="60"
                               ClearButtonEnabled="False" SpinButtonPlacementMode="Inline" ValidationMode="InvalidInputOverwritten"
-                              Value="{Binding ResinLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="最多消耗的树脂点数"/>
+                              Value="{Binding ResinLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{i18n:T 最多消耗的树脂点数}"/>
             </Grid>
         </ui:CardExpander>
 
@@ -72,11 +73,11 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0">
-                        <ui:TextBlock FontTypography="Body" Text="优先合成浓缩树脂" TextWrapping="Wrap"/>
-                        <TextBlock Style="{StaticResource SoloDescription}" Text="刷取前先把可用原粹合成浓缩树脂，并为首领讨伐留出原粹。"/>
+                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 优先合成浓缩树脂}" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource SoloDescription}" Text="{i18n:T 刷取前先把可用原粹合成浓缩树脂，并为首领讨伐留出原粹。}"/>
                     </StackPanel>
                     <ui:ToggleSwitch Grid.Column="1" Margin="12,0,16,0" IsChecked="{Binding CraftCondensedFirst, Mode=TwoWay}"
-                                     AutomationProperties.Name="优先合成浓缩树脂"/>
+                                     AutomationProperties.Name="{i18n:T 优先合成浓缩树脂}"/>
                 </Grid>
             </ui:CardExpander.Header>
             <Grid Style="{StaticResource SoloRow}" IsEnabled="{Binding CraftCondensedFirst, Mode=OneWay}">
@@ -85,17 +86,17 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Margin="0,0,16,0">
-                    <ui:TextBlock FontTypography="Body" Text="合成台所在地区" TextWrapping="Wrap"/>
-                    <TextBlock Style="{StaticResource SoloDescription}" Text="前往所选地区的合成台合成浓缩树脂。"/>
+                    <ui:TextBlock FontTypography="Body" Text="{i18n:T 合成台所在地区}" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="{i18n:T 前往所选地区的合成台合成浓缩树脂。}"/>
                 </StackPanel>
                 <ComboBox Grid.Column="1" Width="180" VerticalAlignment="Center"
-                          ItemsSource="{x:Static tasksVm:ResinPlanSettingsViewModel.CountryChoices}" SelectedItem="{Binding CraftCountry, Mode=TwoWay}"
-                          AutomationProperties.Name="合成台所在地区"/>
+                          ItemsSource="{x:Static tasksVm:ResinPlanSettingsViewModel.CountryChoices}" ItemTemplate="{StaticResource SoloTranslatedItem}" SelectedItem="{Binding CraftCountry, Mode=TwoWay}"
+                          AutomationProperties.Name="{i18n:T 合成台所在地区}"/>
             </Grid>
         </ui:CardExpander>
 
         <!-- 3. 参与的任务：按执行顺序排列 -->
-        <ui:TextBlock Margin="4,8,0,8" FontTypography="BodyStrong" Text="参与的任务"/>
+        <ui:TextBlock Margin="4,8,0,8" FontTypography="BodyStrong" Text="{i18n:T 参与的任务}"/>
         <!-- 首领讨伐次数沿用首领自己的树脂使用设置，在首领的“设置”中编辑，摘要显示当前次数 -->
         <ContentControl Content="{Binding Boss, Mode=OneWay}" ContentTemplate="{StaticResource ResinPlanSubTaskTemplate}"
                         HorizontalContentAlignment="Stretch" Focusable="False"/>
@@ -115,14 +116,14 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0">
-                        <ui:TextBlock FontTypography="Body" Text="优先满足活动" TextWrapping="Wrap"/>
+                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 优先满足活动}" TextWrapping="Wrap"/>
                         <TextBlock Style="{StaticResource SoloDescription}"
-                                   Text="识别到移涌活动时，先在活动对应的内容里用原粹领取当天的双倍；紊乱爆发期进行中时，幽境危战优先使用树脂，并暂停首领与秘境养成。"/>
+                                   Text="{i18n:T 识别到移涌活动时，先在活动对应的内容里用原粹领取当天的双倍；紊乱爆发期进行中时，幽境危战优先使用树脂，并暂停首领与秘境养成。}"/>
                         <TextBlock Style="{StaticResource SoloDescription}"
-                                   Text="盛材移涌与祝圣移涌的秘境在自动秘境的“设置”中选择，默认跟随培养计划：盛材移涌按提升指南选择秘境，祝圣移涌刷养成角色推荐圣遗物所在的秘境。地脉移涌使用自动地脉花的国家与类型。"/>
+                                   Text="{i18n:T 盛材移涌与祝圣移涌的秘境在自动秘境的“设置”中选择，默认跟随培养计划：盛材移涌按提升指南选择秘境，祝圣移涌刷养成角色推荐圣遗物所在的秘境。地脉移涌使用自动地脉花的国家与类型。}"/>
                     </StackPanel>
                     <ui:ToggleSwitch Grid.Column="1" Margin="12,0,16,0" IsChecked="{Binding EventPriority, Mode=TwoWay}"
-                                     AutomationProperties.Name="优先满足活动"/>
+                                     AutomationProperties.Name="{i18n:T 优先满足活动}"/>
                 </Grid>
             </ui:CardExpander.Header>
             <Grid Style="{StaticResource SoloRow}" IsEnabled="{Binding EventPriority, Mode=OneWay}">
@@ -131,12 +132,12 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Margin="0,0,16,0">
-                    <ui:TextBlock FontTypography="Body" Text="严格使用 60 树脂" TextWrapping="Wrap"/>
+                    <ui:TextBlock FontTypography="Body" Text="{i18n:T 严格使用 60 树脂}" TextWrapping="Wrap"/>
                     <TextBlock Style="{StaticResource SoloDescription}"
-                               Text="开启：剩余 3 次双倍时用 20 档领取 3 次，共 60 原粹，每点都享受双倍。关闭：用 40 档领取 2 次，共 80 原粹，少打一次。"/>
+                               Text="{i18n:T 开启：剩余 3 次双倍时用 20 档领取 3 次，共 60 原粹，每点都享受双倍。关闭：用 40 档领取 2 次，共 80 原粹，少打一次。}"/>
                 </StackPanel>
                 <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding EventStrictResin, Mode=TwoWay}"
-                                 AutomationProperties.Name="严格使用 60 树脂"/>
+                                 AutomationProperties.Name="{i18n:T 严格使用 60 树脂}"/>
             </Grid>
         </ui:CardExpander>
 
@@ -144,11 +145,11 @@
         <ui:CardControl Style="{StaticResource SoloCard}" Icon="{ui:SymbolIcon Info24}">
             <ui:CardControl.Header>
                 <StackPanel>
-                    <ui:TextBlock FontTypography="Body" Text="执行顺序" TextWrapping="Wrap"/>
+                    <ui:TextBlock FontTypography="Body" Text="{i18n:T 执行顺序}" TextWrapping="Wrap"/>
                     <TextBlock Style="{StaticResource SoloDescription}"
-                               Text="读取树脂 → 识别活动 → 合成浓缩 → 活动（移涌领取 → 紊乱爆发期）→ 首领讨伐 → 秘境养成 → 剩余树脂：幽境危战 → 地脉花 → 备选秘境。"/>
+                               Text="{i18n:T 读取树脂 → 识别活动 → 合成浓缩 → 活动（移涌领取 → 紊乱爆发期）→ 首领讨伐 → 秘境养成 → 剩余树脂：幽境危战 → 地脉花 → 备选秘境。}"/>
                     <TextBlock Style="{StaticResource SoloDescription}"
-                               Text="秘境养成按游戏内养成计划（冒险之证 → 提升指南）选择秘境，请先在游戏内把要培养的角色加入养成计划；备选秘境在自动秘境的设置中选择。"/>
+                               Text="{i18n:T 秘境养成按游戏内养成计划（冒险之证 → 提升指南）选择秘境，请先在游戏内把要培养的角色加入养成计划；备选秘境在自动秘境的设置中选择。}"/>
                 </StackPanel>
             </ui:CardControl.Header>
         </ui:CardControl>

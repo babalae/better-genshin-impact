@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -37,7 +38,7 @@ public partial class StrategyBrowserViewModel : StrategyCategoryViewModel
     /// <summary>面包屑的节点路径。</summary>
     public ObservableCollection<CombatStrategyNode> Breadcrumb { get; } = [];
     /// <summary>可选排序方式。</summary>
-    public string[] SortOptions { get; } = ["名称", "最近修改", "创建时间"];
+    public string[] SortOptions { get; } = [I18nService.Instance.Translate("名称"), I18nService.Instance.Translate("最近修改"), I18nService.Instance.Translate("创建时间")];
     /// <summary>排序索引，键鼠默认按创建时间倒序。</summary>
     [ObservableProperty] private int _sortIndex;
     /// <summary>列表键盘当前定位的行。</summary>
@@ -45,12 +46,13 @@ public partial class StrategyBrowserViewModel : StrategyCategoryViewModel
     /// <summary>是否处于搜索或错误筛选。</summary>
     public bool IsSearching => _searchText.Length > 0 || _errorsOnly;
     /// <summary>搜索结果或当前文件夹说明。</summary>
-    public string LocationText => IsSearching ? $"{(_errorsOnly ? "解析失败" : "搜索结果")} · {Entries.Count} 项" : Title;
+    public string LocationText => IsSearching
+        ? string.Format(_errorsOnly ? I18nService.Instance.Translate("解析失败 · {0} 项") : I18nService.Instance.Translate("搜索结果 · {0} 项"), Entries.Count) : Title;
     /// <summary>是否显示空状态。</summary>
     public bool IsEmpty => Entries.Count == 0;
     /// <summary>空状态说明。</summary>
-    public string EmptyText => IsSearching ? "没有找到匹配的策略，可切换左侧其他类别查看。"
-        : Kind == CombatStrategyKind.KeyMouse ? "还没有录制，可点击下方“录制新的”。" : "还没有策略。把文件放进目录，或从脚本仓库订阅。";
+    public string EmptyText => IsSearching ? I18nService.Instance.Translate("没有找到匹配的策略，可切换左侧其他类别查看。")
+        : Kind == CombatStrategyKind.KeyMouse ? I18nService.Instance.Translate("还没有录制，可点击下方“录制新的”。") : I18nService.Instance.Translate("还没有策略。把文件放进目录，或从脚本仓库订阅。");
     /// <summary>当前目录相对路径，供底栏打开目录。</summary>
     public string FolderRelativePath => _folder?.RelativePath ?? "";
     /// <summary>元数据或后台读取失败提示。</summary>
@@ -240,7 +242,7 @@ public partial class StrategyBrowserViewModel : StrategyCategoryViewModel
             ApplyMetadata(result);
         }
         catch (OperationCanceledException) { }
-        catch (Exception ex) { if (!ct.IsCancellationRequested) LoadError = "读取策略信息失败：" + ex.Message; }
+        catch (Exception ex) { if (!ct.IsCancellationRequested) LoadError = string.Format(I18nService.Instance.Translate("读取策略信息失败：{0}"), ex.Message); }
     }
 
     /// <summary>填充行副标题，搜索结果优先显示相对路径。</summary>
@@ -252,7 +254,7 @@ public partial class StrategyBrowserViewModel : StrategyCategoryViewModel
             entry.HasError = metadata.Error != null;
             entry.Subtitle = IsSearching && !_errorsOnly ? entry.Node.RelativePath : metadata.Summary;
         }
-        else entry.Subtitle = IsSearching ? entry.Node.RelativePath : "正在读取策略信息…";
+        else entry.Subtitle = IsSearching ? entry.Node.RelativePath : I18nService.Instance.Translate("正在读取策略信息…");
     }
 
     /// <summary>在树中按相对路径查找文件夹。</summary>

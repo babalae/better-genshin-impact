@@ -2,6 +2,7 @@ using System;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -60,7 +61,7 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
     private string _statusMessage = string.Empty;
 
     /// <summary>弹窗标题。</summary>
-    public string WindowTitle => $"编辑任务：{Node.Name}";
+    public string WindowTitle => string.Format(I18nService.Instance.Translate("编辑任务：{0}"), I18nService.Instance.Translate(Node.Name));
 
     /// <summary>是否展示任务设置区。</summary>
     public bool HasSettings => Settings is not null;
@@ -121,7 +122,7 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
         var name = Name.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
-            StatusMessage = "任务名称不能为空。";
+            StatusMessage = I18nService.Instance.Translate("任务名称不能为空。");
             return;
         }
         try

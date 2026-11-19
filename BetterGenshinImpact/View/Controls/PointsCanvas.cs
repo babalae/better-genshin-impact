@@ -95,6 +95,25 @@ public class PointsCanvas : FrameworkElement
     }
 
     /// <summary>
+    /// 是否隐藏已标记的标点；false 时已标记的点位半透明绘制
+    /// </summary>
+    public static readonly DependencyProperty HideMarkedPointsProperty =
+        DependencyProperty.Register(
+            nameof(HideMarkedPoints),
+            typeof(bool),
+            typeof(PointsCanvas),
+            new PropertyMetadata(false, (d, _) => ((PointsCanvas)d).Refresh()));
+
+    /// <summary>
+    /// 是否隐藏已标记的标点
+    /// </summary>
+    public bool HideMarkedPoints
+    {
+        get => (bool)GetValue(HideMarkedPointsProperty);
+        set => SetValue(HideMarkedPointsProperty, value);
+    }
+
+    /// <summary>
     /// 点击命令
     /// </summary>
     public ICommand PointClickCommand
@@ -279,7 +298,7 @@ public class PointsCanvas : FrameworkElement
 
             foreach (var point in _allPoints)
             {
-                if (expandedViewport.Contains(point.ImageX, point.ImageY))
+                if (point.IsDrawn(HideMarkedPoints) && expandedViewport.Contains(point.ImageX, point.ImageY))
                 {
                     var localX = (point.ImageX - _viewportRect.X) * scaleX;
                     var localY = (point.ImageY - _viewportRect.Y) * scaleY;
@@ -537,6 +556,10 @@ public class PointsCanvas : FrameworkElement
         for (int i = _allPoints.Count - 1; i >= 0; i--)
         {
             var point = _allPoints[i];
+
+            // 未绘制的点位不响应点击和悬停
+            if (!point.IsDrawn(HideMarkedPoints))
+                continue;
 
             if (_viewportRect.IsEmpty)
             {

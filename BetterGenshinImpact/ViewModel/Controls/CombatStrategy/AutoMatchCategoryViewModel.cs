@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -30,7 +31,7 @@ public partial class AutoMatchCategoryViewModel : StrategyCategoryViewModel
 
     /// <summary>创建自动匹配类别。</summary>
     public AutoMatchCategoryViewModel(Action<CombatStrategyRef> select, Action showErrors)
-        : base(CombatStrategyKind.AutoSelect, "按队伍匹配")
+        : base(CombatStrategyKind.AutoSelect, I18nService.Instance.Translate("按队伍匹配"))
     {
         _select = select;
         _showErrors = showErrors;
@@ -56,9 +57,9 @@ public sealed record AutoMatchScopeViewModel(CombatStrategyNode Node, bool IsCur
     /// <summary>要持久化的范围引用值。</summary>
     public string Value => Node.RelativePath.Length == 0 ? CombatStrategyResolver.AutoSelectName : CombatStrategyResolver.AutoScopePrefix + Node.RelativePath;
     /// <summary>范围显示名称，根目录使用业务名称。</summary>
-    public string Name => Node.RelativePath.Length == 0 ? "全部文本策略" : Node.Name;
+    public string Name => Node.RelativePath.Length == 0 ? I18nService.Instance.Translate("全部文本策略") : Node.Name;
     /// <summary>带数量和当前标记的树形显示文字，供无障碍提示使用。</summary>
-    public string Title => $"{(IsCurrent ? "已选：" : "")}{Name} · {Node.FileCount}";
+    public string Title => $"{(IsCurrent ? I18nService.Instance.Translate("已选：") : "")}{Name} · {Node.FileCount}";
     /// <summary>嵌套目录的缩进层级；全部范围与一级目录左对齐。</summary>
     public int Depth => Node.RelativePath.Count(c => c == '\\' || c == '/');
 }

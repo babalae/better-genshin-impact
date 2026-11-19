@@ -2,6 +2,7 @@ using System.Linq;
 using System.Windows;
 using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
@@ -61,12 +62,12 @@ public sealed class PuloniaTaskSettingsDialogs : IPuloniaTaskSettingsDialogs
         var config = new PromptDialogConfig
         {
             ShowLeftButton = true,
-            LeftButtonText = "恢复继承",
+            LeftButtonText = I18nService.Instance.Translate("恢复继承"),
             LeftButtonClick = (_, _) => { restore = true; dialog!.DialogResult = true; }
         };
-        dialog = new PromptDialog(isLeaf ? "仅整份路线执行成功后记录时间；修改规则会按新规则重算已有 CD。"
-                : "此配置由下级地图追踪任务整体继承，子任务可单独覆盖。",
-            "路线 CD", new PuloniaRouteCooldownView { DataContext = draft }, null, config)
+        dialog = new PromptDialog(isLeaf ? I18nService.Instance.Translate("仅整份路线执行成功后记录时间；修改规则会按新规则重算已有 CD。")
+                : I18nService.Instance.Translate("此配置由下级地图追踪任务整体继承，子任务可单独覆盖。"),
+            I18nService.Instance.Translate("路线 CD"), new PuloniaRouteCooldownView { DataContext = draft }, null, config)
         {
             Owner = GetOwner(),
             Width = 580, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner

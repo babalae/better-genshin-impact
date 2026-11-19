@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Platform.Wine;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using LibreHardwareMonitor.Hardware;
 using Microsoft.Extensions.Logging;
@@ -277,7 +278,7 @@ public sealed class OverlayMetricsService : IDisposable
             return;
         }
 
-        items.Add(new OverlayMetricDisplayItem(OverlayMetricItemDefaults.GetDisplayName(item), formatter(value.Value)));
+        items.Add(new OverlayMetricDisplayItem(I18nService.Instance.Translate(OverlayMetricItemDefaults.GetDisplayName(item)), formatter(value.Value)));
     }
 
     private void RecordPeakProcessingCost(double processingCostMs, DateTime now)

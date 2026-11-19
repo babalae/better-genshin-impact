@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Windows;
 using BetterGenshinImpact.ViewModel.Pages.Plugins;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -12,7 +13,7 @@ public sealed class PluginSettingsDialogs : IPluginSettingsDialogs
     /// <inheritdoc />
     public void Show(string pluginName, object settingsViewModel)
     {
-        var window = new PluginSettingsWindow($"{pluginName} 设置", settingsViewModel) { Owner = GetOwner() };
+        var window = new PluginSettingsWindow(string.Format(I18nService.Instance.Translate("{0} 设置"), pluginName), settingsViewModel) { Owner = GetOwner() };
         window.ShowDialog();
     }
 

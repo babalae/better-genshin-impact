@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Services;
 
@@ -21,14 +22,14 @@ public partial class PuloniaTaskNodeViewModel
     /// <summary>方案标签文字；缺失时提示。</summary>
     public string ProfileLabel => _model.ProfileId is not { } id
         ? string.Empty
-        : _document.FindProfile(id)?.Name ?? "方案缺失";
+        : _document.FindProfile(id)?.Name ?? I18nService.Instance.Translate("方案缺失");
 
     /// <summary>
     /// 计划卡片上的方案文字（取计划根节点）：所挂方案名、方案缺失提示或未使用方案。
     /// </summary>
     public string ProfileDisplayText => _model.ProfileId is not { } id
-        ? "未使用设置方案"
-        : _document.FindProfile(id) is { } profile ? "方案：" + profile.Name : "⚠ 设置方案已不存在";
+        ? I18nService.Instance.Translate("未使用设置方案")
+        : _document.FindProfile(id) is { } profile ? string.Format(I18nService.Instance.Translate("方案：{0}"), profile.Name) : I18nService.Instance.Translate("⚠ 设置方案已不存在");
 
     /// <summary>是否显示任一共享设置标记。</summary>
     public bool HasSharedSettingsBadge => HasSharedSettings || HasProfile;
@@ -45,9 +46,9 @@ public partial class PuloniaTaskNodeViewModel
         {
             var parts = new System.Collections.Generic.List<string>();
             if (_model.ProfileId is { } id)
-                parts.Add(_document.FindProfile(id) is { } profile ? $"方案「{profile.Name}」" : "⚠ 设置方案已不存在");
-            parts.Add(_model.Settings.Count == 0 ? "本节点没有修改，全部沿用上层设置" : $"本节点修改了 {_model.Settings.Count} 项");
-            return string.Join(" · ", parts) + (IsLeaf ? "" : "；修改会传给下面所有任务");
+                parts.Add(_document.FindProfile(id) is { } profile ? string.Format(I18nService.Instance.Translate("方案「{0}」"), profile.Name) : I18nService.Instance.Translate("⚠ 设置方案已不存在"));
+            parts.Add(_model.Settings.Count == 0 ? I18nService.Instance.Translate("本节点没有修改，全部沿用上层设置") : string.Format(I18nService.Instance.Translate("本节点修改了 {0} 项"), _model.Settings.Count));
+            return string.Join(" · ", parts) + (IsLeaf ? "" : I18nService.Instance.Translate("；修改会传给下面所有任务"));
         }
     }
 
@@ -59,16 +60,16 @@ public partial class PuloniaTaskNodeViewModel
             var lines = new System.Collections.Generic.List<string>();
             if (_model.ProfileId is { } id)
                 lines.Add(_document.FindProfile(id) is { } profile
-                    ? $"设置方案：{profile.Name}（{profile.Settings.Count} 项）"
-                    : $"设置方案 {id} 已不存在，运行前请重新选择。");
+                    ? string.Format(I18nService.Instance.Translate("设置方案：{0}（{1} 项）"), profile.Name, profile.Settings.Count)
+                    : string.Format(I18nService.Instance.Translate("设置方案 {0} 已不存在，运行前请重新选择。"), id));
             if (_model.Settings.Count > 0)
             {
-                lines.Add($"本节点覆盖 {_model.Settings.Count} 项共享设置：");
+                lines.Add(string.Format(I18nService.Instance.Translate("本节点覆盖 {0} 项共享设置："), _model.Settings.Count));
                 lines.AddRange(_model.Settings.Properties().Take(12).Select(property =>
                     "· " + (PuloniaSettingCatalog.TryGet(property.Name, out var definition) ? definition.DisplayName : property.Name)
                          + "：" + PuloniaSharedSettingText.Format(property.Name, property.Value)));
                 if (_model.Settings.Count > 12)
-                    lines.Add($"… 另有 {_model.Settings.Count - 12} 项");
+                    lines.Add(string.Format(I18nService.Instance.Translate("… 另有 {0} 项"), _model.Settings.Count - 12));
             }
             return string.Join("\n", lines);
         }

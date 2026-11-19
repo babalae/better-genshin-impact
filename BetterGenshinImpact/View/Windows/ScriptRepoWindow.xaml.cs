@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Helpers.Win32;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -58,7 +59,7 @@ public partial class ScriptRepoWindow
     [ObservableProperty] private bool _isUpdating;
     [ObservableProperty] private bool _isProgressIndeterminate;
     [ObservableProperty] private int _updateProgressValue;
-    [ObservableProperty] private string _updateProgressText = "准备更新，请耐心等待...";
+    [ObservableProperty] private string _updateProgressText = I18nService.Instance.Translate("准备更新，请耐心等待...");
     // 窗口由调用方直接 new，没有注入入口，暂时读配置根（见 task-context-removal.md 第 5 节）
     [ObservableProperty] private ScriptConfig _config = ConfigService.Config!.ScriptConfig;
 
@@ -184,8 +185,8 @@ public partial class ScriptRepoWindow
         {
             IsUpdating = true;
             IsProgressIndeterminate = true;
-            UpdateProgressText = "后台正在自动更新订阅脚本...";
-            Toast.Information("后台正在自动更新订阅脚本，请等待完成");
+            UpdateProgressText = I18nService.Instance.Translate("后台正在自动更新订阅脚本...");
+            Toast.Information(I18nService.Instance.Translate("后台正在自动更新订阅脚本，请等待完成"));
         }
         else
         {
@@ -227,7 +228,7 @@ public partial class ScriptRepoWindow
         _repoChannels = new ObservableCollection<RepoChannel>(
             ScriptRepoUpdater.RepoChannels.Select(kv => new RepoChannel(kv.Key, kv.Value))
         );
-        _repoChannels.Add(new RepoChannel("自定义", "https://example.com/custom-repo"));
+        _repoChannels.Add(new RepoChannel(I18nService.Key("自定义"), "https://example.com/custom-repo"));
 
         // 根据配置中保存的渠道名称恢复选择
         if (string.IsNullOrEmpty(Config.SelectedChannelName))
@@ -272,7 +273,7 @@ public partial class ScriptRepoWindow
     {
         if (SelectedRepoChannel is null)
         {
-            Toast.Warning("请选择一个脚本仓库更新渠道。");
+            Toast.Warning(I18nService.Instance.Translate("请选择一个脚本仓库更新渠道。"));
             return;
         }
 
@@ -282,32 +283,32 @@ public partial class ScriptRepoWindow
         // 验证URL
         if (string.IsNullOrWhiteSpace(repoUrl))
         {
-            Toast.Warning("请输入自定义仓库URL。");
+            Toast.Warning(I18nService.Instance.Translate("请输入自定义仓库URL。"));
             return;
         }
 
         if (repoUrl == "https://example.com/custom-repo")
         {
-            Toast.Warning("请修改默认的自定义URL为有效的仓库地址。");
+            Toast.Warning(I18nService.Instance.Translate("请修改默认的自定义URL为有效的仓库地址。"));
             return;
         }
 
         if (!Uri.TryCreate(repoUrl, UriKind.Absolute, out _))
         {
-            Toast.Warning("请输入有效的URL地址。");
+            Toast.Warning(I18nService.Instance.Translate("请输入有效的URL地址。"));
             return;
         }
 
         try
         {
             // 显示更新中提示
-            Toast.Information("正在更新脚本仓库，请耐心等待...");
+            Toast.Information(I18nService.Instance.Translate("正在更新脚本仓库，请耐心等待..."));
 
             // 设置进度显示
             IsUpdating = true;
             IsProgressIndeterminate = true;
             UpdateProgressValue = 0;
-            UpdateProgressText = "准备更新，请耐心等待...";
+            UpdateProgressText = I18nService.Instance.Translate("准备更新，请耐心等待...");
 
             // 执行更新（Task.Run 避免 SynchronizationContext 将后续 IO 调度回 UI 线程）
             var (_, updated) = await Task.Run(() => ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl,
@@ -324,16 +325,16 @@ public partial class ScriptRepoWindow
             // 更新结果提示
             if (updated)
             {
-                Toast.Success("脚本仓库更新成功，有新内容");
+                Toast.Success(I18nService.Instance.Translate("脚本仓库更新成功，有新内容"));
             }
             else
             {
-                Toast.Success("脚本仓库已是最新");
+                Toast.Success(I18nService.Instance.Translate("脚本仓库已是最新"));
             }
         }
         catch (Exception ex)
         {
-            await ThemedMessageBox.ErrorAsync($"更新失败，可尝试重置仓库后重新更新。失败原因：{ex.Message}");
+            await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("更新失败，可尝试重置仓库后重新更新。失败原因：{0}"), ex.Message));
         }
         finally
         {
@@ -422,14 +423,14 @@ public partial class ScriptRepoWindow
     {
         if (IsUpdating)
         {
-            Toast.Warning("请等待当前更新完成后再进行重置操作。");
+            Toast.Warning(I18nService.Instance.Translate("请等待当前更新完成后再进行重置操作。"));
             return;
         }
 
         // 添加确认对话框
         var result = await ThemedMessageBox.ShowAsync(
-            "确定要重置脚本仓库吗？无法正常更新时候可以使用本功能，重置后请重新更新脚本仓库。",
-            "确认重置",
+            I18nService.Instance.Translate("确定要重置脚本仓库吗？无法正常更新时候可以使用本功能，重置后请重新更新脚本仓库。"),
+            I18nService.Instance.Translate("确认重置"),
             MessageBoxButton.YesNo,
             ThemedMessageBox.MessageBoxIcon.Warning);
 
@@ -438,11 +439,11 @@ public partial class ScriptRepoWindow
             try
             {
                 await ScriptRepoUpdater.Instance.ResetCurrentRepoAsync();
-                Toast.Success("脚本仓库已重置，请重新更新脚本仓库。");
+                Toast.Success(I18nService.Instance.Translate("脚本仓库已重置，请重新更新脚本仓库。"));
             }
             catch (Exception ex)
             {
-                Toast.Error($"重置失败: {ex.Message}");
+                Toast.Error(string.Format(I18nService.Instance.Translate("重置失败: {0}"), ex.Message));
             }
         }
     }
@@ -453,13 +454,13 @@ public partial class ScriptRepoWindow
     {
         if (string.IsNullOrWhiteSpace(OnlineDownloadUrl))
         {
-            Toast.Warning("请输入有效的下载地址。");
+            Toast.Warning(I18nService.Instance.Translate("请输入有效的下载地址。"));
             return;
         }
 
         if (IsUpdating)
         {
-            Toast.Warning("请等待当前操作完成后再进行下载。");
+            Toast.Warning(I18nService.Instance.Translate("请等待当前操作完成后再进行下载。"));
             return;
         }
 
@@ -467,7 +468,7 @@ public partial class ScriptRepoWindow
         {
             IsUpdating = true;
             UpdateProgressValue = 0;
-            UpdateProgressText = "正在下载脚本仓库...";
+            UpdateProgressText = I18nService.Instance.Translate("正在下载脚本仓库...");
 
             using var httpClient = new HttpClient();
             httpClient.Timeout = TimeSpan.FromMinutes(10);
@@ -482,7 +483,7 @@ public partial class ScriptRepoWindow
                 await response.Content.CopyToAsync(fileStream);
             }
 
-            UpdateProgressText = "正在解压并导入...";
+            UpdateProgressText = I18nService.Instance.Translate("正在解压并导入...");
             UpdateProgressValue = 50;
 
             // 导入下载的zip文件
@@ -494,11 +495,11 @@ public partial class ScriptRepoWindow
                 File.Delete(tempZipPath);
             }
 
-            Toast.Success("在线脚本仓库下载并导入成功！");
+            Toast.Success(I18nService.Instance.Translate("在线脚本仓库下载并导入成功！"));
         }
         catch (Exception ex)
         {
-            Toast.Error($"下载失败: {ex.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("下载失败: {0}"), ex.Message));
         }
         finally
         {
@@ -511,7 +512,7 @@ public partial class ScriptRepoWindow
     {
         if (IsUpdating)
         {
-            Toast.Warning("请等待当前操作完成后再进行导入。");
+            Toast.Warning(I18nService.Instance.Translate("请等待当前操作完成后再进行导入。"));
             return;
         }
 
@@ -519,8 +520,8 @@ public partial class ScriptRepoWindow
         {
             var openFileDialog = new OpenFileDialog
             {
-                Title = "选择脚本仓库压缩包",
-                Filter = "压缩包文件 (*.zip)|*.zip",
+                Title = I18nService.Instance.Translate("选择脚本仓库压缩包"),
+                Filter = I18nService.Instance.Translate("压缩包文件 (*.zip)|*.zip"),
                 Multiselect = false
             };
 
@@ -529,7 +530,7 @@ public partial class ScriptRepoWindow
                 IsUpdating = true;
                 IsProgressIndeterminate = false; // 导入有实际百分比进度
                 UpdateProgressValue = 0;
-                UpdateProgressText = "正在导入脚本仓库，请耐心等待...";
+                UpdateProgressText = I18nService.Instance.Translate("正在导入脚本仓库，请耐心等待...");
 
                 await ScriptRepoUpdater.Instance.ImportLocalRepoZip(openFileDialog.FileName, (progress, text) =>
                 {
@@ -540,12 +541,12 @@ public partial class ScriptRepoWindow
                     });
                 });
 
-                Toast.Success("脚本仓库导入成功！");
+                Toast.Success(I18nService.Instance.Translate("脚本仓库导入成功！"));
             }
         }
         catch (Exception ex)
         {
-            Toast.Error($"导入失败: {ex.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("导入失败: {0}"), ex.Message));
         }
         finally
         {
@@ -558,7 +559,7 @@ public partial class ScriptRepoWindow
     {
         if (IsUpdating)
         {
-            Toast.Warning("请等待当前操作完成后再进行更新。");
+            Toast.Warning(I18nService.Instance.Translate("请等待当前操作完成后再进行更新。"));
             return;
         }
 
@@ -567,14 +568,14 @@ public partial class ScriptRepoWindow
             IsUpdating = true;
             IsProgressIndeterminate = true;
             UpdateProgressValue = 0;
-            UpdateProgressText = "正在更新订阅脚本...";
+            UpdateProgressText = I18nService.Instance.Translate("正在更新订阅脚本...");
 
             // Task.Run 避免 SynchronizationContext 将 checkout/IO 调度回 UI 线程
             await Task.Run(() => ScriptRepoUpdater.Instance.ManualUpdateSubscribedScripts());
         }
         catch (Exception ex)
         {
-            Toast.Error($"更新订阅脚本失败: {ex.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("更新订阅脚本失败: {0}"), ex.Message));
         }
         finally
         {
@@ -600,7 +601,7 @@ public partial class ScriptRepoWindow
         }
         catch (Exception ex)
         {
-            ThemedMessageBox.Warning($"无法打开链接: {ex.Message}", "错误");
+            ThemedMessageBox.Warning(string.Format(I18nService.Instance.Translate("无法打开链接: {0}"), ex.Message), I18nService.Instance.Translate("错误"));
         }
         e.Handled = true;
     }

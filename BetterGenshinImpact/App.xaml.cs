@@ -39,6 +39,7 @@ using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Remote;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.HoYoLab;
 using BetterGenshinImpact.Service.AccountRecords;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.ExternalAccess;
@@ -247,7 +248,7 @@ public partial class App : Application
                 // 窗口、任务栏、Alt+Tab 与托盘共用同一份实例视觉身份。
                 services.AddSingleton(_ => InstanceVisualIdentity.Create(
                     instanceContext,
-                    $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}"));
+                    $"BetterGI · {I18nService.Instance.Translate("更好的原神")} · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}"));
                 // 独立任务：启动时扫描主程序集中带 [SoloTaskInfo] 的任务类
                 services.AddSingleton(_ => new SoloTaskRegistry([typeof(App).Assembly]));
                 // 可插拔机制：扫描主程序集中的可插拔能力和内置实现，把每个可插拔能力接口注册为代理；
@@ -502,6 +503,8 @@ public partial class App : Application
                 services.AddSingleton<IMihoyoMapApiService, MihoyoMapApiService>();
                 services.AddSingleton<IKongyingTavernApiService, KongyingTavernApiService>();
                 services.AddSingleton<IHoYoLabMapApiService, HoYoLabMapApiService>();
+                services.AddSingleton<HoYoLabMarkApiService>(sp => new HoYoLabMarkApiService(sp.GetRequiredService<IHttpClientFactory>()));
+                services.AddSingleton<HoYoLabAccountService>(_ => new HoYoLabAccountService());
                 services.AddSingleton<IMaskMapPointService, MaskMapPointService>();
 
                 services.AddSingleton(TimeProvider.System);
@@ -510,7 +513,7 @@ public partial class App : Application
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
 
-                I18N.Culture = new CultureInfo("zh-Hans"); // #1846
+                // #1846：Wpf.Ui.Violeta 控件库文案语言（I18N.Culture）改由 I18nService.ChangeLanguage 按界面语言设置。
             }
         )
         .Build();

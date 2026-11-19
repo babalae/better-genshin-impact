@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 
@@ -13,11 +14,11 @@ public sealed record NcnnDeviceInfo(int Index, string Name, int TypeCode)
     /// <summary>设备类型描述（ncnn GpuInfo::type()）：0 独显 / 1 核显 / 2 虚拟显卡 / 3 CPU；设备列表与设备详情两处记录共用。</summary>
     public static string TypeText(int typeCode) => typeCode switch
     {
-        0 => "独显",
-        1 => "核显",
-        2 => "虚拟显卡",
+        0 => I18nService.Instance.Translate("独显"),
+        1 => I18nService.Instance.Translate("核显"),
+        2 => I18nService.Instance.Translate("虚拟显卡"),
         3 => "CPU",
-        _ => "未知类型"
+        _ => I18nService.Instance.Translate("未知类型")
     };
 }
 

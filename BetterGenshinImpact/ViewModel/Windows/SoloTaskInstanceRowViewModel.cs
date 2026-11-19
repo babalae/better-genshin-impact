@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.SoloTask.Execution;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Instance;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
@@ -46,7 +47,7 @@ public sealed partial class SoloTaskInstanceRowViewModel : ObservableObject
     /// 当前运行状态的中文说明。
     /// </summary>
     [ObservableProperty]
-    private string _statusText = "可启动";
+    private string _statusText = I18nService.Instance.Translate("可启动");
 
     /// <summary>
     /// 上一次运行失败或请求失败的补充说明。
@@ -58,7 +59,7 @@ public sealed partial class SoloTaskInstanceRowViewModel : ObservableObject
     /// 行操作按钮文字。
     /// </summary>
     [ObservableProperty]
-    private string _actionText = "启动";
+    private string _actionText = I18nService.Instance.Translate("启动");
 
     /// <summary>
     /// 当前是否允许对这一行发起启动或停止请求。
@@ -100,24 +101,24 @@ public sealed partial class SoloTaskInstanceRowViewModel : ObservableObject
 
         if (!isOnline)
         {
-            StatusText = "离线";
-            ActionText = "不可用";
+            StatusText = I18nService.Instance.Translate("离线");
+            ActionText = I18nService.Instance.Translate("不可用");
             CanOperate = false;
             return;
         }
 
         if (!status.IsActive)
         {
-            StatusText = "可启动";
-            ActionText = "启动";
+            StatusText = I18nService.Instance.Translate("可启动");
+            ActionText = I18nService.Instance.Translate("启动");
             CanOperate = !isOperationPending;
             return;
         }
 
         if (status.TaskId != managedTaskId)
         {
-            StatusText = $"正被“{_getTaskDisplayName(status.TaskId)}”占用";
-            ActionText = "已占用";
+            StatusText = string.Format(I18nService.Instance.Translate("正被“{0}”占用"), I18nService.Instance.Translate(_getTaskDisplayName(status.TaskId)));
+            ActionText = I18nService.Instance.Translate("已占用");
             CanOperate = false;
             return;
         }
@@ -125,23 +126,23 @@ public sealed partial class SoloTaskInstanceRowViewModel : ObservableObject
         switch (status.State)
         {
             case SoloTaskRunState.Starting:
-                StatusText = "启动中";
-                ActionText = "请稍候";
+                StatusText = I18nService.Instance.Translate("启动中");
+                ActionText = I18nService.Instance.Translate("请稍候");
                 CanOperate = false;
                 break;
             case SoloTaskRunState.Running:
-                StatusText = "运行中";
-                ActionText = "停止";
+                StatusText = I18nService.Instance.Translate("运行中");
+                ActionText = I18nService.Instance.Translate("停止");
                 CanOperate = !isOperationPending;
                 break;
             case SoloTaskRunState.Stopping:
-                StatusText = "停止中";
-                ActionText = "请稍候";
+                StatusText = I18nService.Instance.Translate("停止中");
+                ActionText = I18nService.Instance.Translate("请稍候");
                 CanOperate = false;
                 break;
             default:
-                StatusText = "可启动";
-                ActionText = "启动";
+                StatusText = I18nService.Instance.Translate("可启动");
+                ActionText = I18nService.Instance.Translate("启动");
                 CanOperate = !isOperationPending;
                 break;
         }
@@ -154,10 +155,10 @@ public sealed partial class SoloTaskInstanceRowViewModel : ObservableObject
     {
         return endpoint.InstanceType switch
         {
-            BetterGiInstanceType.Primary => "主实例",
-            BetterGiInstanceType.ChildSession => $"桌面分身（会话 {endpoint.WindowsSessionId}）",
-            BetterGiInstanceType.WebView => $"云原神（{endpoint.InstanceName ?? endpoint.ProcessId.ToString()}）",
-            _ => $"实例 {endpoint.ProcessId}"
+            BetterGiInstanceType.Primary => I18nService.Instance.Translate("主实例"),
+            BetterGiInstanceType.ChildSession => string.Format(I18nService.Instance.Translate("桌面分身（会话 {0}）"), endpoint.WindowsSessionId),
+            BetterGiInstanceType.WebView => string.Format(I18nService.Instance.Translate("云原神（{0}）"), endpoint.InstanceName ?? endpoint.ProcessId.ToString()),
+            _ => string.Format(I18nService.Instance.Translate("实例 {0}"), endpoint.ProcessId)
         };
     }
 }

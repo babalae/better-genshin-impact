@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
@@ -96,7 +97,7 @@ public sealed partial class PuloniaTaskService
         /// <summary>
         /// 状态摘要；执行期间是面向用户的进度文字，逻辑判断不读取它。
         /// </summary>
-        public string Message { get; set; } = "运行快照已固定，正在等待串行执行。";
+        public string Message { get; set; } = I18nService.Instance.Translate("运行快照已固定，正在等待串行执行。");
 
         /// <summary>
         /// 提交时间。

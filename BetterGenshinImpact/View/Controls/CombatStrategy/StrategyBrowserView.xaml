@@ -1,5 +1,5 @@
 <UserControl x:Class="BetterGenshinImpact.View.Controls.CombatStrategy.StrategyBrowserView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="14"
              FontFamily="{DynamicResource TextThemeFontFamily}"
@@ -42,14 +42,14 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <Grid Margin="0,0,0,10">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-            <ui:TextBox x:Name="SearchInput" Height="34" ClearButtonEnabled="False" VerticalContentAlignment="Center" PlaceholderText="搜索策略名称或路径…" Icon="{ui:SymbolIcon Search20}"
+            <ui:TextBox x:Name="SearchInput" Height="34" ClearButtonEnabled="False" VerticalContentAlignment="Center" PlaceholderText="{i18n:T 搜索策略名称或路径…}" Icon="{ui:SymbolIcon Search20}"
                         Text="{Binding DataContext.SearchText, RelativeSource={RelativeSource AncestorType=local:CombatStrategyPickerPanel}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        AutomationProperties.Name="搜索当前类别策略" ToolTip="按策略名称和相对路径搜索" InputMethod.IsInputMethodEnabled="True" Padding="8,4,30,4" />
+                        AutomationProperties.Name="{i18n:T 搜索当前类别策略}" ToolTip="{i18n:T 按策略名称和相对路径搜索}" InputMethod.IsInputMethodEnabled="True" Padding="8,4,30,4" />
             <ui:Button Style="{StaticResource StrategySubtleButtonStyle}" x:Name="ClearSearchButton" Appearance="Transparent" Icon="{ui:SymbolIcon Dismiss16}" Width="28" Height="28" Padding="4" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,3,0"
                        Command="{Binding DataContext.ClearSearchCommand, RelativeSource={RelativeSource AncestorType=local:CombatStrategyPickerPanel}, Mode=OneWay}"
-                       Visibility="{Binding DataContext.HasSearchText, RelativeSource={RelativeSource AncestorType=local:CombatStrategyPickerPanel}, Mode=OneWay, Converter={StaticResource StrategyVisibility}}" ToolTip="清空搜索" AutomationProperties.Name="清空搜索" />
+                       Visibility="{Binding DataContext.HasSearchText, RelativeSource={RelativeSource AncestorType=local:CombatStrategyPickerPanel}, Mode=OneWay, Converter={StaticResource StrategyVisibility}}" ToolTip="{i18n:T 清空搜索}" AutomationProperties.Name="{i18n:T 清空搜索}" />
             <ComboBox x:Name="SortSelector" Grid.Column="1" Width="112" Height="34" Margin="8,0,0,0" HorizontalAlignment="Stretch" Padding="8,4"
-                      ItemsSource="{Binding SortOptions, Mode=OneWay}" SelectedIndex="{Binding SortIndex, Mode=TwoWay}" AutomationProperties.Name="排序方式" />
+                      ItemsSource="{Binding SortOptions, Mode=OneWay}" SelectedIndex="{Binding SortIndex, Mode=TwoWay}" AutomationProperties.Name="{i18n:T 排序方式}" />
         </Grid>
         <Border Grid.Row="1" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" Padding="0,0,0,8" Margin="0,0,0,6">
             <Grid>
@@ -89,7 +89,7 @@
                 <ItemsControl.ItemTemplate><DataTemplate>
                     <ui:Button Style="{StaticResource StrategySubtleButtonStyle}" Appearance="Transparent" Margin="0,6,0,0" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
                                Command="{Binding DataContext.SwitchCategoryCommand, RelativeSource={RelativeSource AncestorType=local:CombatStrategyPickerPanel}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}">
-                        <TextBlock><Run Text="在 " /><Run Text="{Binding Title, Mode=OneWay}" /><Run Text=" 中找到 " /><Run Text="{Binding MatchCount, Mode=OneWay}" /><Run Text=" 项 →" /></TextBlock>
+                        <TextBlock><Run Text="{i18n:T '在 '}" /><Run Text="{Binding Title, Mode=OneWay}" /><Run Text="{i18n:T ' 中找到 '}" /><Run Text="{Binding MatchCount, Mode=OneWay}" /><Run Text="{i18n:T ' 项 →'}" /></TextBlock>
                     </ui:Button>
                 </DataTemplate></ItemsControl.ItemTemplate>
             </ItemsControl>

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
@@ -194,6 +195,6 @@ public sealed partial class PuloniaTaskService
         if (await _accounts.GetCurrentAccountAsync(_accounts.CurrentInstanceKey, ct).ConfigureAwait(false) is { } current)
             return (current, null);
         var first = accounts[0];
-        return (first, $"本实例当前账户未确定，按账户列表第一个账户“{first.Name}”预测；实际运行前需要先设置本实例当前账户。");
+        return (first, string.Format(I18nService.Instance.Translate("本实例当前账户未确定，按账户列表第一个账户“{0}”预测；实际运行前需要先设置本实例当前账户。"), first.Name));
     }
 }

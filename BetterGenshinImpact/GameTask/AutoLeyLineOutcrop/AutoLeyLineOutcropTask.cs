@@ -160,6 +160,9 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
     private RecognitionObject? _ocrRo3;
     private readonly RecognitionObject _ocrRoThis = RecognitionObject.OcrThis;
 
+    /// <summary>按游戏语言解析的游戏内文字匹配模式，每次运行按参数重建。</summary>
+    private LeyLineGameText _gameText = null!;
+
     private readonly Dictionary<string, Mat> _templateCache = new();
 
     private const int MaxRecheckCount = 3;
@@ -220,6 +223,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
 
         // 2. 保存本次运行的参数（原构造函数参数）
         _taskParam = param;
+        _gameText = new LeyLineGameText(param.GameCultureInfo);
         _oneDragonMode = param.OneDragonMode;
         _routeStrategyNotFound = false;
         _ct = ct;
@@ -1212,7 +1216,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
             }
         }
 
-        if (result2Text.Contains("溢口", StringComparison.Ordinal))
+        if (_gameText.Outcrop.IsMatch(result2Text))
         {
             _logger.LogDebug("识别到溢口提示，尝试交互");
             InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
@@ -1690,11 +1694,10 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
         return ContainsRewardPromptActionText(result2Text) || HasRewardPrompt(capture);
     }
 
-    private static bool ContainsFightText(string text)
+    private bool ContainsFightText(string text)
     {
         text = NormalizeLeyLineOcrText(text);
-        var keywords = new[] { "打倒", "所有", "敌人" };
-        return keywords.Any(text.Contains);
+        return _gameText.Fight.IsMatch(text);
     }
 
     private async Task AutoNavigateToReward()
@@ -1818,7 +1821,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
     {
         using var capture = _runtime.CaptureToRectArea();
         // Bv.FindF is faster for common keywords and avoids OCR misses.
-        if (Bv.FindF(capture, "接触") || Bv.FindF(capture, "地脉") || Bv.FindF(capture, "之花"))
+        if (Bv.FindF(capture, _gameText.InteractPrompt))
         {
             return true;
         }
@@ -1826,14 +1829,12 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
         var list = capture.FindMulti(_ocrRoThis);
         foreach (var res in list)
         {
-            if (res.Text.Contains("原粹树脂", StringComparison.Ordinal))
+            if (_gameText.OriginalResin.IsMatch(res.Text))
             {
                 return true;
             }
 
-            if (res.Text.Contains("接触", StringComparison.Ordinal)
-                || res.Text.Contains("地脉", StringComparison.Ordinal)
-                || res.Text.Contains("之花", StringComparison.Ordinal))
+            if (Regex.IsMatch(res.Text, _gameText.InteractPrompt, RegexOptions.IgnoreCase))
             {
                 return true;
             }
@@ -1868,7 +1869,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
         var list = capture.FindMulti(_ocrRoThis);
         foreach (var res in list)
         {
-            if (res.Text.Contains("复苏", StringComparison.Ordinal))
+            if (_gameText.Revive.IsMatch(res.Text))
             {
                 res.Click();
                 await _runtime.Delay(2000, _ct);
@@ -2061,11 +2062,10 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
             if (kind == ResinKind.Original)
             {
                 var lines = BuildPromptTextLines(regions);
-                var originalLines = lines.Where(text => text.Contains("原粹", StringComparison.Ordinal)).ToArray();
+                var originalLines = lines.Where(text => _gameText.OriginalResin.IsMatch(text)).ToArray();
                 var has20 = originalLines.Any(text => text.Contains("20", StringComparison.Ordinal));
                 var has40 = originalLines.Any(text => text.Contains("40", StringComparison.Ordinal));
-                var hasDouble = lines.Any(text => text.Contains("双倍", StringComparison.Ordinal)
-                    || text.Contains("2倍", StringComparison.Ordinal));
+                var hasDouble = lines.Any(text => _gameText.DoubleReward.IsMatch(text));
                 var tier = _taskParam.ResinUsage.OriginalTier;
                 // 默认沿用双倍活动切 40，其余保持当前界面；指定档位主动切换。
                 var expected = tier == OriginalResinTier.Only20 ? 20
@@ -2118,12 +2118,10 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
         return mergedLines.FirstOrDefault(r => IsRewardPromptTitleText(r.Text));
     }
 
-    private static bool IsRewardPromptTitleText(string text)
+    private bool IsRewardPromptTitleText(string text)
     {
         text = NormalizeLeyLineOcrText(text);
-        return text.Contains("激活地脉之花", StringComparison.Ordinal)
-               || text.Contains("选择激活方式", StringComparison.Ordinal)
-               || text.Contains("地脉之花", StringComparison.Ordinal);
+        return _gameText.RewardPromptTitle.IsMatch(text);
     }
 
     private List<Region> CaptureRewardPromptRegions()
@@ -2157,7 +2155,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
 
         using var check = _runtime.CaptureToRectArea();
         var lineTexts = BuildPromptTextLines(check.FindMulti(_ocrRoThis));
-        return lineTexts.Any(text => text.Contains(expectedNum.ToString(), StringComparison.Ordinal) && text.Contains("原粹", StringComparison.Ordinal));
+        return lineTexts.Any(text => text.Contains(expectedNum.ToString(), StringComparison.Ordinal) && _gameText.OriginalResin.IsMatch(text));
     }
 
     private static Rect GetRewardPromptTitleRoi(ImageRegion capture)
@@ -2208,30 +2206,22 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
             .Trim();
     }
 
-    private static bool ContainsLeyLineFlowerText(string text)
+    private bool ContainsLeyLineFlowerText(string text)
     {
         text = NormalizeLeyLineOcrText(text);
-        return text.Contains("地脉之花", StringComparison.Ordinal)
-               || (text.Contains("地脉", StringComparison.Ordinal) && text.Contains("之花", StringComparison.Ordinal));
+        return _gameText.Flower.IsMatch(text);
     }
 
-    private static bool ContainsRewardPromptActionText(string text)
+    private bool ContainsRewardPromptActionText(string text)
     {
         text = NormalizeLeyLineOcrText(text);
-        return text.Contains("使用", StringComparison.Ordinal);
+        return _gameText.UseAction.IsMatch(text);
     }
 
-    private static bool ContainsRewardPromptContentText(string text)
+    private bool ContainsRewardPromptContentText(string text)
     {
         text = NormalizeLeyLineOcrText(text);
-        return text.Contains("原粹树脂", StringComparison.Ordinal)
-               || text.Contains("浓缩树脂", StringComparison.Ordinal)
-               || text.Contains("须臾树脂", StringComparison.Ordinal)
-               || text.Contains("脆弱树脂", StringComparison.Ordinal)
-               || text.Contains("激活地脉之花", StringComparison.Ordinal)
-               || text.Contains("选择激活方式", StringComparison.Ordinal)
-               || (text.Contains("树脂", StringComparison.Ordinal) && text.Contains("使用", StringComparison.Ordinal))
-               || text.Contains("补充", StringComparison.Ordinal);
+        return _gameText.RewardPromptContent.IsMatch(text);
     }
 
     private static List<Region> MergeTextRegionsByLine(Region owner, IEnumerable<Region> regions)
@@ -2373,13 +2363,14 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
 
     private async Task FindAndClickCountry(string country)
     {
-        var match = country == "挪德卡莱" ? "挪德卡" : country;
+        // 按游戏语言匹配下拉列表中的国家名（如英文客户端为 Mondstadt）。
+        var countryPattern = _gameText.Country(country);
 
         for (var attempt = 0; attempt <= MaxCountryScrollAttempts; attempt++)
         {
             using var capture = _runtime.CaptureToRectArea();
             var list = capture.FindMulti(_ocrRoThis);
-            var matchingTargets = list.Where(r => r.Text.Contains(match, StringComparison.Ordinal)).ToList();
+            var matchingTargets = list.Where(r => countryPattern.IsMatch(r.Text)).ToList();
             var target = matchingTargets.FirstOrDefault(r => IsCountryOptionFullyVisible(r, capture));
             if (target != null)
             {
@@ -2463,14 +2454,14 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
 
         using var capture = _runtime.CaptureToRectArea();
         var list = capture.FindMulti(_ocrRoThis);
-        var stop = list.FirstOrDefault(r => r.Text.Contains("停止", StringComparison.Ordinal));
+        var stop = list.FirstOrDefault(r => _gameText.StopTracking.IsMatch(r.Text));
         if (stop != null)
         {
             stop.Click();
             return;
         }
 
-        var leyLine = list.FirstOrDefault(r => r.Text.Contains("地脉", StringComparison.Ordinal) || r.Text.Contains("衍出", StringComparison.Ordinal));
+        var leyLine = list.FirstOrDefault(r => _gameText.TrackedLeyLine.IsMatch(r.Text));
         if (leyLine != null)
         {
             leyLine.Click();

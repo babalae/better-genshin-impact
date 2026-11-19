@@ -6,6 +6,7 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Notification;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -22,8 +23,8 @@ public class ScriptGroupProjectEditorViewModel : ObservableObject, IDisposable
 
     public List<KeyValuePair<bool, string>> JsNotificationOptions { get; } = new()
     {
-        new KeyValuePair<bool, string>(true, "启用"),
-        new KeyValuePair<bool, string>(false, "禁用")
+        new KeyValuePair<bool, string>(true, I18nService.Instance.Translate("启用")),
+        new KeyValuePair<bool, string>(false, I18nService.Instance.Translate("禁用"))
     };
     
     public bool IsJsScript => _project.Type == "Javascript";
@@ -73,7 +74,7 @@ public class ScriptGroupProjectEditorViewModel : ObservableObject, IDisposable
             {
                 return new List<JsText>
                 {
-                    new JsText("当前脚本项目未加载", Brushes.Red)
+                    new JsText(I18nService.Instance.Translate("当前脚本项目未加载"), Brushes.Red)
                 };
             }
             var urls = _project.Project.Manifest?.HttpAllowedUrls ?? [];
@@ -81,12 +82,12 @@ public class ScriptGroupProjectEditorViewModel : ObservableObject, IDisposable
             {
                 return new List<JsText>
                 {
-                    new JsText("当前脚本无需使用HTTP资源", Brushes.Green)
+                    new JsText(I18nService.Instance.Translate("当前脚本无需使用HTTP资源"), Brushes.Green)
                 };
             }
             return new List<JsText>
             {
-                new JsText($"当前脚本使用 {urls.Length} 个HTTP资源", Brushes.OrangeRed)
+                new JsText(string.Format(I18nService.Instance.Translate("当前脚本使用 {0} 个HTTP资源"), urls.Length), Brushes.OrangeRed)
             };
         }
     }

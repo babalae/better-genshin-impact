@@ -1,11 +1,11 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.CloudWebInstanceWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:vm="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
-                 Title="云原神网页版"
+                 Title="{i18n:T 云原神网页版}"
                  Width="600"
                  MinHeight="230"
                  MaxHeight="600"
@@ -56,7 +56,7 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <ui:TitleBar Grid.Row="0" Title="云原神网页版" Icon="{ui:SymbolIcon Cloud24}"
+        <ui:TitleBar Grid.Row="0" Title="{i18n:T 云原神网页版}" Icon="{ui:SymbolIcon Cloud24}"
                      ShowMinimize="False" ShowMaximize="False" />
 
         <!-- 首页只保留入口；实例汇总、创建和状态反馈集中在这个窗口。 -->
@@ -67,12 +67,12 @@
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="{Binding SummaryText, Mode=OneWay}" FontSize="13" />
-                <TextBlock Text="状态自动更新 · 每个实例独立保存登录状态" FontSize="12" Margin="0,3,0,0"
+                <TextBlock Text="{i18n:T 状态自动更新 · 每个实例独立保存登录状态}" FontSize="12" Margin="0,3,0,0"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>
-            <ui:Button Grid.Column="1" Content="新建实例" Icon="{ui:SymbolIcon Add24}"
+            <ui:Button Grid.Column="1" Content="{i18n:T 新建实例}" Icon="{ui:SymbolIcon Add24}"
                        Command="{Binding BeginCreateCommand, Mode=OneWay}"
-                       Style="{StaticResource CloudActionButtonStyle}" ToolTip="新建实例（Ctrl+N）" />
+                       Style="{StaticResource CloudActionButtonStyle}" ToolTip="{i18n:T 新建实例（Ctrl+N）}" />
         </Grid>
 
         <!-- 内联创建减少弹窗层级；名称限制仍以存储层校验为准。 -->
@@ -81,7 +81,7 @@
                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                 Visibility="{Binding IsCreating, Mode=OneWay, Converter={StaticResource CloudBooleanToVisibilityConverter}}">
             <StackPanel>
-                <TextBlock Text="实例名称" FontSize="12" Margin="0,0,0,7" />
+                <TextBlock Text="{i18n:T 实例名称}" FontSize="12" Margin="0,0,0,7" />
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -89,32 +89,32 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBox Text="{Binding NewInstanceName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                PlaceholderText="例如：小号A、日常号" MaxLength="32" MinHeight="32"
-                                AutomationProperties.Name="实例名称">
+                                PlaceholderText="{i18n:T 例如：小号A、日常号}" MaxLength="32" MinHeight="32"
+                                AutomationProperties.Name="{i18n:T 实例名称}">
                         <ui:TextBox.InputBindings>
                             <KeyBinding Key="Enter" Command="{Binding CreateAndLaunchCommand, Mode=OneWay}" />
                         </ui:TextBox.InputBindings>
                     </ui:TextBox>
-                    <ui:Button Grid.Column="1" Content="新建并打开" Margin="8,0,0,0" Appearance="Primary"
+                    <ui:Button Grid.Column="1" Content="{i18n:T 新建并打开}" Margin="8,0,0,0" Appearance="Primary"
                                Style="{StaticResource CloudActionButtonStyle}"
                                Command="{Binding CreateAndLaunchCommand, Mode=OneWay}" />
                     <ui:Button Grid.Column="2" Icon="{ui:SymbolIcon Dismiss24}" Width="32" Height="32"
                                Padding="6" Margin="4,0,0,0" Appearance="Transparent"
                                Command="{Binding CancelCreateCommand, Mode=OneWay}"
-                               ToolTip="取消新建" AutomationProperties.Name="取消新建" />
+                               ToolTip="{i18n:T 取消新建}" AutomationProperties.Name="{i18n:T 取消新建}" />
                 </Grid>
                 <!-- 账户目录有多个账户时选择新实例的 Pulonia 当前账户，默认第一个；只有一个账户时不显示。 -->
                 <StackPanel Margin="0,10,0,0"
                             Visibility="{Binding ShowAccountChoice, Mode=OneWay, Converter={StaticResource CloudBooleanToVisibilityConverter}}">
-                    <TextBlock Text="当前账户" FontSize="12" Margin="0,0,0,7" />
+                    <TextBlock Text="{i18n:T 当前账户}" FontSize="12" Margin="0,0,0,7" />
                     <ComboBox MinHeight="32"
                               HorizontalAlignment="Stretch"
-                              AutomationProperties.Name="新实例的当前账户"
+                              AutomationProperties.Name="{i18n:T 新实例的当前账户}"
                               DisplayMemberPath="DisplayText"
                               ItemsSource="{Binding AccountOptions, Mode=OneWay}"
                               SelectedValue="{Binding NewInstanceAccountId, Mode=TwoWay}"
                               SelectedValuePath="Id"
-                              ToolTip="这个云原神实例的游戏将登录的账户；云原神实例不能自动切换账户" />
+                              ToolTip="{i18n:T 这个云原神实例的游戏将登录的账户；云原神实例不能自动切换账户}" />
                 </StackPanel>
                 <TextBlock Text="{Binding CreationError, Mode=OneWay}" Style="{StaticResource CloudErrorTextStyle}" />
             </StackPanel>
@@ -189,24 +189,24 @@
                                     </ui:Button>
                                     <!-- Flyout 不属于窗口的可视树，通过 PlacementTarget 和 Tag 取得命令与实例行。 -->
                                     <ui:DropDownButton Grid.Column="4" Icon="{ui:SymbolIcon MoreHorizontal24}" Width="36"
-                                                       Height="32" Padding="4" Appearance="Transparent" ToolTip="更多操作"
-                                                       AutomationProperties.Name="更多操作"
+                                                       Height="32" Padding="4" Appearance="Transparent" ToolTip="{i18n:T 更多操作}"
+                                                       AutomationProperties.Name="{i18n:T 更多操作}"
                                                        Tag="{Binding DataContext, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
                                         <ui:DropDownButton.Flyout>
                                             <ContextMenu DataContext="{Binding PlacementTarget, Mode=OneWay, RelativeSource={RelativeSource Self}}">
-                                                <ui:MenuItem Header="关闭游戏" Icon="{ui:SymbolIcon Power24}"
+                                                <ui:MenuItem Header="{i18n:T 关闭游戏}" Icon="{ui:SymbolIcon Power24}"
                                                              Command="{Binding Tag.CloseInstanceCommand, Mode=OneWay}"
                                                              CommandParameter="{Binding DataContext, Mode=OneWay}" />
-                                                <ui:MenuItem Header="清理缓存（保留登录）" Icon="{ui:SymbolIcon Broom24}"
+                                                <ui:MenuItem Header="{i18n:T 清理缓存（保留登录）}" Icon="{ui:SymbolIcon Broom24}"
                                                              Command="{Binding Tag.ClearCacheCommand, Mode=OneWay}"
                                                              CommandParameter="{Binding DataContext, Mode=OneWay}"
-                                                             ToolTip="仅可清理未运行的实例，登录状态会保留。"
+                                                             ToolTip="{i18n:T 仅可清理未运行的实例，登录状态会保留。}"
                                                              ToolTipService.ShowOnDisabled="True" />
                                                 <Separator />
-                                                <ui:MenuItem Header="删除实例…" Icon="{ui:SymbolIcon Delete24}"
+                                                <ui:MenuItem Header="{i18n:T 删除实例…}" Icon="{ui:SymbolIcon Delete24}"
                                                              Command="{Binding Tag.DeleteInstanceCommand, Mode=OneWay}"
                                                              CommandParameter="{Binding DataContext, Mode=OneWay}"
-                                                             ToolTip="仅可删除未运行的实例，删除时会清除登录状态。"
+                                                             ToolTip="{i18n:T 仅可删除未运行的实例，删除时会清除登录状态。}"
                                                              ToolTipService.ShowOnDisabled="True" />
                                             </ContextMenu>
                                         </ui:DropDownButton.Flyout>
@@ -230,8 +230,8 @@
                 </StackPanel.Style>
                 <ui:SymbolIcon Symbol="CloudAdd24" FontSize="28" HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                <TextBlock Text="添加第一个云原神实例" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,10,0,4" />
-                <TextBlock Text="点击「新建实例」，取个名字即可打开游戏。" FontSize="12" HorizontalAlignment="Center"
+                <TextBlock Text="{i18n:T 添加第一个云原神实例}" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,10,0,4" />
+                <TextBlock Text="{i18n:T 点击「新建实例」，取个名字即可打开游戏。}" FontSize="12" HorizontalAlignment="Center"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>
         </Grid>
@@ -243,12 +243,12 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="登录、排队请在游戏窗口完成。" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{i18n:T 登录、排队请在游戏窗口完成。}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     <TextBlock FontSize="12" Margin="0,3,0,0">
-                        <Hyperlink Command="{Binding OpenTasksCommand, Mode=OneWay}" TextDecorations="None">前往独立任务，选择实例运行</Hyperlink>
+                        <Hyperlink Command="{Binding OpenTasksCommand, Mode=OneWay}" TextDecorations="None"><Run Text="{i18n:T 前往独立任务，选择实例运行}" /></Hyperlink>
                     </TextBlock>
                 </StackPanel>
-                <ui:Button Grid.Column="1" Content="关闭" IsCancel="True" MinWidth="72" Height="32" Padding="12,4"
+                <ui:Button Grid.Column="1" Content="{i18n:T 关闭}" IsCancel="True" MinWidth="72" Height="32" Padding="12,4"
                            Command="{Binding CloseCommand, Mode=OneWay}" />
             </Grid>
         </Border>

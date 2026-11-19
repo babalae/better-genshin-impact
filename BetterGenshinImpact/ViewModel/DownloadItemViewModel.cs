@@ -1,6 +1,7 @@
 using System;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Infrastructure.Network.Download;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel;
@@ -102,12 +103,16 @@ public partial class DownloadItemViewModel : ObservableObject
         CanOpenFolder = progress.State == DownloadState.Completed && origin is null;
         StatusText = progress.State switch
         {
-            DownloadState.Queued => "排队中",
+            DownloadState.Queued => I18nService.Instance.Translate("排队中"),
             DownloadState.Downloading => FormatDownloading(progress),
-            DownloadState.Verifying => "正在校验文件…",
-            DownloadState.Completed => "已完成",
-            DownloadState.Failed => origin is null ? progress.Error ?? "下载失败" : $"{progress.Error ?? "下载失败"}。请在{origin}中重试",
-            _ => origin is null ? "已取消，已下载的部分会保留" : $"已取消，已下载的部分会保留。请在{origin}中继续",
+            DownloadState.Verifying => I18nService.Instance.Translate("正在校验文件…"),
+            DownloadState.Completed => I18nService.Instance.Translate("已完成"),
+            DownloadState.Failed => origin is null
+                ? progress.Error ?? I18nService.Instance.Translate("下载失败")
+                : string.Format(I18nService.Instance.Translate("{0}。请在{1}中重试"), progress.Error ?? I18nService.Instance.Translate("下载失败"), I18nService.Instance.Translate(origin)),
+            _ => origin is null
+                ? I18nService.Instance.Translate("已取消，已下载的部分会保留")
+                : string.Format(I18nService.Instance.Translate("已取消，已下载的部分会保留。请在{0}中继续"), I18nService.Instance.Translate(origin)),
         };
     }
 
@@ -125,7 +130,7 @@ public partial class DownloadItemViewModel : ObservableObject
         }
 
         var text = $"{size} · {ByteSizeFormatter.Format((long)progress.BytesPerSecond)}/s";
-        return progress.Remaining is { } remaining ? $"{text} · 剩余 {FormatRemaining(remaining)}" : text;
+        return progress.Remaining is { } remaining ? string.Format(I18nService.Instance.Translate("{0} · 剩余 {1}"), text, FormatRemaining(remaining)) : text;
     }
 
     /// <summary>
@@ -133,8 +138,8 @@ public partial class DownloadItemViewModel : ObservableObject
     /// </summary>
     private static string FormatRemaining(TimeSpan remaining) => remaining.TotalSeconds switch
     {
-        < 60 => $"{Math.Max(1, (int)remaining.TotalSeconds)} 秒",
-        < 3600 => $"{(int)Math.Ceiling(remaining.TotalMinutes)} 分钟",
-        _ => $"{(int)remaining.TotalHours} 小时 {remaining.Minutes} 分钟",
+        < 60 => string.Format(I18nService.Instance.Translate("{0} 秒"), Math.Max(1, (int)remaining.TotalSeconds)),
+        < 3600 => string.Format(I18nService.Instance.Translate("{0} 分钟"), (int)Math.Ceiling(remaining.TotalMinutes)),
+        _ => string.Format(I18nService.Instance.Translate("{0} 小时 {1} 分钟"), (int)remaining.TotalHours, remaining.Minutes),
     };
 }

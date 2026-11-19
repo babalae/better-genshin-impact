@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -202,10 +203,10 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
             await Management.EnsureLoadedAsync();
             if (!IsCurrent(generation, identity)) return;
             NotifyRegisteredProfiles();
-            if (!Management.IsLoaded) StatusMessage = "声线库尚未加载，请检查映射目录。";
+            if (!Management.IsLoaded) StatusMessage = I18nService.Instance.Translate("声线库尚未加载，请检查映射目录。");
         }
         catch (Exception)
-        { if (IsCurrent(generation, identity)) StatusMessage = "读取声线库失败，请检查映射目录是否可读。"; }
+        { if (IsCurrent(generation, identity)) StatusMessage = I18nService.Instance.Translate("读取声线库失败，请检查映射目录是否可读。"); }
     }
 
     /// <summary>目录的条目增删同步列表，数据始终来自共享管理器。</summary>
@@ -247,7 +248,7 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
             if (remote) config.RemoteUrl = value.Trim(); else config.LocalUrl = value.Trim();
         }
         UrlValidationMessage = (!IsValidUrl(LocalUrlDraft) || (!string.IsNullOrWhiteSpace(RemoteUrlDraft) && !IsValidUrl(RemoteUrlDraft)))
-            ? "请填写 HTTP/HTTPS 根地址，不含凭据、查询或片段；非法输入仅保留为草稿。" : "";
+            ? I18nService.Instance.Translate("请填写 HTTP/HTTPS 根地址，不含凭据、查询或片段；非法输入仅保留为草稿。") : "";
     }
 
     /// <summary>与生产 HTTP Provider 的根路径规则保持一致；GPT-SoVITS 设置共用同一规则。</summary>
@@ -283,7 +284,7 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task RegisterVoiceAsync()
     {
-        if (!HasValidActiveUrl()) { StatusMessage = "请先修正当前实例的服务地址。"; return; }
+        if (!HasValidActiveUrl()) { StatusMessage = I18nService.Instance.Translate("请先修正当前实例的服务地址。"); return; }
         var generation = Interlocked.Increment(ref _generation);
         var identity = EngineConfig;
         IsRefreshing = false;
@@ -295,11 +296,11 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
             var displayName = string.IsNullOrWhiteSpace(VoiceDisplayName)
                 ? SelectedVoice?.DisplayName ?? VoiceId : VoiceDisplayName.Trim();
             await _host.Management.RegisterProviderVoiceAsync(ProviderId, profile.InstanceId!, VoiceId, displayName);
-            if (IsCurrent(generation, identity)) StatusMessage = "已添加为声线，可在“角色”页分配给角色或默认 NPC。";
+            if (IsCurrent(generation, identity)) StatusMessage = I18nService.Instance.Translate("已添加为声线，可在“角色”页分配给角色或默认 NPC。");
         }
         catch (Exception)
         {
-            if (IsCurrent(generation, identity)) StatusMessage = "添加声线失败，请检查声音与实例参数，以及角色目录是否可写。";
+            if (IsCurrent(generation, identity)) StatusMessage = I18nService.Instance.Translate("添加声线失败，请检查声音与实例参数，以及角色目录是否可写。");
         }
     }
 
@@ -308,11 +309,11 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
     private async Task RefreshVoicesAsync()
     {
         if (!_active) return;
-        if (!HasValidActiveUrl()) { StatusMessage = "请先修正当前实例的服务地址。"; return; }
+        if (!HasValidActiveUrl()) { StatusMessage = I18nService.Instance.Translate("请先修正当前实例的服务地址。"); return; }
         var generation = Interlocked.Increment(ref _generation);
         var identity = EngineConfig;
         IsRefreshing = true;
-        StatusMessage = "正在读取声音列表…";
+        StatusMessage = I18nService.Instance.Translate("正在读取声音列表…");
         try
         {
             var settings = _factory.CreateVoiceSettings(CreateProfile(), validateProvider: false);
@@ -321,13 +322,13 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
             Voices.Clear();
             foreach (var voice in voices) Voices.Add(voice);
             NotifyVoice();
-            StatusMessage = ProviderId == "openai-speech" ? "已更新本地声音建议；连接与认证请通过试听验证。"
-                : $"已读取 {voices.Count} 项；保留原声音 ID，实际合成请试听。";
+            StatusMessage = ProviderId == "openai-speech" ? I18nService.Instance.Translate("已更新本地声音建议；连接与认证请通过试听验证。")
+                : string.Format(I18nService.Instance.Translate("已读取 {0} 项；保留原声音 ID，实际合成请试听。"), voices.Count);
         }
         catch (Exception)
         {
             // 服务异常可能携带认证头或响应正文，因此只显示固定诊断。
-            if (IsCurrent(generation, identity)) StatusMessage = "读取声音失败，请检查实例地址、服务状态及认证设置。";
+            if (IsCurrent(generation, identity)) StatusMessage = I18nService.Instance.Translate("读取声音失败，请检查实例地址、服务状态及认证设置。");
         }
         finally { if (IsCurrent(generation, identity)) IsRefreshing = false; }
     }
@@ -336,21 +337,21 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanTest))]
     private async Task TestVoiceAsync(CancellationToken token)
     {
-        if (!HasValidActiveUrl()) { StatusMessage = "请先修正当前实例的服务地址。"; return; }
+        if (!HasValidActiveUrl()) { StatusMessage = I18nService.Instance.Translate("请先修正当前实例的服务地址。"); return; }
         var generation = Interlocked.Increment(ref _generation);
         var identity = EngineConfig;
         IsRefreshing = false;
         IsTesting = true;
-        StatusMessage = "正在试听…";
+        StatusMessage = I18nService.Instance.Translate("正在试听…");
         try
         {
             await _service.TestVoiceAsync(TestText, CreateProfile(), token);
-            if (IsCurrent(generation, identity)) StatusMessage = "试听播放完成。";
+            if (IsCurrent(generation, identity)) StatusMessage = I18nService.Instance.Translate("试听播放完成。");
         }
         catch (OperationCanceledException)
-        { if (IsCurrent(generation, identity)) StatusMessage = "试听已取消。"; }
+        { if (IsCurrent(generation, identity)) StatusMessage = I18nService.Instance.Translate("试听已取消。"); }
         catch (Exception)
-        { if (IsCurrent(generation, identity)) StatusMessage = "试听失败，请检查声音、服务参数及连接；自动配音需先停止。"; }
+        { if (IsCurrent(generation, identity)) StatusMessage = I18nService.Instance.Translate("试听失败，请检查声音、服务参数及连接；自动配音需先停止。"); }
         finally { IsTesting = false; }
     }
 

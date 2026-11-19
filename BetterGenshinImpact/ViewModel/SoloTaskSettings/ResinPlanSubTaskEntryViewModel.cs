@@ -1,5 +1,6 @@
 using System.Linq;
 using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
@@ -27,11 +28,17 @@ public sealed partial class ResinPlanSubTaskEntryViewModel : ObservableObject
     /// <summary>子任务设置说明。</summary>
     public ResinPlanSubTaskSpec Spec { get; }
 
-    /// <summary>卡片标题。</summary>
-    public string DisplayName => Spec.DisplayName;
+    /// <summary>卡片标题（按当前语言显示）。</summary>
+    public string DisplayName => I18nService.Instance.Translate(Spec.DisplayName);
 
-    /// <summary>卡片说明。</summary>
-    public string Description => Spec.Description;
+    /// <summary>卡片说明（按当前语言显示）。</summary>
+    public string Description => I18nService.Instance.Translate(Spec.Description);
+
+    /// <summary>设置按钮的无障碍名称。</summary>
+    public string EditAutomationName => string.Format(I18nService.Instance.Translate("设置{0}"), DisplayName);
+
+    /// <summary>参与开关的无障碍名称。</summary>
+    public string EnabledAutomationName => string.Format(I18nService.Instance.Translate("{0}参与体力计划"), DisplayName);
 
     /// <summary>是否在体力计划中执行此任务。</summary>
     [ObservableProperty] private bool _enabled;
@@ -49,15 +56,17 @@ public sealed partial class ResinPlanSubTaskEntryViewModel : ObservableObject
             var parts = Spec.SummaryFields
                 .Select(item => (item.Label, Value: Param[item.Field] is JValue { Value: not null } value ? value.ToString() : string.Empty))
                 .Where(item => item.Value.Length > 0)
-                .Select(item => $"{item.Label}：{item.Value}")
+                // 标签与取值（国家、地脉花类型、秘境名等配置数据）只在展示时翻译，参数原值不变
+                .Select(item => string.Format(I18nService.Instance.Translate("{0}：{1}"),
+                    I18nService.Instance.Translate(item.Label), I18nService.Instance.Translate(item.Value)))
                 .ToList();
             // 树脂使用由子任务自己决定时（首领），摘要同时显示次数，卡片上即可看到讨伐几次
             if (Spec.ReadResinUsage(Param) is { } resin && Spec.ResinCapability is { } capability)
             {
-                parts.Add("树脂：" + ResinUsageText.Summary(resin, capability));
+                parts.Add(string.Format(I18nService.Instance.Translate("树脂：{0}"), ResinUsageText.Summary(resin, capability)));
             }
 
-            return parts.Count == 0 ? "使用默认设置" : string.Join(" · ", parts);
+            return parts.Count == 0 ? I18nService.Instance.Translate("使用默认设置") : string.Join(" · ", parts);
         }
     }
 

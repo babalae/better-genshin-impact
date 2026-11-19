@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -74,7 +75,7 @@ public partial class ImageEditWindow
         }
         catch (Exception e)
         {
-            ThemedMessageBox.Show($"图片加载失败：{e.Message}", "错误", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error);
+            ThemedMessageBox.Show(string.Format(I18nService.Instance.Translate("图片加载失败：{0}"), e.Message), I18nService.Instance.Translate("错误"), MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error);
             DialogResult = false;
             return;
         }
@@ -112,7 +113,7 @@ public partial class ImageEditWindow
         var text = $"{_editImage.PixelWidth} × {_editImage.PixelHeight} px";
         if (!_cropPx.IsEmpty)
         {
-            text += $" ｜ 裁剪区域 {(int)_cropPx.Width} × {(int)_cropPx.Height} px";
+            text += " ｜ " + string.Format(I18nService.Instance.Translate("裁剪区域 {0} × {1} px"),(int)_cropPx.Width, (int)_cropPx.Height);
         }
 
         InfoText.Text = text;
@@ -398,7 +399,7 @@ public partial class ImageEditWindow
         var saved = TrySave(final);
         if (saved == null)
         {
-            ThemedMessageBox.Show("编辑结果保存失败，请检查磁盘权限或换一张图片重试。", "错误", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error);
+            ThemedMessageBox.Show(I18nService.Instance.Translate("编辑结果保存失败，请检查磁盘权限或换一张图片重试。"), I18nService.Instance.Translate("错误"), MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error);
             return;
         }
 

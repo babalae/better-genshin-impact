@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -47,7 +48,7 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
     private bool _refreshAbandonedByDialog;
 
     [ObservableProperty]
-    private string _statusText = "正在检测…";
+    private string _statusText = I18nService.Instance.Translate("正在检测…");
 
     [ObservableProperty]
     private bool _isBusy;
@@ -146,7 +147,7 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         IsBusy = true;
         IsChecking = true;
         _checkFailed = false;
-        StatusText = "正在检测…";
+        StatusText = I18nService.Instance.Translate("正在检测…");
 
         try
         {
@@ -170,7 +171,7 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
                         if (!noticeShown)
                         {
                             noticeShown = true;
-                            StatusText = "正在校验系统组件库（termsrv.dll）…";
+                            StatusText = I18nService.Instance.Translate("正在校验系统组件库（termsrv.dll）…");
                         }
 
                         await Task.Delay(200);
@@ -215,16 +216,16 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(IsAllGood));
 
             var status = warningCount == 0 && noticeCount == 0
-                ? "检查完成：没有发现问题。"
-                : $"检查完成：{warningCount} 个需要处理，{noticeCount} 个建议处理。";
+                ? I18nService.Instance.Translate("检查完成：没有发现问题。")
+                : string.Format(I18nService.Instance.Translate("检查完成：{0} 个需要处理，{1} 个建议处理。"), warningCount, noticeCount);
 
             // 没验证过 termsrv.dll 时别把话说满：非管理员跑 sfc 只会返回 1，
             // 这一项按「不下结论」处理——那就得在状态栏说清楚，别让用户以为全查过了。
             if (!ChildSessionEnvironmentCheck.GetTermsrvState().Verified)
             {
                 status += ChildSessionEnvironmentCheck.IsElevated()
-                    ? "（termsrv.dll 完整性本次未能校验，可重新检测）"
-                    : "（未以管理员身份运行，termsrv.dll 完整性未校验）";
+                    ? I18nService.Instance.Translate("（termsrv.dll 完整性本次未能校验，可重新检测）")
+                    : I18nService.Instance.Translate("（未以管理员身份运行，termsrv.dll 完整性未校验）");
             }
 
             StatusText = status;
@@ -241,7 +242,7 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         {
             _checkFailed = true;
             OnPropertyChanged(nameof(IsAllGood));
-            StatusText = $"检查失败：{exception.Message}";
+            StatusText = string.Format(I18nService.Instance.Translate("检查失败：{0}"), exception.Message);
         }
         finally
         {
@@ -323,9 +324,10 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         try
         {
             confirm = ThemedMessageBox.Question(
-                $"即将修复：{item.Title}{Environment.NewLine}{Environment.NewLine}{item.FixHint}"
-                + $"{Environment.NewLine}{Environment.NewLine}是否继续？",
-                "确认修复",
+                string.Format(I18nService.Instance.Translate("即将修复：{0}"), item.Title)
+                + Environment.NewLine + Environment.NewLine + item.FixHint
+                + Environment.NewLine + Environment.NewLine + I18nService.Instance.Translate("是否继续？"),
+                I18nService.Instance.Translate("确认修复"),
                 MessageBoxButton.YesNo,
                 MessageBoxResult.No);
         }
@@ -358,7 +360,7 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
 
         // 修复期间禁掉「重新检测」：两者并发会互相覆盖对方的结论。
         IsBusy = true;
-        StatusText = $"正在修复：{item.Title}…";
+        StatusText = string.Format(I18nService.Instance.Translate("正在修复：{0}…"), item.Title);
 
         try
         {
@@ -376,7 +378,7 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            StatusText = $"修复失败：{exception.Message}";
+            StatusText = string.Format(I18nService.Instance.Translate("修复失败：{0}"), exception.Message);
             LastFixResult = StatusText;
         }
         finally
@@ -409,11 +411,11 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         try
         {
             Clipboard.SetText(builder.ToString());
-            StatusText = "环境信息已复制到剪贴板。";
+            StatusText = I18nService.Instance.Translate("环境信息已复制到剪贴板。");
         }
         catch (Exception exception)
         {
-            StatusText = $"复制失败：{exception.Message}";
+            StatusText = string.Format(I18nService.Instance.Translate("复制失败：{0}"), exception.Message);
         }
     }
 
@@ -490,19 +492,16 @@ public partial class ChildSessionDiagnosticItem : ObservableObject
     /// <summary>修复前给用户的提示语（不同项的副作用不同）。</summary>
     public string FixHint => Id switch
     {
-        "rdp-disabled" => "这会打开本机的远程桌面监听并重启远程桌面服务。",
-        "rdp-wrapper" => "这会把 TermService 还原成系统原生的 termsrv.dll，并清理相关开机任务；"
-                         + "还原后多用户并发远程桌面的能力会失效。",
-        "termservice-disabled" => "这会把远程桌面服务的启动类型从「禁用」改回「手动」并启动它。",
-        "termservice-stopped" => "这会启动远程桌面服务。",
-        "termservice-dll-type" => "这会把 ServiceDll 写回原生路径与正确类型，然后重启服务。",
-        "termservice-key-broken" => "这会恢复 TermService 服务键的默认值（依赖只追加），然后重启服务。",
-        "hello-only" => "这会关闭「仅允许 Windows Hello 登录」。改完需要你自己注销或重启才会生效。",
-        "rdp-tool-persistence" => "这会导出备份后删除这些开机任务与自启项。",
-        "termsrv-dll-tampered" => "这会先用工具留下的备份还原 termsrv.dll（还原后会复核，不通过自动回滚）；"
-                                  + "没有可用备份时，在服务停止的状态下用 sfc 只修这一个文件，几秒到几十秒、"
-                                  + "当场生效、不需要重启；连它都修不好才会弹出命令行窗口跑完整扫描（5~15 分钟）。",
-        _ => "这会修改系统设置。"
+        "rdp-disabled" => I18nService.Instance.Translate("这会打开本机的远程桌面监听并重启远程桌面服务。"),
+        "rdp-wrapper" => I18nService.Instance.Translate("这会把 TermService 还原成系统原生的 termsrv.dll，并清理相关开机任务；还原后多用户并发远程桌面的能力会失效。"),
+        "termservice-disabled" => I18nService.Instance.Translate("这会把远程桌面服务的启动类型从「禁用」改回「手动」并启动它。"),
+        "termservice-stopped" => I18nService.Instance.Translate("这会启动远程桌面服务。"),
+        "termservice-dll-type" => I18nService.Instance.Translate("这会把 ServiceDll 写回原生路径与正确类型，然后重启服务。"),
+        "termservice-key-broken" => I18nService.Instance.Translate("这会恢复 TermService 服务键的默认值（依赖只追加），然后重启服务。"),
+        "hello-only" => I18nService.Instance.Translate("这会关闭「仅允许 Windows Hello 登录」。改完需要你自己注销或重启才会生效。"),
+        "rdp-tool-persistence" => I18nService.Instance.Translate("这会导出备份后删除这些开机任务与自启项。"),
+        "termsrv-dll-tampered" => I18nService.Instance.Translate("这会先用工具留下的备份还原 termsrv.dll（还原后会复核，不通过自动回滚）；没有可用备份时，在服务停止的状态下用 sfc 只修这一个文件，几秒到几十秒、当场生效、不需要重启；连它都修不好才会弹出命令行窗口跑完整扫描（5~15 分钟）。"),
+        _ => I18nService.Instance.Translate("这会修改系统设置。")
     };
 
     /// <summary>是否正在修复（用于禁用按钮）。</summary>

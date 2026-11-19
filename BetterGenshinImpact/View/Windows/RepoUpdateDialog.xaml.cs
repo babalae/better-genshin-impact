@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Service.I18n;
 using MessageBoxResult = Wpf.Ui.Controls.MessageBoxResult;
 
 namespace BetterGenshinImpact.View.Windows;
@@ -27,8 +28,8 @@ public partial class RepoUpdateDialog : Wpf.Ui.Controls.FluentWindow
         InitializeComponent();
 
         // 配置窗口属性
-        Title = "仓库更新提示";
-        MessageTextBlock.Text = $"脚本仓库已经 {daysSinceUpdate} 天未更新\n\n温馨提示：\n脚本内容跟随仓库版本，旧版仓库会订阅到旧版脚本。\n更新仓库后需要重新订阅脚本，以更新脚本内容。\n\n是否立即更新？";
+        Title = I18nService.Instance.Translate("仓库更新提示");
+        MessageTextBlock.Text = string.Format(I18nService.Instance.Translate("脚本仓库已经 {0} 天未更新\n\n温馨提示：\n脚本内容跟随仓库版本，旧版仓库会订阅到旧版脚本。\n更新仓库后需要重新订阅脚本，以更新脚本内容。\n\n是否立即更新？"), daysSinceUpdate);
         Owner = Application.Current.MainWindow;
 
         // 注册事件
@@ -46,7 +47,7 @@ public partial class RepoUpdateDialog : Wpf.Ui.Controls.FluentWindow
     {
         // 计算倒计时秒数：30 天为 5 秒，超过 30 天每多 2 天增加 1 秒
         _remainingSeconds = 5 + (_daysSinceUpdate - 30) / 2;
-        SecondaryButton.Content = $"直接打开 ({_remainingSeconds}s)";
+        SecondaryButton.Content = string.Format(I18nService.Instance.Translate("直接打开 ({0}s)"), _remainingSeconds);
         StartDialogTimer();
     }
 
@@ -99,12 +100,12 @@ public partial class RepoUpdateDialog : Wpf.Ui.Controls.FluentWindow
 
         if (_remainingSeconds > 0)
         {
-            SecondaryButton.Content = $"直接打开 ({_remainingSeconds}s)";
+            SecondaryButton.Content = string.Format(I18nService.Instance.Translate("直接打开 ({0}s)"), _remainingSeconds);
         }
         else
         {
             // 倒计时结束，启用按钮
-            SecondaryButton.Content = "直接打开";
+            SecondaryButton.Content = I18nService.Instance.Translate("直接打开");
             SecondaryButton.IsEnabled = true;
             _dialogTimer?.Stop();
         }

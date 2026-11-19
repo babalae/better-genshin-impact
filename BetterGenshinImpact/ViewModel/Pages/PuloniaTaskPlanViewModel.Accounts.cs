@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -38,8 +39,8 @@ public partial class PuloniaTaskPlanViewModel
             document.ApplyMutation(() => document.Plan.AccountId = accountId, document.SelectedNode);
             NotifyRunAccountChanged();
             StatusMessage = accountId is null
-                ? "已改为跟随当前账户，将自动保存。"
-                : "运行账户已更改，运行前会切换到该账户并核验 UID；将自动保存。";
+                ? I18nService.Instance.Translate("已改为跟随当前账户，将自动保存。")
+                : I18nService.Instance.Translate("运行账户已更改，运行前会切换到该账户并核验 UID；将自动保存。");
         }
     }
 
@@ -79,7 +80,7 @@ public partial class PuloniaTaskPlanViewModel
         }
         catch (Exception ex)
         {
-            StatusMessage = "账户目录读取失败，运行账户无法显示：" + ex.Message;
+            StatusMessage = I18nService.Instance.Translate("账户目录读取失败，运行账户无法显示：") + ex.Message;
         }
         NotifyRunAccountChanged();
     }

@@ -7,6 +7,7 @@ using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Resin;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json.Linq;
@@ -51,10 +52,10 @@ public sealed partial class ResinPlanSubTaskSettingsViewModel : ObservableObject
         _spec = spec;
         _schema = schema;
         _original = (JObject)parameters.DeepClone();
-        Title = $"体力计划 · {spec.DisplayName}设置";
+        Title = string.Format(I18nService.Instance.Translate("体力计划 · {0}设置"), I18nService.Instance.Translate(spec.DisplayName));
         Description = spec.ResinCapability is null
-            ? "树脂使用、秘境选择与奖励识别由体力计划决定，这里不显示；未修改的设置保持原值。"
-            : "讨伐次数按下方树脂使用设置（指定次数或刷至耗尽），并受体力用量限制；体力计划只使用原粹树脂。未修改的设置保持原值。";
+            ? I18nService.Instance.Translate("树脂使用、秘境选择与奖励识别由体力计划决定，这里不显示；未修改的设置保持原值。")
+            : I18nService.Instance.Translate("讨伐次数按下方树脂使用设置（指定次数或刷至耗尽），并受体力用量限制；体力计划只使用原粹树脂。未修改的设置保持原值。");
 
         // 1. 只展示用户可以决定的字段
         var visible = (JObject)schema.DeepClone();

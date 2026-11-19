@@ -1,6 +1,7 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaTaskRunPreviewWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="{Binding Title, Mode=OneWay}"
@@ -63,7 +64,7 @@
                 <TextBlock Margin="0,0,8,0"
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="CD 按账户" />
+                           Text="{i18n:T 'CD 按账户'}" />
                 <ComboBox MinWidth="140"
                           MaxWidth="240"
                           VerticalAlignment="Center"
@@ -71,7 +72,7 @@
                           SelectedValuePath="Key"
                           ItemsSource="{Binding AccountOptions, Mode=OneWay}"
                           SelectedValue="{Binding SelectedAccountId, Mode=TwoWay}"
-                          ToolTip="按这个账户的完成记录预测本次会执行还是因路线 CD 跳过。改选只影响本窗口，开始执行后仍按计划的运行账户判定。"
+                          ToolTip="{i18n:T '按这个账户的完成记录预测本次会执行还是因路线 CD 跳过。改选只影响本窗口，开始执行后仍按计划的运行账户判定。'}"
                           AutomationProperties.Name="CD 按账户" />
                 <TextBlock Margin="8,0,0,0"
                            VerticalAlignment="Center"
@@ -83,7 +84,7 @@
             <TextBlock FontWeight="SemiBold" Text="{Binding SummaryText, Mode=OneWay}" TextWrapping="Wrap" />
             <TextBlock Margin="0,4,0,0"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       Text="按当前时间预测；运行到每个节点时会重新判定，执行失败和取消不记录路线 CD。"
+                       Text="{i18n:T '按当前时间预测；运行到每个节点时会重新判定，执行失败和取消不记录路线 CD。'}"
                        TextWrapping="Wrap" />
             <Border Margin="0,8,0,0"
                     Padding="10,6"
@@ -92,7 +93,7 @@
                     Visibility="{Binding HasError, Mode=OneWay, Converter={StaticResource PreviewBoolVisibility}}">
                 <TextBlock Text="{Binding ErrorText, Mode=OneWay}" TextWrapping="Wrap" />
             </Border>
-            <CheckBox Margin="0,8,0,0" Content="只看会跳过的项" IsChecked="{Binding ShowSkippedOnly, Mode=TwoWay}" />
+            <CheckBox Margin="0,8,0,0" Content="{i18n:T 只看会跳过的项}" IsChecked="{Binding ShowSkippedOnly, Mode=TwoWay}" />
         </StackPanel>
 
         <Grid Grid.Row="2" Margin="24,0,24,12">
@@ -156,19 +157,19 @@
                 <StackPanel Orientation="Horizontal">
                     <ui:Button Command="{Binding ClearSelectedCommand, Mode=OneWay}"
                                CommandParameter="{Binding SelectedItems, ElementName=PreviewList}"
-                               Content="清除选中项的 CD 记录"
-                               ToolTip="清除后这些路线本次会照常执行；运行历史中的成功记录不受影响" />
-                    <ui:Button Margin="8,0,0,0" Command="{Binding LoadCommand, Mode=OneWay}" Content="刷新" />
+                               Content="{i18n:T '清除选中项的 CD 记录'}"
+                               ToolTip="{i18n:T 清除后这些路线本次会照常执行；运行历史中的成功记录不受影响}" />
+                    <ui:Button Margin="8,0,0,0" Command="{Binding LoadCommand, Mode=OneWay}" Content="{i18n:T 刷新}" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <ui:Button MinWidth="96"
                                Appearance="Primary"
                                Command="{Binding StartCommand, Mode=OneWay}"
-                               Content="开始执行" />
+                               Content="{i18n:T 开始执行}" />
                     <ui:Button MinWidth="96"
                                Margin="8,0,0,0"
                                Click="OnCloseClick"
-                               Content="关闭"
+                               Content="{i18n:T 关闭}"
                                IsCancel="True" />
                 </StackPanel>
             </Grid>

@@ -9,6 +9,7 @@ using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Core.Script.Repositories;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
@@ -78,11 +79,12 @@ public static class PuloniaTaskResourcePreviewLoader
     private static async Task<PuloniaTaskResourcePreview> LoadCoreAsync(PuloniaTaskResourceDescriptor resource,
         string? taskType, ScriptPreviewLease? lease, bool includeSettingsPage, CancellationToken ct)
     {
-        var header = $"相对路径：{resource.Resource?.RelativePath ?? resource.RelativePath}\n最后修改：{resource.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
+        var header = string.Format(I18nService.Instance.Translate("相对路径：{0}"), resource.Resource?.RelativePath ?? resource.RelativePath)
+                     + "\n" + string.Format(I18nService.Instance.Translate("最后修改：{0}"), resource.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss"));
         if (resource.IsDirectory && taskType is "pathing" or "keymouse")
-            header += $"\n包含资源：{resource.ChildResourceCount} 项";
+            header += "\n" + string.Format(I18nService.Instance.Translate("包含资源：{0} 项"), resource.ChildResourceCount);
         else if (!resource.IsDirectory && (resource.Resource is null || resource.Size > 0))
-            header += $"\n文件大小：{FormatFileSize(resource.Size)}";
+            header += "\n" + string.Format(I18nService.Instance.Translate("文件大小：{0}"), FormatFileSize(resource.Size));
         if (taskType != "javascript")
             return new PuloniaTaskResourcePreview(header, null);
 
@@ -98,7 +100,7 @@ public static class PuloniaTaskResourcePreviewLoader
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException
                                    or NotSupportedException)
         {
-            settingsError = "无法解析脚本设置：" + ex.Message;
+            settingsError = string.Format(I18nService.Instance.Translate("无法解析脚本设置：{0}"), ex.Message);
         }
 
         // HTML 设置页只在打开设置时解析；仓库资源按仓库与路径确定主机名，每次预览目录不同也能保留网页存储
@@ -120,7 +122,7 @@ public static class PuloniaTaskResourcePreviewLoader
 
         var readmePath = Path.Combine(resource.FullPath, "README.md");
         var markdownFilePath = File.Exists(readmePath) ? readmePath : null;
-        var text = markdownFilePath is null ? "该脚本未提供 README.md。" : string.Empty;
+        var text = markdownFilePath is null ? I18nService.Instance.Translate("该脚本未提供 README.md。") : string.Empty;
         return new PuloniaTaskResourcePreview(text, manifest.Name, markdownFilePath, settingItems, settingsError, lease,
             hasSettingsHtml, settingsPage, settingsPageError);
     }

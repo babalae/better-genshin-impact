@@ -14,11 +14,13 @@ using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -158,6 +160,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
         _pendingBringToFront = false;
         ResetPageCloseRecognition();
 
+        // 游戏语言可能在两次启用之间被修改，每次启用时重新确定关键词翻译
+        _keywordLocalizer = CreateKeywordLocalizer();
+        _dailyKeywords = [_keywordLocalizer("每日"), _keywordLocalizer("委托")];
+        _expeditionKeywords = [_keywordLocalizer("探索"), _keywordLocalizer("派遣")];
+
         _defaultPauseList = [];
         _pauseList = [];
         _selectList = [];
@@ -173,6 +180,52 @@ public partial class AutoSkipTrigger : ITaskTrigger
         ResetPageCloseRecognition();
     }
 
+    /// <summary>
+    /// 内置关键词的翻译函数。关键词文件和代码中的关键词都以简体中文编写，
+    /// 非中文游戏语言通过 AutoSkipTrigger.{语言}.resx 映射为游戏内文本；缺少翻译时保留原文
+    /// </summary>
+    private Func<string, string> _keywordLocalizer = static keyword => keyword;
+
+    /// <summary>
+    /// 每日委托选项关键词（已按游戏语言翻译）
+    /// </summary>
+    private string[] _dailyKeywords = ["每日", "委托"];
+
+    /// <summary>
+    /// 探索派遣选项关键词（已按游戏语言翻译）
+    /// </summary>
+    private string[] _expeditionKeywords = ["探索", "派遣"];
+
+    /// <summary>
+    /// 按当前游戏语言创建关键词翻译函数，中文游戏语言直接使用原文
+    /// </summary>
+    private Func<string, string> CreateKeywordLocalizer()
+    {
+        var cultureName = _allConfig.OtherConfig.GameCultureInfoName;
+        if (cultureName.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+        {
+            return static keyword => keyword;
+        }
+
+        var localizer = App.GetService<IStringLocalizer<AutoSkipTrigger>>();
+        if (localizer == null)
+        {
+            return static keyword => keyword;
+        }
+
+        var culture = new CultureInfo(cultureName);
+        return keyword => localizer.WithCultureGet(culture, keyword);
+    }
+
+    /// <summary>
+    /// 翻译关键词列表，并去掉翻译后重复的项
+    /// </summary>
+    /// <param name="keywords">关键词文件中读取的列表</param>
+    private List<string> LocalizeKeywords(List<string>? keywords)
+    {
+        return keywords?.Select(_keywordLocalizer).Distinct().ToList() ?? [];
+    }
+
     private void InitKeyword()
     {
         try
@@ -180,7 +233,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             var defaultPauseListJson = Global.ReadAllTextIfExist(@"Assets\Config\Skip\default_pause_options.json");
             if (!string.IsNullOrEmpty(defaultPauseListJson))
             {
-                _defaultPauseList = JsonSerializer.Deserialize<List<string>>(defaultPauseListJson, ConfigService.JsonOptions) ?? [];
+                _defaultPauseList = LocalizeKeywords(JsonSerializer.Deserialize<List<string>>(defaultPauseListJson, ConfigService.JsonOptions));
             }
         }
         catch (Exception e)
@@ -195,7 +248,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             var pauseListJson = Global.ReadAllTextIfExist(@"Assets\Config\Skip\pause_options.json");
             if (!string.IsNullOrEmpty(pauseListJson))
             {
-                _pauseList = JsonSerializer.Deserialize<List<string>>(pauseListJson, ConfigService.JsonOptions) ?? [];
+                _pauseList = LocalizeKeywords(JsonSerializer.Deserialize<List<string>>(pauseListJson, ConfigService.JsonOptions));
             }
         }
         catch (Exception e)
@@ -209,7 +262,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             var selectListJson = Global.ReadAllTextIfExist(@"Assets\Config\Skip\select_options.json");
             if (!string.IsNullOrEmpty(selectListJson))
             {
-                _selectList = JsonSerializer.Deserialize<List<string>>(selectListJson, ConfigService.JsonOptions) ?? [];
+                _selectList = LocalizeKeywords(JsonSerializer.Deserialize<List<string>>(selectListJson, ConfigService.JsonOptions));
             }
         }
         catch (Exception e)
@@ -802,7 +855,9 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         var textMat = item.ToImageRegion().SrcMat;
                         if (IsOrangeOption(textMat))
                         {
-                            if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains("每日") || item.Text.Contains("委托")))
+                            var isDailyOption = _dailyKeywords.Any(item.Text.Contains);
+                            var isExpeditionOption = _expeditionKeywords.Any(item.Text.Contains);
+                            if (_config.AutoGetDailyRewardsEnabled && isDailyOption)
                             {
                                 if (!ClickOcrRegion(item, "每日委托"))
                                 {
@@ -821,7 +876,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                                 
                                 _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
                             }
-                            else if (_config.AutoReExploreEnabled && (item.Text.Contains("探索") || item.Text.Contains("派遣")))
+                            else if (_config.AutoReExploreEnabled && isExpeditionOption)
                             {
                                 if (!ClickOcrRegion(item, "探索派遣"))
                                 {
@@ -831,10 +886,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                                 Thread.Sleep(800); // 等待探索派遣界面打开
                                 new OneKeyExpeditionTask(_runtime).Run();
                             }
-                            else if (!item.Text.Contains("每日")
-                                && !item.Text.Contains("委托")
-                                && !item.Text.Contains("探索")
-                                && !item.Text.Contains("派遣"))
+                            else if (!isDailyOption && !isExpeditionOption)
                             {
                                 if (!ClickOcrRegion(item))
                                 {

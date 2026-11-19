@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Infrastructure.WebView;
 
@@ -48,39 +49,48 @@ public static class WebViewProfiles
     /// <summary>
     /// 软件内网页：更新日志、脚本仓库、地图路径编辑器
     /// </summary>
-    public static readonly WebViewProfile Default = new(WebViewEnvironments.App, WebViewProfile.DefaultProfileName, "软件内网页 · 网页缓存")
+    public static readonly WebViewProfile Default = new(WebViewEnvironments.App, WebViewProfile.DefaultProfileName, I18nService.Key("软件内网页 · 网页缓存"))
     {
-        Description = "更新日志、脚本仓库、地图编辑器等网页的缓存，保留网页登录与设置",
+        Description = I18nService.Key("更新日志、脚本仓库、地图编辑器等网页的缓存，保留网页登录与设置"),
     };
 
     /// <summary>
     /// 脚本 HTML 遮罩，与其他网页隔离
     /// </summary>
-    public static readonly WebViewProfile HtmlMask = new(WebViewEnvironments.App, "HtmlMask", "软件内网页 · 脚本遮罩数据")
+    public static readonly WebViewProfile HtmlMask = new(WebViewEnvironments.App, "HtmlMask", I18nService.Key("软件内网页 · 脚本遮罩数据"))
     {
-        Description = "脚本 HTML 遮罩网页的缓存和网页数据",
+        Description = I18nService.Key("脚本 HTML 遮罩网页的缓存和网页数据"),
         ClearsAllData = true,
     };
 
     /// <summary>
     /// 悬浮小窗网页：清理时只清缓存，保留 B 站等网站的登录
     /// </summary>
-    public static readonly WebViewProfile Guide = new(WebViewEnvironments.Guide, WebViewProfile.DefaultProfileName, "悬浮小窗 · 网页缓存")
+    public static readonly WebViewProfile Guide = new(WebViewEnvironments.Guide, WebViewProfile.DefaultProfileName, I18nService.Key("悬浮小窗 · 网页缓存"))
     {
-        Description = "悬浮小窗中网页的缓存，保留 B 站等网站的登录和网页设置",
+        Description = I18nService.Key("悬浮小窗中网页的缓存，保留 B 站等网站的登录和网页设置"),
     };
 
     /// <summary>
     /// 脚本 HTML 设置页，与其他网页隔离；每个脚本使用独立主机名，网页存储互不可见
     /// </summary>
-    public static readonly WebViewProfile ScriptSettings = new(WebViewEnvironments.App, "ScriptSettings", "软件内网页 · 脚本设置页数据")
+    public static readonly WebViewProfile ScriptSettings = new(WebViewEnvironments.App, "ScriptSettings", I18nService.Key("软件内网页 · 脚本设置页数据"))
     {
-        Description = "脚本 HTML 设置页的缓存和网页数据，不含脚本设置值",
+        Description = I18nService.Key("脚本 HTML 设置页的缓存和网页数据，不含脚本设置值"),
+        ClearsAllData = true,
+    };
+
+    /// <summary>
+    /// HoYoLAB 地图登录，Cookie 与其他网页隔离
+    /// </summary>
+    public static readonly WebViewProfile HoYoLab = new(WebViewEnvironments.App, "HoYoLab", I18nService.Key("软件内网页 · HoYoLAB 登录"))
+    {
+        Description = I18nService.Key("HoYoLAB 地图的登录状态（Cookie）"),
         ClearsAllData = true,
     };
 
     /// <summary>
     /// 全部 Profile，供存储区域登记
     /// </summary>
-    public static IReadOnlyList<WebViewProfile> All { get; } = [Default, HtmlMask, Guide, ScriptSettings];
+    public static IReadOnlyList<WebViewProfile> All { get; } = [Default, HtmlMask, Guide, ScriptSettings, HoYoLab];
 }

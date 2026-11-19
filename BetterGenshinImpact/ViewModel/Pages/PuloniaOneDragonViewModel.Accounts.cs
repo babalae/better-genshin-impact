@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -44,8 +45,8 @@ public partial class PuloniaOneDragonViewModel
             document.ApplyMutation(() => document.Plan.AccountId = accountId, document.SelectedNode);
             NotifyAccountBindingChanged();
             AccountMessage = accountId is null
-                ? "已改为跟随当前账户，将随当前配置自动保存。"
-                : "运行账户已更改，将随当前配置自动保存。";
+                ? I18nService.Instance.Translate("已改为跟随当前账户，将随当前配置自动保存。")
+                : I18nService.Instance.Translate("运行账户已更改，将随当前配置自动保存。");
         }
     }
 

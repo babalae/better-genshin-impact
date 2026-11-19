@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages.View;
@@ -13,12 +14,12 @@ public partial class InferenceBackendOptionViewModel(InferenceBackend backend) :
     public string Name => Backend == InferenceBackend.Ncnn ? "ncnn" : "ONNX Runtime";
 
     public string Description => Backend == InferenceBackend.Ncnn
-        ? "可用 Vulkan 显卡或原生 CPU 执行转换后的模型，速度稳定，不受 ONNX Runtime 调度影响。"
-        : "按设备选择 CPU、DirectML、OpenVINO 或 CUDA，兼容性最好，可调整线程与缓存。";
+        ? I18nService.Instance.Translate("可用 Vulkan 显卡或原生 CPU 执行转换后的模型，速度稳定，不受 ONNX Runtime 调度影响。")
+        : I18nService.Instance.Translate("按设备选择 CPU、DirectML、OpenVINO 或 CUDA，兼容性最好，可调整线程与缓存。");
 
     public string Tagline => Backend == InferenceBackend.Ncnn
-        ? "计算模式：Vulkan 显卡 / CPU"
-        : "按显卡/处理器挑选执行设备";
+        ? I18nService.Instance.Translate("计算模式：Vulkan 显卡 / CPU")
+        : I18nService.Instance.Translate("按显卡/处理器挑选执行设备");
 
     [ObservableProperty] private bool _isCurrent;
     [ObservableProperty] private bool _isBlocked;

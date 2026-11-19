@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Pulonia.Models;
 
@@ -42,9 +43,10 @@ public static class PuloniaInstanceKey
     /// <returns>界面显示名称</returns>
     public static string Describe(string instanceKey) => instanceKey switch
     {
-        Primary => "主实例",
-        ChildSession => "桌面分身",
-        _ when instanceKey.StartsWith(WebViewPrefix, StringComparison.Ordinal) => "云原神 · " + instanceKey[WebViewPrefix.Length..],
+        Primary => I18nService.Instance.Translate("主实例"),
+        ChildSession => I18nService.Instance.Translate("桌面分身"),
+        _ when instanceKey.StartsWith(WebViewPrefix, StringComparison.Ordinal)
+            => string.Format(I18nService.Instance.Translate("云原神 · {0}"), instanceKey[WebViewPrefix.Length..]),
         _ => instanceKey
     };
 
@@ -66,9 +68,10 @@ public static class PuloniaInstanceKey
     /// <returns>界面显示名称</returns>
     public static string DescribeDirectory(string directoryName) => directoryName switch
     {
-        Primary => "主实例",
-        ChildSession => "桌面分身",
-        _ when directoryName.StartsWith("webview-", StringComparison.Ordinal) => "云原神 · " + directoryName["webview-".Length..],
+        Primary => I18nService.Instance.Translate("主实例"),
+        ChildSession => I18nService.Instance.Translate("桌面分身"),
+        _ when directoryName.StartsWith("webview-", StringComparison.Ordinal)
+            => string.Format(I18nService.Instance.Translate("云原神 · {0}"), directoryName["webview-".Length..]),
         _ => directoryName
     };
 

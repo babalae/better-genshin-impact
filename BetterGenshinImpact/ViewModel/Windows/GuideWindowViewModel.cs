@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Guide;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -197,28 +198,28 @@ public partial class GuideWindowViewModel : ObservableObject, IViewModel
     #region 按钮提示（带快捷键）
 
     /// <summary>播放按钮提示</summary>
-    public string PlayToolTip => WithHotkey("播放/暂停", _hotKeyConfig.GuidePlayPauseHotkey);
+    public string PlayToolTip => WithHotkey(I18nService.Instance.Translate("播放/暂停"), _hotKeyConfig.GuidePlayPauseHotkey);
 
     /// <summary>倍速按钮提示</summary>
-    public string RateToolTip => WithHotkey("倍速（点击选择，滚轮调整）", _hotKeyConfig.GuideSpeedUpHotkey);
+    public string RateToolTip => WithHotkey(I18nService.Instance.Translate("倍速（点击选择，滚轮调整）"), _hotKeyConfig.GuideSpeedUpHotkey);
 
     /// <summary>音量按钮提示</summary>
-    public string VolumeToolTip => "静音（滚轮调整音量）";
+    public string VolumeToolTip => I18nService.Instance.Translate("静音（滚轮调整音量）");
 
     /// <summary>字幕按钮提示</summary>
-    public string SubtitleToolTip => WithHotkey("字幕浮窗", _hotKeyConfig.GuideSubtitleHotkey);
+    public string SubtitleToolTip => WithHotkey(I18nService.Instance.Translate("字幕浮窗"), _hotKeyConfig.GuideSubtitleHotkey);
 
     /// <summary>沉浸按钮提示</summary>
-    public string ImmersiveToolTip => "沉浸模式（B 站网页全屏）";
+    public string ImmersiveToolTip => I18nService.Instance.Translate("沉浸模式（B 站网页全屏）");
 
     /// <summary>交互按钮提示</summary>
-    public string InteractionToolTip => "交互模式：可以在网页中输入文字，移开鼠标后自动回到游戏";
+    public string InteractionToolTip => I18nService.Instance.Translate("交互模式：可以在网页中输入文字，移开鼠标后自动回到游戏");
 
     /// <summary>穿透按钮提示</summary>
-    public string ClickThroughToolTip => WithHotkey("鼠标穿透：点击直接落到游戏上", _hotKeyConfig.GuideClickThroughHotkey);
+    public string ClickThroughToolTip => WithHotkey(I18nService.Instance.Translate("鼠标穿透：点击直接落到游戏上"), _hotKeyConfig.GuideClickThroughHotkey);
 
     /// <summary>隐藏按钮提示</summary>
-    public string HideToolTip => WithHotkey("隐藏小窗（保留网页）", _hotKeyConfig.GuideToggleHotkey);
+    public string HideToolTip => WithHotkey(I18nService.Instance.Translate("隐藏小窗（保留网页）"), _hotKeyConfig.GuideToggleHotkey);
 
     /// <summary>
     /// 提示文本后附上快捷键
@@ -615,11 +616,11 @@ public partial class GuideWindowViewModel : ObservableObject, IViewModel
         try
         {
             Clipboard.SetText(GuideLinkResolver.Normalize(State.Url));
-            State.ShowOsd("已复制链接");
+            State.ShowOsd(I18nService.Instance.Translate("已复制链接"));
         }
         catch (Exception)
         {
-            State.ShowOsd("复制失败，剪贴板被其他程序占用");
+            State.ShowOsd(I18nService.Instance.Translate("复制失败，剪贴板被其他程序占用"));
         }
     }
 
@@ -640,7 +641,7 @@ public partial class GuideWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception)
         {
-            State.ShowOsd("无法打开系统浏览器");
+            State.ShowOsd(I18nService.Instance.Translate("无法打开系统浏览器"));
         }
     }
 
@@ -890,7 +891,7 @@ public partial class GuideWindowViewModel : ObservableObject, IViewModel
 
         if (FavoriteOptions.Count == 0)
         {
-            FavoriteOptions.Add(new GuideMenuOption("暂无收藏，点 ★ 收藏当前视频", null, null) { IsEnabled = false });
+            FavoriteOptions.Add(new GuideMenuOption(I18nService.Instance.Translate("暂无收藏，点 ★ 收藏当前视频"), null, null) { IsEnabled = false });
         }
 
         HistoryOptions.Clear();
@@ -905,7 +906,7 @@ public partial class GuideWindowViewModel : ObservableObject, IViewModel
 
         if (HistoryOptions.Count == 0)
         {
-            HistoryOptions.Add(new GuideMenuOption("暂无观看记录", null, null) { IsEnabled = false });
+            HistoryOptions.Add(new GuideMenuOption(I18nService.Instance.Translate("暂无观看记录"), null, null) { IsEnabled = false });
         }
     }
 
@@ -920,7 +921,10 @@ public partial class GuideWindowViewModel : ObservableObject, IViewModel
         for (var i = 0; i < screens.Length; i++)
         {
             var screen = screens[i];
-            var name = $"显示器 {i + 1}（{screen.Bounds.Width}×{screen.Bounds.Height}{(screen.Primary ? "，主显示器" : string.Empty)}）";
+            var name = string.Format(screen.Primary
+                    ? I18nService.Instance.Translate("显示器 {0}（{1}×{2}，主显示器）")
+                    : I18nService.Instance.Translate("显示器 {0}（{1}×{2}）"),
+                i + 1, screen.Bounds.Width, screen.Bounds.Height);
             MonitorOptions.Add(new GuideMenuOption(name, SelectMonitorCommand, i));
         }
 
@@ -948,12 +952,12 @@ public partial class GuideWindowViewModel : ObservableObject, IViewModel
 
         if (record.Finished)
         {
-            return "已看完";
+            return I18nService.Instance.Translate("已看完");
         }
 
         return record.Duration > 0
-            ? $"看到 {GuideWindowState.FormatTime(record.Position)} / {GuideWindowState.FormatTime(record.Duration)}"
-            : $"看到 {GuideWindowState.FormatTime(record.Position)}";
+            ? string.Format(I18nService.Instance.Translate("看到 {0} / {1}"), GuideWindowState.FormatTime(record.Position), GuideWindowState.FormatTime(record.Duration))
+            : string.Format(I18nService.Instance.Translate("看到 {0}"), GuideWindowState.FormatTime(record.Position));
     }
 
     /// <summary>

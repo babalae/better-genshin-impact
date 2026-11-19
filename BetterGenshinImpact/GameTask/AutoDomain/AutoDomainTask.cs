@@ -1601,6 +1601,9 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
         var textListInPrompt = ra2.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
         var shortage = textListInPrompt.Any(t => Regex.IsMatch(t.Text, insufficientCountString, RegexOptions.IgnoreCase)
             || Regex.IsMatch(t.Text, replenishResinString, RegexOptions.IgnoreCase));
+        // 诊断：记录弹框识别结果与文字，便于排查非中文游戏语言下领奖失败的原因
+        Logger.LogInformation("自动秘境：领奖弹框识别 {Prompt}，树脂不足提示 {Shortage}，文字：{Texts}",
+            chooseResinPrompt, shortage, string.Join(" | ", textListInPrompt.Select(t => t.Text)));
         if (chooseResinPrompt)
         {
             using var capture = _runtime.CaptureToRectArea();
@@ -1611,6 +1614,8 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
             {
                 // “补充原粹树脂”只说明原粹不足；其他行仍有使用按钮时继续由选择器筛选。
                 _stopReason = ResinExecutionRules.NoCandidateReason(offered, shortage);
+                Logger.LogWarning("自动秘境：没有可用的树脂选项（识别到：{Offered}），停止领奖",
+                    string.Join(",", offered.Select(ResinUsageText.DisplayName)));
                 await ExitDomain();
                 return false;
             }
@@ -1681,6 +1686,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
             // 如果没有选择树脂的提示，说明只有原粹树脂；保持旧流程，实际消耗无法识别时按 20。
             if (shortage)
             {
+                Logger.LogWarning("自动秘境：未识别到树脂选择弹框，但检测到树脂不足提示，停止领奖");
                 _stopReason = ResinStopReason.ResinExhausted;
                 await ExitDomain();
                 return false;

@@ -9,6 +9,7 @@ using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Microsoft.Extensions.DependencyInjection;
@@ -100,7 +101,7 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
         if (!_registry.TryGet(ToTaskId(task.TaskType), out var descriptor)
             || !_definitions.ContainsKey(task.TaskType))
         {
-            return PuloniaTaskOutcome.Failure($"未注册独立任务 {task.TaskType}。");
+            return PuloniaTaskOutcome.Failure(string.Format(I18nService.Instance.Translate("未注册独立任务 {0}。"), task.TaskType));
         }
 
         // 1. 任务只使用本节点租约记录的运行环境；它已停止时当前节点失败
@@ -121,13 +122,13 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
         {
             // 领奖次数属于运行账户的进度（accounts/<账户 ID>/boss-rewards.json）；游戏节点的运行一定已确定运行账户。
             if (context.AccountId is not { } accountId)
-                return PuloniaTaskOutcome.Failure("本次运行没有确定运行账户，无法按账户记录首领领奖次数，未开始讨伐。");
+                return PuloniaTaskOutcome.Failure(I18nService.Instance.Translate("本次运行没有确定运行账户，无法按账户记录首领领奖次数，未开始讨伐。"));
             var accounts = _services.GetRequiredService<IPuloniaAccountService>();
             var completed = await accounts.GetBossRewardCountAsync(accountId, task.PlanId, task.SourceTaskId, resetId, ct)
                 .ConfigureAwait(false);
             if (!ApplyBossRewardLimit(boss, totalLimit, completed))
                 return new PuloniaTaskOutcome(PuloniaTaskOutcomeKind.Skipped,
-                    $"首领累计成功领奖已达上限（{completed}/{totalLimit}）。");
+                    string.Format(I18nService.Instance.Translate("首领累计成功领奖已达上限（{0}/{1}）。"), completed, totalLimit));
             // 回调来自任务线程，每次成功领奖立即持久化；取消时也必须保留刚刚确认的次数。
             boss.RewardClaimedCallback = () => accounts.IncrementBossRewardCountAsync(accountId, task.PlanId, task.SourceTaskId,
                 resetId).GetAwaiter().GetResult();
@@ -194,6 +195,11 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
     }
 
     /// <summary>
+    /// 描述符未提供说明时使用的默认说明格式（中文原文，{0} 为任务名）；界面展示时再按当前语言翻译。
+    /// </summary>
+    internal static readonly string FallbackDescriptionFormat = I18nService.Key("执行独立任务“{0}”。");
+
+    /// <summary>
     /// 由独立任务描述符建立能力定义：默认参数来自参数类的无参构造，Schema 按参数 JSON 合同生成。
     /// </summary>
     /// <param name="descriptor">独立任务描述符。</param>
@@ -221,7 +227,7 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
             TaskType = ToTaskType(descriptor.TaskId),
             DisplayName = descriptor.DisplayName,
             Description = string.IsNullOrWhiteSpace(descriptor.Description)
-                ? $"执行独立任务“{descriptor.DisplayName}”。"
+                ? string.Format(FallbackDescriptionFormat, descriptor.DisplayName)
                 : descriptor.Description,
             RequiresGameSession = true,
             DefaultParameters = defaults,

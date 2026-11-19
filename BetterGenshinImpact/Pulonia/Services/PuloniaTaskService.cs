@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.I18n;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
@@ -367,7 +368,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             if (state.Status == PuloniaTaskRunStatus.Queued)
             {
                 state.Status = PuloniaTaskRunStatus.Cancelled;
-                state.Message = "排队请求已取消，未启动任何执行器。";
+                state.Message = I18nService.Instance.Translate("排队请求已取消，未启动任何执行器。");
                 state.FinishedAt = DateTimeOffset.UtcNow;
                 completeQueuedCancellation = true;
             }
@@ -480,7 +481,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
 
         // 1. 当前状态：正式文件损坏时从备份回退
         if (await _runState.LoadAsync(ct).ConfigureAwait(false))
-            Notify("运行状态已从备份回退；回退时间段内的游戏操作需要核验。");
+            Notify(I18nService.Instance.Translate("运行状态已从备份回退；回退时间段内的游戏操作需要核验。"));
 
         // 2. 历史：逐个读取，坏文件跳过并提示；常驻内存的记录去掉快照正文，快照按需读取
         var history = await _store.ListHistoryWithFailuresAsync(ct).ConfigureAwait(false);
@@ -493,7 +494,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         {
             foreach (var failure in history.Failures)
                 _logger.LogWarning("跳过无法读取的 Pulonia 运行历史 {Path}：{Message}", failure.Path, failure.Message);
-            Notify($"有 {history.Failures.Count} 份运行历史无法读取，已跳过（文件仍保留，修复后重启即可查看）："
+            Notify(string.Format(I18nService.Instance.Translate("有 {0} 份运行历史无法读取，已跳过（文件仍保留，修复后重启即可查看）："), history.Failures.Count)
                         + string.Join("；", history.Failures.Take(MaxListedHistoryFailures))
                         + (history.Failures.Count > MaxListedHistoryFailures ? "……" : "。"));
         }
@@ -512,7 +513,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         {
             var interrupted = active.WithSnapshotJson(active.SnapshotJson);
             interrupted.Status = PuloniaTaskRunStatus.Interrupted;
-            interrupted.Message = "应用在运行期间中断，可沿用原快照继续未完成节点。";
+            interrupted.Message = I18nService.Instance.Translate("应用在运行期间中断，可沿用原快照继续未完成节点。");
             interrupted.FinishedAt = DateTimeOffset.UtcNow;
             // 当前地址只在内存中更新，落盘的值可能已过时，不作为中断位置展示。
             interrupted.CurrentTaskAddress = null;
@@ -520,7 +521,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         }
         // 之前未能归档的中断运行仍在待归档中，这里一并提示。
         if (_runState.Current.PendingArchives.Any(item => item.Status == PuloniaTaskRunStatus.Interrupted))
-            Notify("检测到上次未正常结束的运行，已保留为可续跑历史。");
+            Notify(I18nService.Instance.Translate("检测到上次未正常结束的运行，已保留为可续跑历史。"));
 
         // 5. 归档待归档运行；单个失败保留在待归档中，下次启动重试
         var archived = new HashSet<string>(StringComparer.Ordinal);
@@ -533,7 +534,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogWarning(ex, "Pulonia 运行 {RunId} 归档失败，保留在待归档状态", record.RunId);
-                Notify($"运行 {record.RunId} 无法写入历史，已保留在运行状态中，下次启动重试：{ex.Message}");
+                Notify(string.Format(I18nService.Instance.Translate("运行 {0} 无法写入历史，已保留在运行状态中，下次启动重试：{1}"), record.RunId, ex.Message));
                 continue;
             }
             archived.Add(record.RunId);
@@ -645,7 +646,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 return;
             state.Status = PuloniaTaskRunStatus.Running;
             state.StartedAt = DateTimeOffset.UtcNow;
-            state.Message = "正在开始执行。";
+            state.Message = I18nService.Instance.Translate("正在开始执行。");
         }
         try
         {
@@ -657,7 +658,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             lock (_runsGate)
             {
                 state.Status = PuloniaTaskRunStatus.NeedsAttention;
-                state.Message = "无法持久化活动运行，未启动任务执行器：" + ex.Message;
+                state.Message = I18nService.Instance.Translate("无法持久化活动运行，未启动任务执行器：") + ex.Message;
                 state.FinishedAt = DateTimeOffset.UtcNow;
             }
             await CompleteStateAsync(state).ConfigureAwait(false);
@@ -719,25 +720,25 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         if (runCancelled && error is null or OperationCanceledException)
             return timedOut && !state.Cancellation.IsCancellationRequested
                 ? (PuloniaTaskRunStatus.TimedOut,
-                    $"计划超过总运行时限 {state.Request.TimeoutSeconds:0.###} 秒，当前执行器已退出。")
-                : (PuloniaTaskRunStatus.Cancelled, "计划已取消，当前执行器已退出并释放资源。");
+                    string.Format(I18nService.Instance.Translate("计划超过总运行时限 {0:0.###} 秒，当前执行器已退出。"), state.Request.TimeoutSeconds))
+                : (PuloniaTaskRunStatus.Cancelled, I18nService.Instance.Translate("计划已取消，当前执行器已退出并释放资源。"));
         // 2. 无法确定运行账户（当前账户未确定、续跑账户不符）：未触碰游戏，原样提示用户处理
         if (error is PuloniaRunAccountException)
             return (PuloniaTaskRunStatus.NeedsAttention, error.Message);
         // 3. 账户准备或核验失败：没有在错误账户上继续业务，需要人工处理
         if (error is PuloniaGenshinAccountException)
-            return (PuloniaTaskRunStatus.NeedsAttention, "账户准备或核验失败，未继续执行：" + error.Message);
+            return (PuloniaTaskRunStatus.NeedsAttention, I18nService.Instance.Translate("账户准备或核验失败，未继续执行：") + error.Message);
         // 4. 其余异常：关键状态写入失败后停止自动运行、等待人工处理，否则按执行基础设施失败收尾
         if (error is not null)
             return _runState.Failure is not null
-                ? (PuloniaTaskRunStatus.NeedsAttention, "执行状态持久化失败，已停止自动运行：" + error.Message)
-                : (PuloniaTaskRunStatus.Failed, "执行基础设施失败：" + error.Message);
+                ? (PuloniaTaskRunStatus.NeedsAttention, I18nService.Instance.Translate("执行状态持久化失败，已停止自动运行：") + error.Message)
+                : (PuloniaTaskRunStatus.Failed, I18nService.Instance.Translate("执行基础设施失败：") + error.Message);
         // 5. 计划走完：有节点在重试耗尽后失败时，以最近一次失败说明作为原因
         string? failure;
         lock (_runsGate)
             failure = state.FailureMessage;
         return failure is null
-            ? (PuloniaTaskRunStatus.Succeeded, "计划运行完成。")
+            ? (PuloniaTaskRunStatus.Succeeded, I18nService.Instance.Translate("计划运行完成。"))
             : (PuloniaTaskRunStatus.Failed, failure);
     }
 
@@ -757,9 +758,9 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             state.Status = PuloniaTaskRunStatus.Cancelling;
             state.Message = message ?? reason switch
             {
-                TaskStopReason.ApplicationShutdown => "应用正在关闭，正在等待当前执行器退出并释放资源。",
-                TaskStopReason.RuntimeStopped => "游戏运行环境已停止，正在等待当前执行器退出并释放资源。",
-                _ => "已请求取消，正在等待当前执行器退出并释放资源。"
+                TaskStopReason.ApplicationShutdown => I18nService.Instance.Translate("应用正在关闭，正在等待当前执行器退出并释放资源。"),
+                TaskStopReason.RuntimeStopped => I18nService.Instance.Translate("游戏运行环境已停止，正在等待当前执行器退出并释放资源。"),
+                _ => I18nService.Instance.Translate("已请求取消，正在等待当前执行器退出并释放资源。")
             };
         }
 
@@ -800,7 +801,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         {
             var now = DateTimeOffset.UtcNow;
             await AddNodeResultAsync(state, new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, 0,
-                PuloniaTaskNodeStatus.Skipped, "节点自身或祖先已关闭。", now, now,
+                PuloniaTaskNodeStatus.Skipped, I18nService.Instance.Translate("节点自身或祖先已关闭。"), now, now,
                 reasonCode: PuloniaTaskRunClassifier.DisabledReason)).ConfigureAwait(false);
             return ExecutionSignal.Continue;
         }
@@ -812,7 +813,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         {
             var now = DateTimeOffset.UtcNow;
             await AddNodeResultAsync(state, new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, 0,
-                PuloniaTaskNodeStatus.Skipped, "续跑沿用原快照，已确认完成或位于显式起点之前。", now, now,
+                PuloniaTaskNodeStatus.Skipped, I18nService.Instance.Translate("续跑沿用原快照，已确认完成或位于显式起点之前。"), now, now,
                 reasonCode: PuloniaTaskRunClassifier.ResumeSkippedReason)).ConfigureAwait(false);
             return ExecutionSignal.Continue;
         }
@@ -821,8 +822,8 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         {
             var now = DateTimeOffset.UtcNow;
             await AddNodeResultAsync(state, new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, 1,
-                PuloniaTaskNodeStatus.Failed, $"没有注册 {task.TaskType} 执行器。", now, now)).ConfigureAwait(false);
-            return MarkFinalFailure(state, task, $"没有注册 {task.TaskType} 执行器。");
+                PuloniaTaskNodeStatus.Failed, string.Format(I18nService.Instance.Translate("没有注册 {0} 执行器。"), task.TaskType), now, now)).ConfigureAwait(false);
+            return MarkFinalFailure(state, task, string.Format(I18nService.Instance.Translate("没有注册 {0} 执行器。"), task.TaskType));
         }
 
 
@@ -840,10 +841,10 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             {
                 var reason = PuloniaRouteCooldown.FormatSkipReason(routeRule, cooldown);
                 // 跳过也更新当前节点与消息（只在内存），运行中能看到哪条路线因 CD 跳过
-                SetCurrentTask(state, task.TaskAddress, $"已跳过“{task.Name}”：{reason}");
+                SetCurrentTask(state, task.TaskAddress, string.Format(I18nService.Instance.Translate("已跳过“{0}”：{1}"), task.Name, reason));
                 var now = DateTimeOffset.UtcNow;
                 await AddNodeResultAsync(state, new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, 0,
-                    PuloniaTaskNodeStatus.Skipped, "已跳过：" + reason, now, now, routeData,
+                    PuloniaTaskNodeStatus.Skipped, I18nService.Instance.Translate("已跳过：") + reason, now, now, routeData,
                     outcomeKind: PuloniaTaskOutcomeKind.Skipped,
                     reasonCode: PuloniaRouteCooldown.GetReasonCode(cooldown))).ConfigureAwait(false);
                 return ExecutionSignal.Continue;
@@ -857,8 +858,8 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             runToken.ThrowIfCancellationRequested();
             // 不重试的任务不显示“第 1/1 次”，只在有重试机会时标出当前轮次
             SetCurrentTask(state, task.TaskAddress, maxAttempts > 1
-                ? $"正在执行“{task.Name}”（第 {attempt}/{maxAttempts} 次）。"
-                : $"正在执行“{task.Name}”。");
+                ? string.Format(I18nService.Instance.Translate("正在执行“{0}”（第 {1}/{2} 次）。"), task.Name, attempt, maxAttempts)
+                : string.Format(I18nService.Instance.Translate("正在执行“{0}”。"), task.Name));
             var startedAt = DateTimeOffset.UtcNow;
             PuloniaTaskOutcome? outcome = null;
             Exception? failure = null;
@@ -886,7 +887,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             {
                 // 计划已取消：执行器无论以取消还是其他异常退出，都只记录一次取消结果，并结束整次运行。
                 await AddNodeResultAsync(state, new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, attempt,
-                    PuloniaTaskNodeStatus.Cancelled, "节点随计划取消，执行器已退出。", startedAt, DateTimeOffset.UtcNow,
+                    PuloniaTaskNodeStatus.Cancelled, I18nService.Instance.Translate("节点随计划取消，执行器已退出。"), startedAt, DateTimeOffset.UtcNow,
                     outcomeKind: PuloniaTaskOutcomeKind.Cancelled)).ConfigureAwait(false);
                 throw new OperationCanceledException(runToken);
             }
@@ -920,7 +921,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 succeeded &= outcome?.Kind == PuloniaTaskOutcomeKind.Succeeded;
             // 配置明确禁用的 Shell 等节点记为跳过，不触发失败重试或停止后续任务。
             var skipped = outcome?.Kind == PuloniaTaskOutcomeKind.Skipped;
-            var message = outcome?.Message ?? failure?.Message ?? "执行器未返回结果。";
+            var message = outcome?.Message ?? failure?.Message ?? I18nService.Instance.Translate("执行器未返回结果。");
             var status = nodeTimedOut
                 ? PuloniaTaskNodeStatus.TimedOut
                 : skipped ? PuloniaTaskNodeStatus.Skipped
@@ -936,7 +937,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                     resultData[property.Name] = property.Value.DeepClone();
             }
             if (routeRule is not null && !succeeded && !skipped && failure is null)
-                message = "地图追踪文件未完整执行成功，不写入完成记录。";
+                message = I18nService.Instance.Translate("地图追踪文件未完整执行成功，不写入完成记录。");
             var result = new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, attempt,
                 status, message, startedAt, finished, resultData,
                 routeRule is not null && !succeeded && !skipped ? PuloniaTaskOutcomeKind.Failed : outcome?.Kind, outcome?.Evidence,
@@ -1034,7 +1035,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
     {
         lock (_runsGate)
         {
-            state.FailureMessage = $"任务“{task.Name}”失败：{message}";
+            state.FailureMessage = string.Format(I18nService.Instance.Translate("任务“{0}”失败：{1}"), task.Name, message);
             state.Message = state.FailureMessage;
         }
         return task.Policy.FailureBehavior switch
@@ -1112,7 +1113,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             lock (_runsGate)
             {
                 state.Status = PuloniaTaskRunStatus.NeedsAttention;
-                state.Message = "运行已经结束，但状态或历史持久化失败：" + ex.Message;
+                state.Message = I18nService.Instance.Translate("运行已经结束，但状态或历史持久化失败：") + ex.Message;
                 view = state.CreateView();
             }
         }

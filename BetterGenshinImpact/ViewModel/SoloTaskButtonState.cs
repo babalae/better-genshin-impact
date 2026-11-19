@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.SoloTask.Execution;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel;
@@ -55,16 +56,18 @@ public sealed partial class SoloTaskButtonState(string taskId) : ObservableObjec
     /// 根据实例数量和活动运行数量生成按钮文字。
     /// </summary>
     public string ButtonText => IsOperationPending
-        ? "处理中…"
+        ? I18nService.Instance.Translate("处理中…")
         : TargetCount <= 1
             ? SingleTargetState switch
             {
-                SoloTaskRunState.Starting => "启动中",
-                SoloTaskRunState.Running => "停止",
-                SoloTaskRunState.Stopping => "停止中",
-                _ => "启动"
+                SoloTaskRunState.Starting => I18nService.Instance.Translate("启动中"),
+                SoloTaskRunState.Running => I18nService.Instance.Translate("停止"),
+                SoloTaskRunState.Stopping => I18nService.Instance.Translate("停止中"),
+                _ => I18nService.Instance.Translate("启动")
             }
-            : ActiveRunCount > 0 ? $"管理（{ActiveRunCount}）" : "启动";
+            : ActiveRunCount > 0
+                ? string.Format(I18nService.Instance.Translate("管理（{0}）"), ActiveRunCount)
+                : I18nService.Instance.Translate("启动");
 
     /// <summary>
     /// 当前是否允许再次进入启动或管理流程。

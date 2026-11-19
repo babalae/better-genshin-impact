@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -28,11 +29,11 @@ public partial class CraftResinEditorViewModel : ObservableObject, IResinSetting
     /// <summary>是否显示保留数量。</summary>
     public bool ShowKeepAmount => KeepResin;
     /// <inheritdoc />
-    public string Title => "树脂使用 · 合成浓缩树脂";
+    public string Title => $"{I18nService.Instance.Translate("树脂使用")} · {I18nService.Instance.Translate("合成浓缩树脂")}";
     /// <inheritdoc />
     public string Summary => ResinUsageText.CraftSummary(BuildValue());
     /// <inheritdoc />
-    public string? ValidationMessage => KeepResin && KeepAmount is < 1 or > 999 ? "保留数量须为 1–999。" : null;
+    public string? ValidationMessage => KeepResin && KeepAmount is < 1 or > 999 ? I18nService.Instance.Translate("保留数量须为 1–999。") : null;
     /// <inheritdoc />
     public bool CanConfirm => ValidationMessage is null;
 

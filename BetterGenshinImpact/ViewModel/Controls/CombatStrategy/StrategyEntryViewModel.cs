@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Controls.CombatStrategy;
@@ -11,9 +12,9 @@ public partial class StrategyEntryViewModel : ObservableObject
     /// <summary>文件夹或文件图标文字。</summary>
     public string Icon => Node.IsFolder ? "📁" : IsCurrent ? "✓" : "";
     /// <summary>类型或子树计数。</summary>
-    public string Badge => Node.IsFolder ? $"{Node.FileCount}  ›" : HasError ? "解析失败" : Node.Strategy?.Kind switch
+    public string Badge => Node.IsFolder ? $"{Node.FileCount}  ›" : HasError ? I18nService.Instance.Translate("解析失败") : Node.Strategy?.Kind switch
     {
-        CombatStrategyKind.Txt => "txt", CombatStrategyKind.Json => "JSON", _ => "键鼠",
+        CombatStrategyKind.Txt => "txt", CombatStrategyKind.Json => "JSON", _ => I18nService.Instance.Translate("键鼠"),
     };
     /// <summary>角色、录制信息或搜索结果路径。</summary>
     [ObservableProperty] private string _subtitle = "";

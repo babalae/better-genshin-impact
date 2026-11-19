@@ -6,6 +6,7 @@ using System.Windows;
 using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Infrastructure.WebView;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Windows;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
@@ -66,7 +67,7 @@ public partial class JsScriptHtmlSettingsWindow : FluentWindow
     public static string? Show(ScriptSettingsEditRequest request, Window? owner)
     {
         if (!WebViewRuntime.IsAvailable)
-            return "未安装 Microsoft Edge WebView2 运行时";
+            return I18nService.Instance.Translate("未安装 Microsoft Edge WebView2 运行时");
         new JsScriptHtmlSettingsWindow(request) { Owner = owner ?? Application.Current.MainWindow }.ShowDialog();
         return null;
     }
@@ -83,7 +84,7 @@ public partial class JsScriptHtmlSettingsWindow : FluentWindow
             // 不设置下载目录，页面发起的下载会被取消；target=_blank 的 http(s) 链接交给系统浏览器
             await WebView.InitializeAsync(provider, WebViewProfiles.ScriptSettings, new WebViewOptions
             {
-                ProcessCrashed = _ => ViewModel.ErrorMessage = "网页进程异常退出，请关闭窗口后重新打开。"
+                ProcessCrashed = _ => ViewModel.ErrorMessage = I18nService.Instance.Translate("网页进程异常退出，请关闭窗口后重新打开。")
             });
 
             var core = WebView.CoreWebView2;
@@ -108,7 +109,7 @@ public partial class JsScriptHtmlSettingsWindow : FluentWindow
         {
             // 初始化完成前关闭窗口也会走到这里，此时设置提示没有影响
             _logger.LogError(e, "脚本设置页初始化失败：{Script}", _page.ScriptName);
-            ViewModel.ErrorMessage = "网页初始化失败：" + e.Message;
+            ViewModel.ErrorMessage = I18nService.Instance.Translate("网页初始化失败：") + e.Message;
         }
     }
 
@@ -141,7 +142,7 @@ public partial class JsScriptHtmlSettingsWindow : FluentWindow
             return;
         ViewModel.ErrorMessage = e.IsSuccess
             ? null
-            : $"页面加载失败（HTTP {e.HttpStatusCode}，{e.WebErrorStatus}）。修改页面文件后可以在页面中按 F5 重新加载。";
+            : string.Format(I18nService.Instance.Translate("页面加载失败（HTTP {0}，{1}）。修改页面文件后可以在页面中按 F5 重新加载。"), e.HttpStatusCode, e.WebErrorStatus);
     }
 
     /// <summary>

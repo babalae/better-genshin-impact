@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.ResinPlan;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Services;
@@ -29,11 +30,14 @@ public static class PuloniaTaskResultInterpreter
 
     /// <summary>
     /// Shell 执行器的关键结果字段；缺失时标记为未返回，不冒充退出码 0 或空输出。
+    /// 标签登记为翻译键，读取结果时按当前界面语言翻译。
     /// </summary>
     private static readonly (string Key, string Label)[] ShellKeyFields =
     [
-        ("exit_code", "进程退出码"), ("standard_output", "标准输出"), ("standard_error", "标准错误"),
-        ("standard_output_truncated", "标准输出已截断"), ("standard_error_truncated", "标准错误已截断")
+        ("exit_code", I18nService.Key("进程退出码")), ("standard_output", I18nService.Key("标准输出")),
+        ("standard_error", I18nService.Key("标准错误")),
+        ("standard_output_truncated", I18nService.Key("标准输出已截断")),
+        ("standard_error_truncated", I18nService.Key("标准错误已截断"))
     ];
 
     /// <summary>
@@ -59,22 +63,25 @@ public static class PuloniaTaskResultInterpreter
     /// </summary>
     public static string GetVerificationNote(string taskType) => taskType switch
     {
-        "pathing" => "路线 CD 按整份文件执行成功估算采集完成，不记录部分成功；不代表逐点采集数量或实际收益。",
-        "javascript" => "旧 JS 脚本正常返回不等于游戏副作用已核验；仅展示执行器实际返回的数据与证据。",
-        "keymouse" => "宏回放结束不等于游戏目标完成；录制文件本身没有结构化收益证据。",
-        "shell" => "退出码表示进程结果；标准输出/错误每路最多保留 65536 字符，截断会明确标记。",
-        "csharp" => "返回值来自注册的 C# 能力；局部确认不等于整个节点成功。",
+        "pathing" => I18nService.Instance.Translate("路线 CD 按整份文件执行成功估算采集完成，不记录部分成功；不代表逐点采集数量或实际收益。"),
+        "javascript" => I18nService.Instance.Translate("旧 JS 脚本正常返回不等于游戏副作用已核验；仅展示执行器实际返回的数据与证据。"),
+        "keymouse" => I18nService.Instance.Translate("宏回放结束不等于游戏目标完成；录制文件本身没有结构化收益证据。"),
+        "shell" => I18nService.Instance.Translate("退出码表示进程结果；标准输出/错误每路最多保留 65536 字符，截断会明确标记。"),
+        "csharp" => I18nService.Instance.Translate("返回值来自注册的 C# 能力；局部确认不等于整个节点成功。"),
         _ when PuloniaSoloTaskExecutor.IsSoloTaskType(taskType) =>
-            "独立任务的结果种类与原因码由任务本身给出；“已执行，未核验”表示任务没有确认手段，需要核对游戏状态。奖励只列出任务识别到的物品，未识别时不推算收益。",
-        _ => "没有返回领取/合成数量时不推算收益；“已执行，未核验”需要核对游戏状态。"
+            I18nService.Instance.Translate("独立任务的结果种类与原因码由任务本身给出；“已执行，未核验”表示任务没有确认手段，需要核对游戏状态。奖励只列出任务识别到的物品，未识别时不推算收益。"),
+        _ => I18nService.Instance.Translate("没有返回领取/合成数量时不推算收益；“已执行，未核验”需要核对游戏状态。")
     };
 
     /// <summary>
-    /// 快照节点资源路径的中文标签。
+    /// 快照节点资源路径的标签，按当前界面语言翻译。
     /// </summary>
     public static string GetResourcePathLabel(string taskType) => taskType switch
     {
-        "pathing" => "路线文件", "javascript" => "JS 项目目录", "keymouse" => "录制文件", _ => "资源路径"
+        "pathing" => I18nService.Instance.Translate("路线文件"),
+        "javascript" => I18nService.Instance.Translate("JS 项目目录"),
+        "keymouse" => I18nService.Instance.Translate("录制文件"),
+        _ => I18nService.Instance.Translate("资源路径")
     };
 
     /// <summary>
@@ -92,7 +99,7 @@ public static class PuloniaTaskResultInterpreter
         if (TryReadRewards(result, out var rewards))
         {
             handled.Add("rewards");
-            entries.Add(new PuloniaTaskResultEntry("奖励", PuloniaTaskResultEntryKind.Rewards, rewards));
+            entries.Add(new PuloniaTaskResultEntry(I18nService.Instance.Translate("奖励"), PuloniaTaskResultEntryKind.Rewards, rewards));
         }
         if (data["resin"] is JObject resin)
         {
@@ -101,7 +108,7 @@ public static class PuloniaTaskResultInterpreter
                 var report = SoloTaskJson.Deserialize<ResinUsageReport>(resin.ToString());
                 report.Claims ??= new();
                 report.Consumed ??= new();
-                entries.Add(new PuloniaTaskResultEntry("树脂使用", PuloniaTaskResultEntryKind.Value,
+                entries.Add(new PuloniaTaskResultEntry(I18nService.Instance.Translate("树脂使用"), PuloniaTaskResultEntryKind.Value,
                     new JValue(ResinUsageText.Report(report))));
                 handled.Add("resin");
             }
@@ -115,7 +122,7 @@ public static class PuloniaTaskResultInterpreter
         {
             case "shell":
                 foreach (var (key, label) in ShellKeyFields)
-                    AddKeyField(entries, handled, data, key, label);
+                    AddKeyField(entries, handled, data, key, I18nService.Instance.Translate(label));
                 break;
             case "pathing":
                 AddPathingFields(entries, handled, data, PuloniaRouteCooldown.IsCooldownSkip(result));
@@ -123,8 +130,8 @@ public static class PuloniaTaskResultInterpreter
             case "csharp":
                 if (data.ContainsKey("sum"))
                 {
-                    AddKeyField(entries, handled, data, "sum", "计算合计");
-                    AddKeyField(entries, handled, data, "value_count", "参与计算的数值数量");
+                    AddKeyField(entries, handled, data, "sum", I18nService.Instance.Translate("计算合计"));
+                    AddKeyField(entries, handled, data, "value_count", I18nService.Instance.Translate("参与计算的数值数量"));
                 }
                 break;
         }
@@ -145,7 +152,7 @@ public static class PuloniaTaskResultInterpreter
         if (data["budget"] is JObject budget)
         {
             handled.Add("budget");
-            entries.Add(new PuloniaTaskResultEntry("体力预算", PuloniaTaskResultEntryKind.Value,
+            entries.Add(new PuloniaTaskResultEntry(I18nService.Instance.Translate("体力预算"), PuloniaTaskResultEntryKind.Value,
                 new JValue(FormatResinPlanBudget(budget))));
         }
 
@@ -154,7 +161,7 @@ public static class PuloniaTaskResultInterpreter
         {
             handled.Add("events");
             if (data["events"] is JObject events)
-                entries.Add(new PuloniaTaskResultEntry("活动识别", PuloniaTaskResultEntryKind.Value,
+                entries.Add(new PuloniaTaskResultEntry(I18nService.Instance.Translate("活动识别"), PuloniaTaskResultEntryKind.Value,
                     new JValue(FormatResinPlanEvents(events))));
         }
 
@@ -165,7 +172,8 @@ public static class PuloniaTaskResultInterpreter
         foreach (var step in steps.OfType<JObject>())
         {
             index++;
-            entries.Add(new PuloniaTaskResultEntry($"第 {index} 步 · {step.Value<string>("name")}",
+            entries.Add(new PuloniaTaskResultEntry(
+                string.Format(I18nService.Instance.Translate("第 {0} 步 · {1}"), index, step.Value<string>("name")),
                 PuloniaTaskResultEntryKind.Value, new JValue(FormatResinPlanStep(step))));
         }
     }
@@ -174,12 +182,16 @@ public static class PuloniaTaskResultInterpreter
     private static string FormatResinPlanBudget(JObject budget)
     {
         var max = budget.Value<int?>("max_resin") ?? 0;
-        var condensed = budget["start_condensed"] is { Type: JTokenType.Integer } value ? value.ToString() : "数量未识别";
-        var text = (max > 0 ? $"最多 {max} 点" : "全部可用树脂")
-                   + $"；开始时原粹 {budget.Value<int?>("start_original") ?? 0}、浓缩 {condensed}"
-                   + $"；领奖共消耗 {budget.Value<int?>("spent_points") ?? 0} 点";
+        var condensed = budget["start_condensed"] is { Type: JTokenType.Integer } value
+            ? value.ToString()
+            : I18nService.Instance.Translate("数量未识别");
+        var limit = max > 0
+            ? string.Format(I18nService.Instance.Translate("最多 {0} 点"), max)
+            : I18nService.Instance.Translate("全部可用树脂");
+        var text = string.Format(I18nService.Instance.Translate("{0}；开始时原粹 {1}、浓缩 {2}；领奖共消耗 {3} 点"),
+            limit, budget.Value<int?>("start_original") ?? 0, condensed, budget.Value<int?>("spent_points") ?? 0);
         var crafted = budget.Value<int?>("crafted_condensed") ?? 0;
-        return crafted > 0 ? text + $"；合成浓缩 {crafted} 个" : text;
+        return crafted > 0 ? text + string.Format(I18nService.Instance.Translate("；合成浓缩 {0} 个"), crafted) : text;
     }
 
     /// <summary>格式化体力计划的活动识别：移涌活动与紊乱爆发期状态。</summary>
@@ -188,7 +200,9 @@ public static class PuloniaTaskResultInterpreter
         if (events.Value<bool?>("recognized") != true)
         {
             var message = events.Value<string>("message");
-            return string.IsNullOrWhiteSpace(message) ? "未能识别活动页，按没有活动处理" : $"未能识别活动页（{message}），按没有活动处理";
+            return string.IsNullOrWhiteSpace(message)
+                ? I18nService.Instance.Translate("未能识别活动页，按没有活动处理")
+                : string.Format(I18nService.Instance.Translate("未能识别活动页（{0}），按没有活动处理"), message);
         }
 
         // 每个移涌活动显示为“名称（今日剩余双倍 3/3）”；未知的活动值（例如后续版本新增）按原文展示
@@ -202,14 +216,16 @@ public static class PuloniaTaskResultInterpreter
                     RemainingClaims = item.Value<int?>("remaining_claims"),
                     DailyClaims = item.Value<int?>("daily_claims")
                 });
-                return $"{name}（今日剩余双倍 {remaining}）";
+                return string.Format(I18nService.Instance.Translate("{0}（今日剩余双倍 {1}）"), name, remaining);
             })
             .ToArray() ?? [];
         var burst = Enum.TryParse<StygianBurstState>(events.Value<string>("stygian_burst"), out var state)
             ? ResinPlanEventDetector.DisplayName(state)
-            : "未识别";
-        return (overflows.Length > 0 ? "移涌活动：" + string.Join("、", overflows) : "没有移涌活动")
-               + "；幽境危战紊乱爆发期：" + burst;
+            : I18nService.Instance.Translate("未识别");
+        var overflowText = overflows.Length > 0
+            ? string.Format(I18nService.Instance.Translate("移涌活动：{0}"), string.Join(I18nService.Instance.Translate("、"), overflows))
+            : I18nService.Instance.Translate("没有移涌活动");
+        return string.Format(I18nService.Instance.Translate("{0}；幽境危战紊乱爆发期：{1}"), overflowText, burst);
     }
 
     /// <summary>格式化体力计划的一个阶段：结果、对象、说明与本步奖励。</summary>
@@ -217,17 +233,17 @@ public static class PuloniaTaskResultInterpreter
     {
         var kind = step.Value<string>("kind") switch
         {
-            nameof(SoloTaskResultKind.Succeeded) => "成功",
-            nameof(SoloTaskResultKind.Unverified) => "已执行，未核验",
-            nameof(SoloTaskResultKind.Partial) => "部分完成",
-            nameof(SoloTaskResultKind.Failed) => "失败",
-            _ => "跳过"
+            nameof(SoloTaskResultKind.Succeeded) => I18nService.Instance.Translate("成功"),
+            nameof(SoloTaskResultKind.Unverified) => I18nService.Instance.Translate("已执行，未核验"),
+            nameof(SoloTaskResultKind.Partial) => I18nService.Instance.Translate("部分完成"),
+            nameof(SoloTaskResultKind.Failed) => I18nService.Instance.Translate("失败"),
+            _ => I18nService.Instance.Translate("跳过")
         };
         var target = step.Value<string>("target");
-        var text = string.IsNullOrWhiteSpace(target) ? kind : $"{kind}（{target}）";
+        var text = string.IsNullOrWhiteSpace(target) ? kind : string.Format(I18nService.Instance.Translate("{0}（{1}）"), kind, target);
         var message = step.Value<string>("message");
         if (!string.IsNullOrWhiteSpace(message))
-            text += "：" + message;
+            text = string.Format(I18nService.Instance.Translate("{0}：{1}"), text, message);
         if (step.Value<bool?>("executed") != true)
             return text;
 
@@ -235,9 +251,9 @@ public static class PuloniaTaskResultInterpreter
         var rewards = (step.SelectToken("rewards.items") as JArray)?.OfType<JObject>()
             .Select(item => $"{item.Value<string>("name")} ×{item.Value<int?>("count") ?? 0}").ToArray() ?? [];
         if (rewards.Length > 0)
-            text += "；奖励：" + string.Join("、", rewards);
+            text += string.Format(I18nService.Instance.Translate("；奖励：{0}"), string.Join(I18nService.Instance.Translate("、"), rewards));
         else if (step.Value<bool?>("rewards_recognized") != true && (step.SelectToken("resin.claim_count")?.Value<int?>() ?? 0) > 0)
-            text += "；此任务暂不识别奖励";
+            text += I18nService.Instance.Translate("；此任务暂不识别奖励");
         return text;
     }
 
@@ -254,25 +270,28 @@ public static class PuloniaTaskResultInterpreter
     {
         if (data.ContainsKey("is_success"))
         {
-            AddKeyField(entries, handled, data, "is_success", "路线完整执行");
-            AddKeyField(entries, handled, data, "success_fight_count", "成功战斗次数");
+            AddKeyField(entries, handled, data, "is_success", I18nService.Instance.Translate("路线完整执行"));
+            AddKeyField(entries, handled, data, "success_fight_count", I18nService.Instance.Translate("成功战斗次数"));
             handled.Add("error_message");
+            var failureLabel = I18nService.Instance.Translate("失败原因");
             entries.Add(data["error_message"] is { Type: not JTokenType.Null } error
-                ? new PuloniaTaskResultEntry("失败原因", PuloniaTaskResultEntryKind.Value, error)
-                : new PuloniaTaskResultEntry("失败原因", data.Value<bool>("is_success")
+                ? new PuloniaTaskResultEntry(failureLabel, PuloniaTaskResultEntryKind.Value, error)
+                : new PuloniaTaskResultEntry(failureLabel, data.Value<bool>("is_success")
                     ? PuloniaTaskResultEntryKind.NoFailure : PuloniaTaskResultEntryKind.FailureNotProvided));
             handled.Add("revive_count");
             handled.Add("collected_items");
+            var reviveLabel = I18nService.Instance.Translate("复活次数");
             entries.Add(data["revive_count"] is { Type: not JTokenType.Null } revive
-                ? new PuloniaTaskResultEntry("复活次数", PuloniaTaskResultEntryKind.Value, revive)
-                : new PuloniaTaskResultEntry("复活次数", PuloniaTaskResultEntryKind.NotCounted));
+                ? new PuloniaTaskResultEntry(reviveLabel, PuloniaTaskResultEntryKind.Value, revive)
+                : new PuloniaTaskResultEntry(reviveLabel, PuloniaTaskResultEntryKind.NotCounted));
+            var collectedLabel = I18nService.Instance.Translate("拾取物品");
             entries.Add(data["collected_items"] is JObject items
-                ? new PuloniaTaskResultEntry("拾取物品", PuloniaTaskResultEntryKind.CollectedItems, items)
-                : new PuloniaTaskResultEntry("拾取物品", PuloniaTaskResultEntryKind.NotCounted));
+                ? new PuloniaTaskResultEntry(collectedLabel, PuloniaTaskResultEntryKind.CollectedItems, items)
+                : new PuloniaTaskResultEntry(collectedLabel, PuloniaTaskResultEntryKind.NotCounted));
         }
         else if (!isCooldownSkip)
             // 执行器异常时没有执行结果，明确标记未返回，不推断成功或失败；因 CD 跳过的节点本来就没有执行，不再标注。
-            AddKeyField(entries, handled, data, "is_success", "路线完整执行");
+            AddKeyField(entries, handled, data, "is_success", I18nService.Instance.Translate("路线完整执行"));
         else
             handled.Add("is_success");
         handled.Add(RouteBasisKey);
@@ -288,7 +307,7 @@ public static class PuloniaTaskResultInterpreter
             var text = data.Value<string>(key);
             entries.Add(new PuloniaTaskResultEntry(PuloniaTaskFieldNames.GetDisplayName(key), PuloniaTaskResultEntryKind.Value,
                 new JValue(DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time)
-                    ? time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) : "无")));
+                    ? time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) : I18nService.Instance.Translate("无"))));
         }
     }
 

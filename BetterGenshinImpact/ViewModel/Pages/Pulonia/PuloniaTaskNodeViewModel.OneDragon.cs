@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -9,7 +10,7 @@ namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 public partial class PuloniaTaskNodeViewModel
 {
     /// <summary>本行最近运行的状态说明，与当前编辑开关相互独立。</summary>
-    [ObservableProperty] private string _oneDragonStatusText = "尚未执行";
+    [ObservableProperty] private string _oneDragonStatusText = I18nService.Instance.Translate("尚未执行");
     /// <summary>本行状态指示的语义分类；颜色由视图按主题资源决定。</summary>
     [ObservableProperty] private PuloniaTaskSubtreeStatus _oneDragonStatusKind = PuloniaTaskSubtreeStatus.NotRun;
 
@@ -29,12 +30,12 @@ public partial class PuloniaTaskNodeViewModel
         OneDragonStatusKind = PuloniaTaskRunClassifier.ClassifySubtree(run, Document.RootNode.Id, Id);
         OneDragonStatusText = OneDragonStatusKind switch
         {
-            PuloniaTaskSubtreeStatus.Running => "执行中",
-            PuloniaTaskSubtreeStatus.Failed => "执行失败",
-            PuloniaTaskSubtreeStatus.NeedsVerification => "待核验",
-            PuloniaTaskSubtreeStatus.Completed => "已完成",
-            PuloniaTaskSubtreeStatus.SkippedOrStopped => "已跳过或停止",
-            _ => "尚未执行"
+            PuloniaTaskSubtreeStatus.Running => I18nService.Instance.Translate("执行中"),
+            PuloniaTaskSubtreeStatus.Failed => I18nService.Instance.Translate("执行失败"),
+            PuloniaTaskSubtreeStatus.NeedsVerification => I18nService.Instance.Translate("待核验"),
+            PuloniaTaskSubtreeStatus.Completed => I18nService.Instance.Translate("已完成"),
+            PuloniaTaskSubtreeStatus.SkippedOrStopped => I18nService.Instance.Translate("已跳过或停止"),
+            _ => I18nService.Instance.Translate("尚未执行")
         };
     }
 }

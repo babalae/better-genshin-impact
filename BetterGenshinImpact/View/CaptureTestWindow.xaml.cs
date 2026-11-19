@@ -8,6 +8,7 @@ using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.I18n;
 using Wpf.Ui.Violeta.Controls;
 using Size = OpenCvSharp.Size;
 
@@ -43,7 +44,7 @@ public partial class CaptureTestWindow
     {
         if (hWnd == IntPtr.Zero)
         {
-            Toast.Warning("请选择窗口");
+            Toast.Warning(I18nService.Instance.Translate("请选择窗口"));
             return;
         }
 

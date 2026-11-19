@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using Newtonsoft.Json.Linq;
 
@@ -35,19 +36,19 @@ public sealed class PuloniaNodeSharedSettingsTarget : PuloniaSharedSettingsTarge
     }
 
     /// <inheritdoc />
-    public override string Title => "共享设置 · " + (Document.IsPlanRoot(Node) ? $"计划「{Document.Name}」"
-        : Node.IsLeaf ? $"任务「{Node.Name}」"
-        : Node.Model.Source?.Kind == "plan" ? $"引用「{Node.Name}」"
-        : $"分组「{Node.Name}」");
+    public override string Title => I18nService.Instance.Translate("共享设置") + " · " + (Document.IsPlanRoot(Node) ? string.Format(I18nService.Instance.Translate("计划「{0}」"), Document.Name)
+        : Node.IsLeaf ? string.Format(I18nService.Instance.Translate("任务「{0}」"), Node.Name)
+        : Node.Model.Source?.Kind == "plan" ? string.Format(I18nService.Instance.Translate("引用「{0}」"), Node.Name)
+        : string.Format(I18nService.Instance.Translate("分组「{0}」"), Node.Name));
 
     /// <inheritdoc />
     public override string Description => Document.IsPlanRoot(Node)
-        ? "计划级设置会传给本计划的全部任务；分组和任务上修改的项优先。"
+        ? I18nService.Instance.Translate("计划级设置会传给本计划的全部任务；分组和任务上修改的项优先。")
         : Node.IsLeaf
-            ? "只对这个任务生效；未修改的项沿用上层设置。"
+            ? I18nService.Instance.Translate("只对这个任务生效；未修改的项沿用上层设置。")
             : Node.Model.Source?.Kind == "plan"
-                ? "这里的设置会替换被引用计划的计划级设置；被引用计划内部分组和任务上的设置仍然优先。"
-                : "这里的设置会传给本组下的全部任务；子组和任务上修改的项优先。";
+                ? I18nService.Instance.Translate("这里的设置会替换被引用计划的计划级设置；被引用计划内部分组和任务上的设置仍然优先。")
+                : I18nService.Instance.Translate("这里的设置会传给本组下的全部任务；子组和任务上修改的项优先。");
 
     /// <inheritdoc />
     public override bool ShowsInheritance => true;
@@ -76,7 +77,7 @@ public sealed class PuloniaNodeSharedSettingsTarget : PuloniaSharedSettingsTarge
                 var total = item.Value.Values.Sum();
                 var detail = string.Join("、", item.Value.OrderByDescending(pair => pair.Value)
                     .Select(pair => $"{pair.Key} {pair.Value}"));
-                return $"影响 {total} 个任务（{detail}）";
+                return string.Format(I18nService.Instance.Translate("影响 {0} 个任务（{1}）"), total, detail);
             }, StringComparer.Ordinal);
         }
     }

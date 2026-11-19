@@ -1,7 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
                     
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                     xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
                     xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior">
@@ -37,14 +37,14 @@
             <ui:CardControl Margin="0,0,0,8" Visibility="{Binding IsResinUsage, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
                 <ui:CardControl.Header>
                     <StackPanel Margin="0,0,16,0">
-                        <ui:TextBlock FontTypography="Body" Text="树脂使用" TextWrapping="Wrap" />
+                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 树脂使用}" TextWrapping="Wrap" />
                         <ContentControl Content="{Binding Resin, Mode=OneWay}" ContentTemplate="{StaticResource ResinUsageSummaryTemplate}"
                                         Margin="0,4,0,0" FontSize="14" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                         HorizontalContentAlignment="Stretch" Focusable="False" />
                     </StackPanel>
                 </ui:CardControl.Header>
-                <ui:Button Content="设置" MinWidth="88"  Command="{Binding Resin.EditCommand, Mode=OneWay}"
-                           AutomationProperties.Name="设置树脂使用" ToolTip="{Binding Resin.Summary, Mode=OneWay}" />
+                <ui:Button Content="{i18n:T 设置}" MinWidth="88"  Command="{Binding Resin.EditCommand, Mode=OneWay}"
+                           AutomationProperties.Name="{i18n:T 设置树脂使用}" ToolTip="{Binding Resin.Summary, Mode=OneWay}" />
             </ui:CardControl>
 
             <!--  布尔字段：右侧开关  -->
@@ -92,12 +92,19 @@
                                       TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardControl.Header>
+                <!--  选项可能是保存的中文 Key（如地脉花类型、国家），按界面语言展示，不改变保存值  -->
                 <ComboBox Margin="0"
                           MinWidth="160"
                           MaxWidth="360"
                           HorizontalAlignment="Right"
                           ItemsSource="{Binding Choices, Mode=OneWay}"
-                          SelectedItem="{Binding SelectedChoice, Mode=TwoWay}" />
+                          SelectedItem="{Binding SelectedChoice, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{i18n:TBinding}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </ui:CardControl>
 
         <!-- 战斗策略字段：使用统一的两级选择器。 -->
@@ -177,13 +184,13 @@
                         <RadioButton MinWidth="0"
                                      Margin="0"
                                      VerticalAlignment="Center"
-                                     Content="跟随培养计划"
+                                     Content="{i18n:T 跟随培养计划}"
                                      IsChecked="{Binding IsFollowTrainingPlan, Mode=TwoWay}"
                                      AutomationProperties.Name="{Binding DisplayName, Mode=OneWay, StringFormat={}{0}：跟随培养计划}" />
                         <RadioButton MinWidth="0"
                                      Margin="16,0,0,0"
                                      VerticalAlignment="Center"
-                                     Content="指定秘境"
+                                     Content="{i18n:T 指定秘境}"
                                      IsChecked="{Binding IsManualDomain, Mode=TwoWay}"
                                      AutomationProperties.Name="{Binding DisplayName, Mode=OneWay, StringFormat={}{0}：指定秘境}" />
                     </StackPanel>

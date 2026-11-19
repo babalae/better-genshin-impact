@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
@@ -11,20 +12,20 @@ namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 public static class PuloniaTaskMenuBuilder
 {
     /// <summary>
-    /// 独立任务子菜单的标题。
+    /// 独立任务子菜单的标题（中文原文，显示时翻译）。
     /// </summary>
     public const string SoloTaskMenuHeader = "独立任务";
 
     /// <summary>
-    /// 资源类与通用任务类型的固定顺序和菜单文字；带省略号表示点击后会打开创建对话框。
+    /// 资源类与通用任务类型的固定顺序和菜单文字；带省略号表示点击后会打开创建对话框。菜单文字为 i18n Key，生成菜单时翻译。
     /// </summary>
     private static readonly (string TaskType, string Header)[] KnownTaskTypes =
     [
-        ("pathing", "地图追踪任务…"),
-        ("javascript", "JS 脚本任务…"),
-        ("keymouse", "录制回放任务…"),
-        ("shell", "Shell 任务…"),
-        ("csharp", "进程内 C# 任务…")
+        ("pathing", I18nService.Key("地图追踪任务…")),
+        ("javascript", I18nService.Key("JS 脚本任务…")),
+        ("keymouse", I18nService.Key("录制回放任务…")),
+        ("shell", I18nService.Key("Shell 任务…")),
+        ("csharp", I18nService.Key("进程内 C# 任务…"))
     ];
 
     /// <summary>
@@ -41,7 +42,7 @@ public static class PuloniaTaskMenuBuilder
         var soloMenu = BuildSoloTaskMenu(all);
         if (soloMenu.Count > 0)
         {
-            menu.Add(PuloniaTaskMenuItemViewModel.Submenu(SoloTaskMenuHeader, soloMenu));
+            menu.Add(PuloniaTaskMenuItemViewModel.Submenu(I18nService.Instance.Translate("独立任务"), soloMenu));
         }
 
         // 2. 非独立任务按任务类型去重：已知类型按固定顺序和固定文字，未知类型排在后面并使用显示名
@@ -54,7 +55,7 @@ public static class PuloniaTaskMenuBuilder
         {
             if (others.Any(definition => definition.TaskType == taskType))
             {
-                menu.Add(PuloniaTaskMenuItemViewModel.Leaf(header, taskType));
+                menu.Add(PuloniaTaskMenuItemViewModel.Leaf(I18nService.Instance.Translate(header), taskType));
             }
         }
 
@@ -100,10 +101,10 @@ public static class PuloniaTaskMenuBuilder
     }
 
     /// <summary>
-    /// 取菜单显示名；能力没有显示名时退回任务类型。
+    /// 取菜单显示名并按当前界面语言翻译；能力没有显示名时退回任务类型。独立任务显示名的 Key 登记在 SoloTaskI18nKeys。
     /// </summary>
     /// <param name="definition">能力定义。</param>
     /// <returns>显示名。</returns>
     private static string DisplayNameOf(PuloniaTaskDefinition definition)
-        => string.IsNullOrWhiteSpace(definition.DisplayName) ? definition.TaskType : definition.DisplayName;
+        => string.IsNullOrWhiteSpace(definition.DisplayName) ? definition.TaskType : I18nService.Instance.Translate(definition.DisplayName);
 }

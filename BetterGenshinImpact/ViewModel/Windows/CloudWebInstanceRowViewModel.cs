@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Instance;
@@ -37,19 +38,19 @@ public sealed partial class CloudWebInstanceRowViewModel : ObservableObject
     /// 行内展示的连接状态。
     /// </summary>
     [ObservableProperty]
-    private string _statusText = "未启动";
+    private string _statusText = I18nService.Instance.Translate("未启动");
 
     /// <summary>
     /// 当前独立任务或下一步操作提示。
     /// </summary>
     [ObservableProperty]
-    private string _detailText = "登录状态独立保存";
+    private string _detailText = I18nService.Instance.Translate("登录状态独立保存");
 
     /// <summary>
     /// 主操作根据进程状态显示打开游戏或查看窗口。
     /// </summary>
     [ObservableProperty]
-    private string _actionText = "打开游戏";
+    private string _actionText = I18nService.Instance.Translate("打开游戏");
 
     /// <summary>
     /// 是否允许启动进程或激活已连接的游戏窗口。
@@ -90,8 +91,8 @@ public sealed partial class CloudWebInstanceRowViewModel : ObservableObject
         Endpoint = endpoint;
         IsConnected = endpoint is not null;
         IsRunning = instance.IsRunning || IsConnected;
-        StatusText = IsConnected ? "已连接" : IsRunning ? "等待连接" : "未启动";
-        ActionText = IsConnected ? "查看窗口" : IsRunning ? "等待连接" : "打开游戏";
+        StatusText = IsConnected ? I18nService.Instance.Translate("已连接") : IsRunning ? I18nService.Instance.Translate("等待连接") : I18nService.Instance.Translate("未启动");
+        ActionText = IsConnected ? I18nService.Instance.Translate("查看窗口") : IsRunning ? I18nService.Instance.Translate("等待连接") : I18nService.Instance.Translate("打开游戏");
         CanOpen = !isOperationPending && (!IsRunning || IsConnected);
         CanClose = !isOperationPending && IsConnected;
         CanDelete = !isOperationPending && !IsRunning;
@@ -101,17 +102,17 @@ public sealed partial class CloudWebInstanceRowViewModel : ObservableObject
         {
             var phase = status.State switch
             {
-                SoloTaskRunState.Starting => "任务启动中",
-                SoloTaskRunState.Stopping => "任务停止中",
-                _ => "正在执行"
+                SoloTaskRunState.Starting => I18nService.Instance.Translate("任务启动中"),
+                SoloTaskRunState.Stopping => I18nService.Instance.Translate("任务停止中"),
+                _ => I18nService.Instance.Translate("正在执行")
             };
             DetailText = $"{phase} · {getTaskDisplayName(status.TaskId)}";
         }
         else
         {
-            DetailText = IsConnected ? "暂无独立任务" : IsRunning
-                ? "请等待连接，也可从游戏窗口手动关闭"
-                : "登录状态独立保存";
+            DetailText = IsConnected ? I18nService.Instance.Translate("暂无独立任务") : IsRunning
+                ? I18nService.Instance.Translate("请等待连接，也可从游戏窗口手动关闭")
+                : I18nService.Instance.Translate("登录状态独立保存");
         }
     }
 }

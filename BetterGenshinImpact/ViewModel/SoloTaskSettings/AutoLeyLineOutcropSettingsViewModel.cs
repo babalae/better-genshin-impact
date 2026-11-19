@@ -1,6 +1,7 @@
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Resin;
 using Microsoft.Extensions.DependencyInjection;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -37,7 +38,7 @@ public partial class AutoLeyLineOutcropSettingsViewModel : SoloTaskSettingsViewM
     public AutoLeyLineOutcropSettingsViewModel(JObject original, IResinSettingsDialogs? dialogs = null) : base(original)
     {
         _originalResin = ResinUsageViewModelSupport.Read(Original["resin_usage"], AutoLeyLineOutcropTask.ResinCapability);
-        Resin = new("自动地脉花", AutoLeyLineOutcropTask.ResinCapability, _originalResin, dialogs);
+        Resin = new(I18nService.Key("自动地脉花"), AutoLeyLineOutcropTask.ResinCapability, _originalResin, dialogs);
         TrackEdits([Resin]);
         _originalOneDragonMode = ReadBool(Original, "one_dragon_mode", true);
         _oneDragonMode = _originalOneDragonMode;

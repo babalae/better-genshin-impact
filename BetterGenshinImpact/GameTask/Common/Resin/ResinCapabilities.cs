@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Frozen;
 
@@ -8,16 +9,16 @@ public static class ResinCapabilities
 {
     /// <summary>秘境：三种方式、四类直接使用、三种原粹档位，默认刷至耗尽。</summary>
     public static ResinUsageCapability Domain { get; } = CreateRewardPromptCapability(
-        new ResinUsage(), "默认使用领奖界面当前档位");
+        new ResinUsage(), I18nService.Key("默认使用领奖界面当前档位"));
 
     /// <summary>幽境危战：支持范围及默认设置与秘境一致。</summary>
     public static ResinUsageCapability StygianOnslaught { get; } = CreateRewardPromptCapability(
-        new ResinUsage(), "默认使用领奖界面当前档位");
+        new ResinUsage(), I18nService.Key("默认使用领奖界面当前档位"));
 
     /// <summary>地脉花：三种方式、四类直接使用、三种档位，默认领奖 6 次。</summary>
     public static ResinUsageCapability LeyLineOutcrop { get; } = CreateRewardPromptCapability(
         new ResinUsage { Mode = ResinUsageMode.RunCount, RunCount = 6 },
-        "双倍活动时切到 40，其余使用界面当前档位");
+        I18nService.Key("双倍活动时切到 40，其余使用界面当前档位"));
 
     /// <summary>首领：原粹直接领奖、须臾及脆弱战前补充，默认只用原粹刷至耗尽。</summary>
     public static ResinUsageCapability Boss { get; } = new()
@@ -34,9 +35,9 @@ public static class ResinCapabilities
         Defaults = new ResinUsage { Allowed = new() { Original = true } },
         Hints = new()
         {
-            UnsupportedReasons = new() { Condensed = "首领讨伐暂不支持浓缩树脂" },
-            PerTypeUnsupportedReason = "首领讨伐只按领奖次数控制",
-            DefaultTierDescription = "首领固定使用 40 原粹树脂"
+            UnsupportedReasons = new() { Condensed = I18nService.Key("首领讨伐暂不支持浓缩树脂") },
+            PerTypeUnsupportedReason = I18nService.Key("首领讨伐只按领奖次数控制"),
+            DefaultTierDescription = I18nService.Key("首领固定使用 40 原粹树脂")
         }
     };
 

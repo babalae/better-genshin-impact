@@ -11,6 +11,7 @@ using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -71,8 +72,8 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
     /// <summary>触发区的模式或类型标签。</summary>
     public string Badge => HasWarning ? "!" : Current?.Kind switch
     {
-        null or CombatStrategyKind.AutoSelect or CombatStrategyKind.Combo => "自动",
-        CombatStrategyKind.Txt => "txt", CombatStrategyKind.Json => "JSON", _ => "键鼠",
+        null or CombatStrategyKind.AutoSelect or CombatStrategyKind.Combo => I18nService.Instance.Translate("自动"),
+        CombatStrategyKind.Txt => "txt", CombatStrategyKind.Json => "JSON", _ => I18nService.Instance.Translate("键鼠"),
     };
     /// <summary>是否为自动模式，用描边标签显示。</summary>
     public bool IsAutomatic => Current?.Kind is null or CombatStrategyKind.AutoSelect or CombatStrategyKind.Combo;
@@ -80,8 +81,8 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
     public bool HasWarning => Current is { } current && (!current.Exists || (AllowedKinds & current.Kind) == 0
         || current.Kind == CombatStrategyKind.Combo && AutoComboRuntime.Session == null);
     /// <summary>当前失效值的固定警告，连招建树警告在对应类别显示。</summary>
-    public string CurrentWarning => Current is { Exists: false } ? $"当前值不存在：{_value}" : Current is { } current && (AllowedKinds & current.Kind) == 0
-        ? $"当前入口不支持此策略：{_value}" : "";
+    public string CurrentWarning => Current is { Exists: false } ? string.Format(I18nService.Instance.Translate("当前值不存在：{0}"), _value) : Current is { } current && (AllowedKinds & current.Kind) == 0
+        ? string.Format(I18nService.Instance.Translate("当前入口不支持此策略：{0}"), _value) : "";
     /// <summary>当前录制由本控件发起，触发区显示停止操作。</summary>
     public bool IsOwnRecording => _ownsRecording && IsRecording;
     /// <summary>是否显示当前值警告。</summary>
@@ -91,8 +92,8 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
     /// <summary>搜索框是否显示清空按钮。</summary>
     public bool HasSearchText => SearchText.Length > 0;
     /// <summary>触发区显示文字。</summary>
-    public string TriggerText => IsOwnRecording ? "录制中… 点击停止"
-        : Current is { Exists: false } ? $"{_value}（不存在）" : Current?.DisplayName ?? "按队伍匹配";
+    public string TriggerText => IsOwnRecording ? I18nService.Instance.Translate("录制中… 点击停止")
+        : Current is { Exists: false } ? string.Format(I18nService.Instance.Translate("{0}（不存在）"), _value) : Current?.DisplayName ?? I18nService.Instance.Translate("按队伍匹配");
     /// <summary>手动策略的目录部分，以次要文字色展示。</summary>
     public string TriggerDirectory => !IsAutomatic && Current is { Exists: true } && !IsOwnRecording
         && Current.DisplayName.LastIndexOf(" / ", StringComparison.Ordinal) is var index && index >= 0
@@ -101,9 +102,9 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
     public string TriggerName => TriggerDirectory.Length > 0 ? TriggerText[TriggerDirectory.Length..] : TriggerText;
     /// <summary>触发区完整提示。</summary>
     public string ToolTipText => $"{Current?.Value}\n{Current?.Path}\n{CombatStrategyMetadataProvider.GetCachedSummary(Current?.Path)}"
-        + (HasWarning ? "\n" + (CurrentWarning.Length > 0 ? CurrentWarning : "自动连招尚未建树") : "");
+        + (HasWarning ? "\n" + (CurrentWarning.Length > 0 ? CurrentWarning : I18nService.Instance.Translate("自动连招尚未建树")) : "");
     /// <summary>无障碍触发区名称。</summary>
-    public string AutomationName => $"战斗策略：{Badge} {TriggerText}";
+    public string AutomationName => string.Format(I18nService.Instance.Translate("战斗策略：{0} {1}"), Badge, TriggerText);
     /// <summary>当前是否为键鼠录制类别。</summary>
     public bool IsKeyMouseCategory => SelectedCategory?.Kind == CombatStrategyKind.KeyMouse;
     /// <summary>是否显示脚本仓库按钮。</summary>
@@ -116,9 +117,9 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
     public IEnumerable<StrategyBrowserViewModel> SearchAlternatives => Categories.OfType<StrategyBrowserViewModel>()
         .Where(b => b != SelectedCategory && b.MatchCount > 0);
     /// <summary>未配置热键时的引导及录制使用建议。</summary>
-    public string RecordHint => "适合站位固定的场景，例如秘境、首领。单段宏建议不超过 20 秒。"
+    public string RecordHint => I18nService.Instance.Translate("适合站位固定的场景，例如秘境、首领。单段宏建议不超过 20 秒。") + " "
         + (string.IsNullOrWhiteSpace(Service.ConfigService.Config?.HotKeyConfig.KeyMouseMacroRecordHotkey)
-            ? " 可在热键设置中配置键鼠录制热键。" : " 可使用键鼠录制热键停止。 ");
+            ? I18nService.Instance.Translate("可在热键设置中配置键鼠录制热键。") : I18nService.Instance.Translate("可使用键鼠录制热键停止。"));
 
     /// <summary>每个控件创建自己的 VM，复用全局录制与导航服务。</summary>
     public CombatStrategyPickerViewModel(KeyMouseRecordService recordService, INavigationService navigation)
@@ -147,7 +148,7 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
         Categories.Clear();
         if (kinds.HasFlag(CombatStrategyKind.AutoSelect)) Categories.Add(new AutoMatchCategoryViewModel(Select, ShowErrors));
         if (kinds.HasFlag(CombatStrategyKind.Combo)) Categories.Add(new ComboCategoryViewModel(Select));
-        foreach (var (kind, title) in new[] { (CombatStrategyKind.Txt, "文本策略"), (CombatStrategyKind.Json, "JSON 策略"), (CombatStrategyKind.KeyMouse, "键鼠录制") })
+        foreach (var (kind, title) in new[] { (CombatStrategyKind.Txt, I18nService.Instance.Translate("文本策略")), (CombatStrategyKind.Json, I18nService.Instance.Translate("JSON 策略")), (CombatStrategyKind.KeyMouse, I18nService.Instance.Translate("键鼠录制")) })
             if (kinds.HasFlag(kind)) Categories.Add(new StrategyBrowserViewModel(kind, title, Select));
         SelectedCategory = Categories.FirstOrDefault(c => c.Kind == Current?.Kind) ?? Categories.FirstOrDefault();
         NotifyTrigger();
@@ -193,7 +194,7 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
             var vm = (CombatStrategyPickerViewModel)recipient;
             if (!ReferenceEquals(message.Requester, vm)) return;
             vm.Select(CombatStrategyResolver.Parse(message.Path));
-            App.GetService<ISnackbarService>()?.Show("已保存并选用", "可在录制管理中重命名", ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
+            App.GetService<ISnackbarService>()?.Show(I18nService.Instance.Translate("已保存并选用"), I18nService.Instance.Translate("可在录制管理中重命名"), ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
         });
     }
 
@@ -247,7 +248,7 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
         catch (Exception ex)
         {
             if (ct.IsCancellationRequested) return;
-            LoadError = "读取目录失败：" + ex.Message;
+            LoadError = string.Format(I18nService.Instance.Translate("读取目录失败：{0}"), ex.Message);
             App.GetLogger<CombatStrategyPickerViewModel>().LogWarning(ex, "读取战斗策略目录失败");
         }
         finally { if (ReferenceEquals(_loadCts, cts)) IsLoading = false; }
@@ -317,7 +318,7 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
         {
-            LoadError = "打开目录失败：" + ex.Message;
+            LoadError = string.Format(I18nService.Instance.Translate("打开目录失败：{0}"), ex.Message);
         }
     }
 
@@ -428,7 +429,7 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
         _autoMetadataCts?.Dispose();
         _autoMetadataCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         ct = _autoMetadataCts.Token;
-        auto.MetadataStatus = "正在检查文本策略…";
+        auto.MetadataStatus = I18nService.Instance.Translate("正在检查文本策略…");
         auto.ErrorSummary = "";
         try
         {
@@ -438,13 +439,13 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
             var metadata = await CombatStrategyMetadataProvider.GetAsync(files, ct);
             ct.ThrowIfCancellationRequested();
             var errors = metadata.Values.Count(m => m.Error != null);
-            auto.ErrorSummary = errors > 0 ? $"{errors} 个文本策略解析失败，匹配时会被跳过" : "";
-            auto.MetadataStatus = scope.Node.FileCount > 200 ? "仅检查当前范围的前 200 个文本策略。"
-                : scope.Node.FileCount == 0 ? "范围内暂无文本策略，可从脚本仓库订阅。" : "";
+            auto.ErrorSummary = errors > 0 ? string.Format(I18nService.Instance.Translate("{0} 个文本策略解析失败，匹配时会被跳过"), errors) : "";
+            auto.MetadataStatus = scope.Node.FileCount > 200 ? I18nService.Instance.Translate("仅检查当前范围的前 200 个文本策略。")
+                : scope.Node.FileCount == 0 ? I18nService.Instance.Translate("范围内暂无文本策略，可从脚本仓库订阅。") : "";
             Categories.OfType<StrategyBrowserViewModel>().FirstOrDefault(b => b.Kind == CombatStrategyKind.Txt)?.ApplyMetadata(metadata);
         }
         catch (OperationCanceledException) { }
-        catch (Exception ex) { if (!ct.IsCancellationRequested) auto.MetadataStatus = "读取策略信息失败：" + ex.Message; }
+        catch (Exception ex) { if (!ct.IsCancellationRequested) auto.MetadataStatus = string.Format(I18nService.Instance.Translate("读取策略信息失败：{0}"), ex.Message); }
     }
 
     /// <summary>只在用户实际选择或本控件录制成功时写回规范值。</summary>

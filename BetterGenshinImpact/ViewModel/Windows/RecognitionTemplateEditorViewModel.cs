@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Behavior;
@@ -300,8 +301,8 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
     {
         var dialog = new SaveFileDialog
         {
-            Title = "选择或创建 Recognition.json",
-            Filter = "Recognition JSON (*.json)|*.json|所有文件 (*.*)|*.*",
+            Title = I18nService.Instance.Translate("选择或创建 Recognition.json"),
+            Filter = "Recognition JSON (*.json)|*.json|" + I18nService.Instance.Translate("所有文件") + " (*.*)|*.*",
             DefaultExt = ".json",
             AddExtension = true,
             OverwritePrompt = false,
@@ -328,7 +329,7 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
     {
         var dialog = new Wpf.Ui.Violeta.Win32.OpenFolderDialog
         {
-            Description = "选择输出文件夹（Recognition.json 写入此目录，图片写入 1920x1080 子目录）",
+            Description = I18nService.Instance.Translate("选择输出文件夹（Recognition.json 写入此目录，图片写入 1920x1080 子目录）"),
             UseDescriptionForTitle = true,
             SelectedPath = Directory.Exists(AssetsRootPath) ? AssetsRootPath : ""
         };
@@ -397,8 +398,8 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
             {
                 var conflictText = string.Join(Environment.NewLine, plan.Conflicts.Select(conflict => $"• {conflict}"));
                 var result = ThemedMessageBox.Show(
-                    $"检测到以下冲突：{Environment.NewLine}{Environment.NewLine}{conflictText}{Environment.NewLine}{Environment.NewLine}是否覆盖并继续保存？",
-                    "确认覆盖模板素材",
+                    string.Format(I18nService.Instance.Translate("检测到以下冲突：{0}{0}{1}{0}{0}是否覆盖并继续保存？"), Environment.NewLine, conflictText),
+                    I18nService.Instance.Translate("确认覆盖模板素材"),
                     MessageBoxButton.YesNo,
                     ThemedMessageBox.MessageBoxIcon.Warning,
                     MessageBoxResult.No,
@@ -414,8 +415,8 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
             RememberAssetsRootPath(Path.GetFullPath(AssetsRootPath.Trim()));
 
             ThemedMessageBox.Show(
-                $"模板素材已保存。{Environment.NewLine}{Environment.NewLine}配置：{plan.JsonPath}{Environment.NewLine}图片：{plan.ImagePath}",
-                "保存成功",
+                string.Format(I18nService.Instance.Translate("模板素材已保存。{0}{0}配置：{1}{0}图片：{2}"), Environment.NewLine, plan.JsonPath, plan.ImagePath),
+                I18nService.Instance.Translate("保存成功"),
                 MessageBoxButton.OK,
                 ThemedMessageBox.MessageBoxIcon.Success,
                 MessageBoxResult.OK,
@@ -434,8 +435,8 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
         {
             _logger.LogError(ex, "保存 Recognition 模板素材失败");
             ThemedMessageBox.Show(
-                $"保存 Recognition 模板素材失败：{ex.Message}",
-                "保存失败",
+                string.Format(I18nService.Instance.Translate("保存 Recognition 模板素材失败：{0}"), ex.Message),
+                I18nService.Instance.Translate("保存失败"),
                 MessageBoxButton.OK,
                 ThemedMessageBox.MessageBoxIcon.Error,
                 MessageBoxResult.OK,
@@ -818,7 +819,7 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
     {
         ThemedMessageBox.Show(
             message,
-            "配置有误",
+            I18nService.Instance.Translate("配置有误"),
             MessageBoxButton.OK,
             ThemedMessageBox.MessageBoxIcon.Warning,
             MessageBoxResult.OK,

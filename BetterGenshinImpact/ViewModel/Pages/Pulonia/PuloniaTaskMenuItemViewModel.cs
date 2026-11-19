@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
@@ -83,5 +84,5 @@ public sealed class PuloniaTaskMenuItemViewModel
     /// 调试与无障碍读屏时显示菜单文字。
     /// </summary>
     /// <returns>菜单文字；分隔项返回“分隔线”。</returns>
-    public override string ToString() => IsSeparator ? "分隔线" : Header;
+    public override string ToString() => IsSeparator ? I18nService.Instance.Translate("分隔线") : Header;
 }

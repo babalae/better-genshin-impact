@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Infrastructure.Network.Download;
 
@@ -18,14 +19,14 @@ public static class DownloadCategories
     /// <summary>
     /// 硬件加速运行库（ONNX Runtime、CUDA、cuDNN、TensorRT）的安装包
     /// </summary>
-    public static readonly DownloadCategory OnnxRuntime = new("onnxruntime", "运行库安装包",
-        "硬件加速运行库的安装包，安装成功后自动删除，留下的通常是未完成或安装失败的下载");
+    public static readonly DownloadCategory OnnxRuntime = new("onnxruntime", I18nService.Key("运行库安装包"),
+        I18nService.Key("硬件加速运行库的安装包，安装成功后自动删除，留下的通常是未完成或安装失败的下载"));
 
     /// <summary>
     /// 主页网络背景图片，下载完成后移入 User/Images
     /// </summary>
-    public static readonly DownloadCategory BannerImage = new("banner-image", "网络背景图片",
-        "主页网络背景图片的下载，完成后移入用户目录，留下的通常是未完成的下载");
+    public static readonly DownloadCategory BannerImage = new("banner-image", I18nService.Key("网络背景图片"),
+        I18nService.Key("主页网络背景图片的下载，完成后移入用户目录，留下的通常是未完成的下载"));
 
     /// <summary>
     /// 全部分类，供存储区域登记

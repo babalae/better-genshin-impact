@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Logging;
 using System;
@@ -176,12 +177,9 @@ public partial class PickerWindow : FluentWindow
     private static bool AskIsThisGenshinImpact(CapturableWindow window)
     {
         var res = ThemedMessageBox.Question(
-            $"""
-            这看起来不像是原神，确定要选择这个窗口吗？
-
-            当前选择的窗口：{window.Name} ({window.ProcessName})
-            """,
-            "确认选择",
+            string.Format(I18nService.Instance.Translate("这看起来不像是原神，确定要选择这个窗口吗？\n\n当前选择的窗口：{0} ({1})"),
+                window.Name, window.ProcessName),
+            I18nService.Instance.Translate("确认选择"),
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxResult.No
         );

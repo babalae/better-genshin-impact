@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.AutoPick;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.Input;
 using System;
@@ -20,7 +21,7 @@ public abstract partial class AutoPickConfigWindowViewModelBase : ViewModel
         }
         catch (Exception e)
         {
-            ThemedMessageBox.Error("保存自动拾取名单配置失败：" + e);
+            ThemedMessageBox.Error(I18nService.Instance.Translate("保存自动拾取名单配置失败：") + e);
         }
     }
 

@@ -32,6 +32,12 @@ public partial class MapMaskConfig : ObservableObject
     [ObservableProperty]
     private bool _pathAutoRecordEnabled = false;
 
+    /// <summary>
+    /// 是否隐藏已标记的标点（默认半透明显示）；只影响显示，不修改标记
+    /// </summary>
+    [ObservableProperty]
+    private bool _hideMarkedPoints = false;
+
     private MapPointApiProvider _mapPointApiProvider = MapPointApiProvider.MihoyoMap;
 
     private string _hoYoLabLanguage = HoYoLabLanguageEnUs;

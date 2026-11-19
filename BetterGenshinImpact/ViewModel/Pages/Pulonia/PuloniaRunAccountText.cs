@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
@@ -20,10 +21,10 @@ public static class PuloniaRunAccountText
     /// <returns>键为账户 ID（跟随当前账户为空字符串）、值为显示文字的选项</returns>
     public static IReadOnlyList<KeyValuePair<string, string>> BuildOptions(IEnumerable<PuloniaGenshinAccountProfile> accounts)
     {
-        var options = new List<KeyValuePair<string, string>> { new(FollowCurrentKey, "跟随当前账户（不切换）") };
+        var options = new List<KeyValuePair<string, string>> { new(FollowCurrentKey, I18nService.Instance.Translate("跟随当前账户（不切换）")) };
         // 只能指定填写了 UID 的账户，因为切换和核验都要按 UID 找到目标。
         options.AddRange(accounts.Where(account => !string.IsNullOrEmpty(account.Uid))
-            .Select(account => new KeyValuePair<string, string>(account.Id, $"{account.Name}（UID {account.Uid}）")));
+            .Select(account => new KeyValuePair<string, string>(account.Id, string.Format(I18nService.Instance.Translate("{0}（UID {1}）"), account.Name, account.Uid))));
         return options;
     }
 
@@ -50,12 +51,12 @@ public static class PuloniaRunAccountText
     public static string Describe(string? accountId, IEnumerable<PuloniaGenshinAccountProfile> accounts)
     {
         if (accountId is null)
-            return "运行账户：跟随当前账户";
+            return I18nService.Instance.Translate("运行账户：跟随当前账户");
         if (accounts.FirstOrDefault(account => account.Id == accountId) is not { } account)
-            return "运行账户：账户已删除，请重新选择";
+            return I18nService.Instance.Translate("运行账户：账户已删除，请重新选择");
         return string.IsNullOrEmpty(account.Uid)
-            ? $"运行账户：“{account.Name}”没有 UID，请重新选择"
-            : "运行账户：" + account.Name;
+            ? string.Format(I18nService.Instance.Translate("运行账户：“{0}”没有 UID，请重新选择"), account.Name)
+            : string.Format(I18nService.Instance.Translate("运行账户：{0}"), account.Name);
     }
 
     /// <summary>
@@ -68,9 +69,9 @@ public static class PuloniaRunAccountText
         if (accountId is null)
             return null;
         if (accounts.FirstOrDefault(account => account.Id == accountId) is not { } account)
-            return "指定的账户已删除，请重新选择运行账户。";
+            return I18nService.Instance.Translate("指定的账户已删除，请重新选择运行账户。");
         return string.IsNullOrEmpty(account.Uid)
-            ? $"“{account.Name}”没有 UID，不能切换和核验，请重新选择运行账户。"
+            ? string.Format(I18nService.Instance.Translate("“{0}”没有 UID，不能切换和核验，请重新选择运行账户。"), account.Name)
             : null;
     }
 }

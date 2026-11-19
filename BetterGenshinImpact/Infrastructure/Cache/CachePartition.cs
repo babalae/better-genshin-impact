@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Infrastructure.Cache;
 
@@ -19,7 +20,7 @@ public sealed record CachePartition(string Id, string DisplayName, TimeSpan Ttl)
     /// <summary>
     /// 清理后的影响，展示在存储空间窗口中
     /// </summary>
-    public string CleanupEffect { get; init; } = "需要时重新下载";
+    public string CleanupEffect { get; init; } = I18nService.Key("需要时重新下载");
 }
 
 /// <summary>
@@ -30,45 +31,45 @@ public static class CachePartitions
     /// <summary>
     /// 地图遮罩上的点位图标
     /// </summary>
-    public static readonly CachePartition MapIcons = new("map-icons", "地图点位图标", TimeSpan.FromDays(20))
+    public static readonly CachePartition MapIcons = new("map-icons", I18nService.Key("地图点位图标"), TimeSpan.FromDays(20))
     {
-        Description = "地图遮罩上的点位图标",
-        CleanupEffect = "打开地图时重新下载",
+        Description = I18nService.Key("地图遮罩上的点位图标"),
+        CleanupEffect = I18nService.Key("打开地图时重新下载"),
     };
 
     /// <summary>
     /// 点击地图点位时显示的详情图片
     /// </summary>
-    public static readonly CachePartition MapPointImages = new("map-point-images", "点位详情图片", TimeSpan.FromDays(7))
+    public static readonly CachePartition MapPointImages = new("map-point-images", I18nService.Key("点位详情图片"), TimeSpan.FromDays(7))
     {
-        Description = "点击地图点位时显示的图片",
-        CleanupEffect = "再次查看时重新下载",
+        Description = I18nService.Key("点击地图点位时显示的图片"),
+        CleanupEffect = I18nService.Key("再次查看时重新下载"),
     };
 
     /// <summary>
     /// 空荧酒馆点位数据（按页缓存，加载时只保留最新的页）
     /// </summary>
-    public static readonly CachePartition KongyingTavern = new("kongying-tavern", "空荧酒馆点位数据", TimeSpan.FromDays(30))
+    public static readonly CachePartition KongyingTavern = new("kongying-tavern", I18nService.Key("空荧酒馆点位数据"), TimeSpan.FromDays(30))
     {
-        Description = "地图遮罩使用的空荧酒馆点位数据",
-        CleanupEffect = "下次加载点位时重新获取",
+        Description = I18nService.Key("地图遮罩使用的空荧酒馆点位数据"),
+        CleanupEffect = I18nService.Key("下次加载点位时重新获取"),
     };
 
     /// <summary>
     /// 自动演奏曲目的封面
     /// </summary>
-    public static readonly CachePartition MusicArtwork = new("music-artwork", "音乐封面", TimeSpan.FromDays(180))
+    public static readonly CachePartition MusicArtwork = new("music-artwork", I18nService.Key("音乐封面"), TimeSpan.FromDays(180))
     {
-        Description = "自动演奏曲目的封面图片",
+        Description = I18nService.Key("自动演奏曲目的封面图片"),
     };
 
     /// <summary>
     /// 更新日志、脚本说明等 Markdown 文档中的网络图片
     /// </summary>
-    public static readonly CachePartition MarkdownImages = new("markdown-images", "文档图片", TimeSpan.FromDays(7))
+    public static readonly CachePartition MarkdownImages = new("markdown-images", I18nService.Key("文档图片"), TimeSpan.FromDays(7))
     {
-        Description = "更新日志、脚本说明等文档中的网络图片",
-        CleanupEffect = "再次打开文档时重新下载",
+        Description = I18nService.Key("更新日志、脚本说明等文档中的网络图片"),
+        CleanupEffect = I18nService.Key("再次打开文档时重新下载"),
     };
 
     /// <summary>

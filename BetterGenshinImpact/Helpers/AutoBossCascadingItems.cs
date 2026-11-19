@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoBoss;
+using BetterGenshinImpact.Service.I18n;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.Helpers;
@@ -26,8 +27,9 @@ public static class AutoBossCascadingItems
     {
         return AutoBossData.CountryToBosses
             .Select(country => (ICascadingItem)new CascadingItem(
-                country.Key,
-                country.Value.Select(boss => (ICascadingItem)new CascadingItem(boss)
+                // 国家与首领名只在展示时翻译；Tag 保持中文首领名，作为保存值。
+                I18nService.Instance.Translate(country.Key),
+                country.Value.Select(boss => (ICascadingItem)new CascadingItem(I18nService.Instance.Translate(boss))
                 {
                     Tag = boss
                 })))

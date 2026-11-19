@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -49,10 +50,11 @@ public partial class PuloniaTaskPlanViewModel
             return;
         }
 
-        MoveSettingsNoticeText = $"移动“{change.Node.Name}”后，{change.ChangedTaskCount} 个任务的 {change.ChangedKeys.Count} 项设置已改变。";
+        MoveSettingsNoticeText = string.Format(I18nService.Instance.Translate("移动“{0}”后，{1} 个任务的 {2} 项设置已改变。"),
+            I18nService.Instance.Translate(change.Node.Name), change.ChangedTaskCount, change.ChangedKeys.Count);
         var lines = change.Details.Take(MaxMoveSettingsDetailLines).ToList();
         if (change.Details.Count > MaxMoveSettingsDetailLines)
-            lines.Add($"… 另有 {change.Details.Count - MaxMoveSettingsDetailLines} 项变化");
+            lines.Add(string.Format(I18nService.Instance.Translate("… 另有 {0} 项变化"), change.Details.Count - MaxMoveSettingsDetailLines));
         MoveSettingsNoticeDetails = string.Join(Environment.NewLine, lines);
         HasMoveSettingsNotice = true;
     }
@@ -71,11 +73,12 @@ public partial class PuloniaTaskPlanViewModel
             return;
         var document = change.Node.Document;
         if (!document.CanKeepMovedSettings(change))
-            StatusMessage = "移动之后已有其他编辑，无法再保留原值；可以撤销后重新移动。";
+            StatusMessage = I18nService.Instance.Translate("移动之后已有其他编辑，无法再保留原值；可以撤销后重新移动。");
         else if (document.KeepMovedSettings(change))
-            StatusMessage = $"已在“{change.Node.Name}”上保留移动前的 {change.ChangedKeys.Count} 项设置。";
+            StatusMessage = string.Format(I18nService.Instance.Translate("已在“{0}”上保留移动前的 {1} 项设置。"),
+                I18nService.Instance.Translate(change.Node.Name), change.ChangedKeys.Count);
         else
-            StatusMessage = "移动前的设置已由子树内部提供，无需写入。";
+            StatusMessage = I18nService.Instance.Translate("移动前的设置已由子树内部提供，无需写入。");
         ShowMoveSettingsNotice(null);
     }
 

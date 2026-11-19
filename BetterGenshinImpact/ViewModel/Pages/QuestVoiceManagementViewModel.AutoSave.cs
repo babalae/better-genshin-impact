@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -24,7 +25,7 @@ public partial class QuestVoiceManagementViewModel
     /// <summary>已保存资源，用于只对新增或改变的本机资源进行存在性校验。</summary>
     private Dictionary<string, RoutingVoice> _savedProfiles = new();
     /// <summary>异步保存状态独立于编辑可用性，保存时仍允许继续输入。</summary>
-    [ObservableProperty] private string _saveStatus = "尚未加载";
+    [ObservableProperty] private string _saveStatus = I18nService.Instance.Translate("尚未加载");
     /// <summary>首次进入设置页面才加载，避免运行页面自动产生目录。</summary>
     public async Task EnsureLoadedAsync()
     {
@@ -32,10 +33,10 @@ public partial class QuestVoiceManagementViewModel
         if (!_store.Exists(_factory.RoutingCatalogPath))
         {
             try { await _factory.EnsureResourcesAsync(default); }
-            catch (Exception exception) { Report(exception); SaveStatus = "加载失败，配置保留"; return; }
+            catch (Exception exception) { Report(exception); SaveStatus = I18nService.Instance.Translate("加载失败，配置保留"); return; }
         }
         await LoadCommand.ExecuteAsync(null);
-        SaveStatus = IsLoaded ? "已加载，有效修改自动保存" : "加载失败，请检查目录";
+        SaveStatus = IsLoaded ? I18nService.Instance.Translate("已加载，有效修改自动保存") : I18nService.Instance.Translate("加载失败，请检查目录");
     }
 
     /// <summary>只登记草稿，不通过后台线程访问可变 WPF 集合。</summary>
@@ -46,7 +47,7 @@ public partial class QuestVoiceManagementViewModel
         {
             if (e.PropertyName != nameof(QuestVoiceConfig.RoutingCatalogPath)) return;
             _saveTimer.Stop();
-            if (IsLoaded) SaveStatus = "配置路径已改变，旧草稿保留；请导出或重新加载";
+            if (IsLoaded) SaveStatus = I18nService.Instance.Translate("配置路径已改变，旧草稿保留；请导出或重新加载");
         };
     }
 
@@ -56,7 +57,7 @@ public partial class QuestVoiceManagementViewModel
         if (_loading) return;
         HasChanges = true;
         _draftRevision++;
-        SaveStatus = "等待输入有效配置";
+        SaveStatus = I18nService.Instance.Translate("等待输入有效配置");
         _saveTimer.Stop();
         _saveTimer.Start();
         NotifyVoiceChoices();
@@ -89,7 +90,7 @@ public partial class QuestVoiceManagementViewModel
             }
             // 资源校验期间仍可能输入；废弃旧快照，下一次防抖保存最新值。
             if (revision != _draftRevision) { _saveTimer.Start(); return false; }
-            SaveStatus = "正在保存";
+            SaveStatus = I18nService.Instance.Translate("正在保存");
             // 状态通知和资源校验均可能让用户切换路径；提交前再次核对，不把旧草稿写到错误目标。
             if (!string.Equals(Path.GetFullPath(_loadedPath), Path.GetFullPath(_factory.RoutingCatalogPath), StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("路由路径已改变，请导出旧草稿或重新加载。");
@@ -99,18 +100,18 @@ public partial class QuestVoiceManagementViewModel
             {
                 HasChanges = false;
                 _savedProfiles = Profiles.ToDictionary(x => x.OriginalId, x => x.Build());
-                SaveStatus = "已保存 · 关闭设置窗口后生效";
-                EditStatus = "有效配置已自动保存，旧文件备份已保留。";
+                SaveStatus = I18nService.Instance.Translate("已保存 · 关闭设置窗口后生效");
+                EditStatus = I18nService.Instance.Translate("有效配置已自动保存，旧文件备份已保留。");
                 _owner.CommandError = "";
             }
-            else { SaveStatus = "等待保存较新的输入"; _saveTimer.Start(); }
+            else { SaveStatus = I18nService.Instance.Translate("等待保存较新的输入"); _saveTimer.Start(); }
             return !HasChanges;
         }
         catch (Exception exception)
         {
-            SaveStatus = exception.Message.Contains("其他操作修改", StringComparison.Ordinal) ? "文件冲突：请导出草稿或重新加载"
+            SaveStatus = exception.Message.Contains("其他操作修改", StringComparison.Ordinal) ? I18nService.Instance.Translate("文件冲突：请导出草稿或重新加载")
                 : exception is IOException or UnauthorizedAccessException || exception.Message.Contains("保存失败", StringComparison.Ordinal)
-                    ? "保存失败：草稿保留" : "等待输入有效配置";
+                    ? I18nService.Instance.Translate("保存失败：草稿保留") : I18nService.Instance.Translate("等待输入有效配置");
             Report(exception);
             return false;
         }

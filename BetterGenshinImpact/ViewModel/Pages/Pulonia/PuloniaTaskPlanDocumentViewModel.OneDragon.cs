@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using Newtonsoft.Json.Linq;
 
@@ -34,9 +35,10 @@ public partial class PuloniaTaskPlanDocumentViewModel
         if (!node.IsLeaf)
             return node.Model.Source?.Kind switch
             {
-                "plan" => $"引用计划 · {node.Model.Source.PlanId} · 执行 {node.RepeatCount} 次",
-                "directory" => $"{node.Model.Source.TaskType} 目录 · {node.Model.Source.Resource?.RelativePath ?? node.Model.Source.Path} · 执行 {node.RepeatCount} 次",
-                _ => $"{node.Children.Count} 个步骤 · 整组执行 {node.RepeatCount} 次"
+                "plan" => string.Format(I18nService.Instance.Translate("引用计划 · {0} · 执行 {1} 次"), node.Model.Source.PlanId, node.RepeatCount),
+                "directory" => string.Format(I18nService.Instance.Translate("{0} 目录 · {1} · 执行 {2} 次"), node.Model.Source.TaskType,
+                    node.Model.Source.Resource?.RelativePath ?? node.Model.Source.Path, node.RepeatCount),
+                _ => string.Format(I18nService.Instance.Translate("{0} 个步骤 · 整组执行 {1} 次"), node.Children.Count, node.RepeatCount)
             };
         // 方案缺失的判定与运行准备共用解析器，预览不抛异常，只在摘要中提示。
         var resolution = ResolveParameters(node.Model, GetAncestorModels(node.Parent));
@@ -47,7 +49,7 @@ public partial class PuloniaTaskPlanDocumentViewModel
             // 体力计划只列出用量与参与的任务；子任务的详细设置在设置区查看
             var parts = new List<string> { DescribeResinPlan(values) };
             if (node.IsEffectivelyEnabled && HasEnabledResinTask(node))
-                parts.Add("⚠ 计划中另有消耗树脂的任务，会与体力计划共用树脂");
+                parts.Add(I18nService.Instance.Translate("⚠ 计划中另有消耗树脂的任务，会与体力计划共用树脂"));
             if (sharedSettings is not null) parts.Add(sharedSettings);
             return string.Join(" · ", parts);
         }
@@ -61,7 +63,7 @@ public partial class PuloniaTaskPlanDocumentViewModel
             _ => null
         };
         var summary = keys.Where(values.ContainsKey).Select(key =>
-            $"{PuloniaTaskFieldNames.GetDisplayName(key)}：{DisplayValue(key)}").ToList();
+            string.Format(I18nService.Instance.Translate("{0}：{1}"), PuloniaTaskFieldNames.GetDisplayName(key), DisplayValue(key))).ToList();
         if (capability is not null)
         {
             // 摘要与卡片共用能力校验；缺失或 null 沿用任务默认值，格式错误仅在预览中提示。
@@ -69,29 +71,30 @@ public partial class PuloniaTaskPlanDocumentViewModel
             {
                 var usage = values["resin_usage"] is { Type: not JTokenType.Null } resin
                     ? SoloTaskJson.Deserialize<ResinUsage>(resin.ToString()) : capability.Defaults;
-                summary.Add("树脂使用：" + ResinUsageText.Summary(usage, capability));
+                summary.Add(string.Format(I18nService.Instance.Translate("树脂使用：{0}"), ResinUsageText.Summary(usage, capability)));
             }
             catch (System.Text.Json.JsonException)
             {
-                summary.Add("树脂使用：参数格式无效");
+                summary.Add(I18nService.Instance.Translate("树脂使用：参数格式无效"));
             }
         }
         if ((capability is not null || node.Model.TaskType == CraftTaskType) && node.IsEffectivelyEnabled
             && EnumerateNodes().Any(other => other.IsLeaf && other.IsEffectivelyEnabled && other.Model.TaskType == ResinPlanTaskType))
-            summary.Add("⚠ 与体力计划共用树脂");
+            summary.Add(I18nService.Instance.Translate("⚠ 与体力计划共用树脂"));
         if (values["fight_config"] is JObject fight && !string.IsNullOrWhiteSpace(fight.Value<string>("StrategyName")))
-            summary.Add("战斗策略：" + fight.Value<string>("StrategyName"));
-        if (!string.IsNullOrWhiteSpace(node.Path)) summary.Add("资源：" + node.Path);
+            summary.Add(string.Format(I18nService.Instance.Translate("战斗策略：{0}"), fight.Value<string>("StrategyName")));
+        if (!string.IsNullOrWhiteSpace(node.Path)) summary.Add(string.Format(I18nService.Instance.Translate("资源：{0}"), node.Path));
         if (sharedSettings is not null) summary.Add(sharedSettings);
         return string.Join(" · ", summary);
 
         // 树脂次数及方式由公共摘要解释，其余字段保留原始显示值；秘境为提升指南选项值时按秘境来源显示“跟随培养计划”。
+        // 显示值仅在展示时翻译（秘境、首领、国家等已登记的键），参数原值不变；用户自定义名称未登记时原样返回。
         string DisplayValue(string key)
         {
-            if (values[key]?.Type == JTokenType.Null) return "默认";
+            if (values[key]?.Type == JTokenType.Null) return I18nService.Instance.Translate("默认");
             var text = values[key]!.ToString();
-            return key == "domain_name" && text == AutoDomainTask.TrainingGuideOption
-                ? TrainingGuideDomainOptions.FollowTrainingPlanOption : text;
+            return I18nService.Instance.Translate(key == "domain_name" && text == AutoDomainTask.TrainingGuideOption
+                ? TrainingGuideDomainOptions.FollowTrainingPlanOption : text);
         }
     }
 
@@ -101,14 +104,14 @@ public partial class PuloniaTaskPlanDocumentViewModel
     private string? DescribeSharedSettingsSummary(PuloniaTaskNodeViewModel node, PuloniaParameterResolution resolution)
     {
         if (resolution.Settings.MissingProfiles.Count > 0)
-            return "⚠ 设置方案缺失";
+            return I18nService.Instance.Translate("⚠ 设置方案缺失");
         if (resolution.BoundSettingKeys.Count == 0)
             return null;
         var parts = new List<string>();
         if (node.Model.ProfileId is { } profileId && FindProfile(profileId) is { } profile)
-            parts.Add("方案：" + profile.Name);
+            parts.Add(string.Format(I18nService.Instance.Translate("方案：{0}"), profile.Name));
         if (node.Model.Settings.Count > 0)
-            parts.Add($"共享设置：本任务覆盖 {node.Model.Settings.Count} 项");
+            parts.Add(string.Format(I18nService.Instance.Translate("共享设置：本任务覆盖 {0} 项"), node.Model.Settings.Count));
         return parts.Count == 0 ? null : string.Join(" · ", parts);
     }
 
@@ -134,16 +137,21 @@ public partial class PuloniaTaskPlanDocumentViewModel
     private static string DescribeResinPlan(JObject values)
     {
         var maxResin = values.Value<int?>("max_resin") ?? 0;
-        var text = maxResin > 0 ? $"体力用量：最多 {maxResin} 点" : "体力用量：全部";
-        if (values.Value<bool?>("craft_condensed_first") == true) text += " · 优先合成浓缩";
+        var text = maxResin > 0
+            ? string.Format(I18nService.Instance.Translate("体力用量：最多 {0} 点"), maxResin)
+            : I18nService.Instance.Translate("体力用量：全部");
+        if (values.Value<bool?>("craft_condensed_first") == true) text += " · " + I18nService.Instance.Translate("优先合成浓缩");
         var enabled = new (string Key, string Name, bool Default)[]
             {
-                ("boss", "首领", false), ("domain", "秘境养成", true), ("stygian", "幽境危战", true), ("ley_line", "地脉花", true)
+                ("boss", I18nService.Key("首领"), false), ("domain", I18nService.Key("秘境养成"), true),
+                ("stygian", I18nService.Key("幽境危战"), true), ("ley_line", I18nService.Key("地脉花"), true)
             }
             .Where(item => values[item.Key] is JObject sub ? sub.Value<bool?>("enabled") ?? item.Default : item.Default)
-            .Select(item => item.Name)
+            .Select(item => I18nService.Instance.Translate(item.Name))
             .ToArray();
-        return text + (enabled.Length == 0 ? " · 未开启任何任务" : " · 参与：" + string.Join("、", enabled));
+        return text + " · " + (enabled.Length == 0
+            ? I18nService.Instance.Translate("未开启任何任务")
+            : string.Format(I18nService.Instance.Translate("参与：{0}"), string.Join(I18nService.Instance.Translate("、"), enabled)));
     }
 
     /// <summary>判断计划中除体力计划外是否还启用了消耗树脂的任务。</summary>

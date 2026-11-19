@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
@@ -203,23 +204,23 @@ public partial class MainWindowViewModel
         var mismatch = _puloniaAccounts.UidMismatch is { } report && report.AccountId == _currentAccountId ? report : null;
         if (current is null)
         {
-            AccountBadgeText = "账户：未确定";
+            AccountBadgeText = I18nService.Instance.Translate("账户：未确定");
             IsAccountBadgeWarning = true;
-            AccountBadgeToolTip = "本实例当前账户未确定，跟随当前账户的运行会进入待处理。点击选择游戏中现在登录的账户。";
+            AccountBadgeToolTip = I18nService.Instance.Translate("本实例当前账户未确定，跟随当前账户的运行会进入待处理。点击选择游戏中现在登录的账户。");
         }
         else if (mismatch?.ObservedUid is { } observed)
         {
-            AccountBadgeText = "账户：" + current.Name;
+            AccountBadgeText = string.Format(I18nService.Instance.Translate("账户：{0}"), current.Name);
             IsAccountBadgeWarning = true;
-            AccountBadgeToolTip = $"本实例最近一次运行开始时，游戏中读到 UID 尾号 {PuloniaAccountChoiceViewModel.UidTail(observed)}，"
-                                  + $"与当前账户“{current.Name}”（UID 尾号 {PuloniaAccountChoiceViewModel.UidTail(current.Uid ?? "")}）不一致。"
-                                  + "请确认游戏中登录的账户，必要时修改本实例当前账户。";
+            AccountBadgeToolTip = string.Format(
+                I18nService.Instance.Translate("本实例最近一次运行开始时，游戏中读到 UID 尾号 {0}，与当前账户“{1}”（UID 尾号 {2}）不一致。请确认游戏中登录的账户，必要时修改本实例当前账户。"),
+                PuloniaAccountChoiceViewModel.UidTail(observed), current.Name, PuloniaAccountChoiceViewModel.UidTail(current.Uid ?? ""));
         }
         else
         {
-            AccountBadgeText = "账户：" + current.Name;
+            AccountBadgeText = string.Format(I18nService.Instance.Translate("账户：{0}"), current.Name);
             IsAccountBadgeWarning = false;
-            AccountBadgeToolTip = $"本实例当前账户：{PuloniaAccountChoiceViewModel.Describe(current)}。点击改为其他账户或管理账户。";
+            AccountBadgeToolTip = string.Format(I18nService.Instance.Translate("本实例当前账户：{0}。点击改为其他账户或管理账户。"), PuloniaAccountChoiceViewModel.Describe(current));
         }
 
         // 3. 目录中有读到的 UID 对应的账户时，建议一键改为该账户
@@ -229,8 +230,8 @@ public partial class MainWindowViewModel
         _suggestedAccountId = suggested?.Id;
         AccountSuggestionText = suggested is null || mismatch?.ObservedUid is not { } suggestedUid
             ? null
-            : $"游戏中读到尾号 {PuloniaAccountChoiceViewModel.UidTail(suggestedUid)}，改为{suggested.Name}";
-        AccountSuggestionButtonText = suggested is null ? "" : $"把当前账户改为{suggested.Name}";
+            : string.Format(I18nService.Instance.Translate("游戏中读到尾号 {0}，改为{1}"), PuloniaAccountChoiceViewModel.UidTail(suggestedUid), suggested.Name);
+        AccountSuggestionButtonText = suggested is null ? "" : string.Format(I18nService.Instance.Translate("把当前账户改为{0}"), suggested.Name);
         // 不一致已解除（修改了当前账户或比对一致）时，提示随之关闭
         if (mismatch is null)
             IsUidMismatchNoticeOpen = false;
@@ -249,10 +250,11 @@ public partial class MainWindowViewModel
 
         _notifiedUidMismatch = report;
         var account = _accountDirectory.FirstOrDefault(item => item.Id == report.AccountId);
-        var name = account?.Name ?? "未知账户";
-        var expected = account?.Uid is { } uid ? PuloniaAccountChoiceViewModel.UidTail(uid) : "未知";
+        var name = account?.Name ?? I18nService.Instance.Translate("未知账户");
+        var expected = account?.Uid is { } uid ? PuloniaAccountChoiceViewModel.UidTail(uid) : I18nService.Instance.Translate("未知");
         // 提示卡片在关闭前一直显示；目录中有读到的 UID 对应的账户时，卡片带“把当前账户改为乙”按钮（统筹设计 4.4）
-        UidMismatchNoticeText = $"本实例当前账户是{name}（UID 尾号 {expected}），游戏中读到尾号 {PuloniaAccountChoiceViewModel.UidTail(observed)}。本次仍按{name}记录进度。";
+        UidMismatchNoticeText = string.Format(I18nService.Instance.Translate("本实例当前账户是{0}（UID 尾号 {1}），游戏中读到尾号 {2}。本次仍按{0}记录进度。"),
+            name, expected, PuloniaAccountChoiceViewModel.UidTail(observed));
         IsUidMismatchNoticeOpen = true;
     }
 
@@ -276,7 +278,7 @@ public partial class MainWindowViewModel
                 // 子实例首次使用时，读取会按“账户列表第一个账户”初始化它的设置，与子实例自己读取的结果相同。
                 var accountId = await _puloniaAccounts.GetCurrentAccountIdAsync(instanceKey);
                 var current = _accountDirectory.FirstOrDefault(account => account.Id == accountId);
-                item.SetAccount(current?.Name ?? "未确定", _accountDirectory.Select(account =>
+                item.SetAccount(current?.Name ?? I18nService.Instance.Translate("未确定"), _accountDirectory.Select(account =>
                 {
                     var targetId = account.Id;
                     return new PuloniaAccountChoiceViewModel(account, targetId == accountId,
@@ -325,7 +327,7 @@ public partial class MainWindowViewModel
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             _logger.LogWarning(ex, "修改本实例当前账户失败");
-            await ThemedMessageBox.WarningAsync("未能修改本实例当前账户：" + ex.Message, "修改当前账户");
+            await ThemedMessageBox.WarningAsync(I18nService.Instance.Translate("未能修改本实例当前账户：") + ex.Message, I18nService.Instance.Translate("修改当前账户"));
         }
     }
 
@@ -348,7 +350,7 @@ public partial class MainWindowViewModel
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             _logger.LogWarning(ex, "修改子实例 {Instance} 的当前账户失败", item.DisplayName);
-            await ThemedMessageBox.WarningAsync($"未能修改「{item.DisplayName}」的当前账户：{ex.Message}", "修改当前账户");
+            await ThemedMessageBox.WarningAsync(string.Format(I18nService.Instance.Translate("未能修改「{0}」的当前账户：{1}"), item.DisplayName, ex.Message), I18nService.Instance.Translate("修改当前账户"));
         }
     }
 }

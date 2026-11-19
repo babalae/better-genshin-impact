@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using BetterGenshinImpact.Infrastructure.Network;
+using BetterGenshinImpact.Service.I18n;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,13 +58,13 @@ public static class AutoComboModelListFetcher
         }
         catch (Exception e)
         {
-            throw new Exception($"配置错误：{e.Message}", e);
+            throw new Exception(string.Format(I18nService.Instance.Translate("配置错误：{0}"), e.Message), e);
         }
 
         // 与建树保持同一口径：发鱼站与本机回环地址不要求密钥，其余地址缺密钥只会拿到一个 401
         if (string.IsNullOrWhiteSpace(apiKey) && AutoComboLlmEndpoint.RequiresApiKey(normalized, isLoopback))
         {
-            throw new Exception("配置错误：请先在任务设置页的“自动连招”卡片中配置 LLM 密钥（本机回环地址与发鱼站除外）");
+            throw new Exception(I18nService.Instance.Translate("配置错误：请先在任务设置页的“自动连招”卡片中配置 LLM 密钥（本机回环地址与发鱼站除外）"));
         }
 
         var uri = BuildModelListUri(normalized, endpoint);
@@ -88,7 +89,7 @@ public static class AutoComboModelListFetcher
             {
                 if (ids.Count == 0)
                 {
-                    throw new Exception($"服务端未返回任何模型：GET {DescribeUri(uri)}。请确认“LLM服务地址”指向模型列表接口（OpenAI 兼容地址通常需要包含 /v1）");
+                    throw new Exception(string.Format(I18nService.Instance.Translate("服务端未返回任何模型：GET {0}。请确认“LLM服务地址”指向模型列表接口（OpenAI 兼容地址通常需要包含 /v1）"), DescribeUri(uri)));
                 }
 
                 return ids;
@@ -96,14 +97,14 @@ public static class AutoComboModelListFetcher
 
             if (string.IsNullOrWhiteSpace(lastId))
             {
-                throw new Exception($"服务端返回 has_more=true 但未给出 last_id，无法继续取下一页：GET {DescribeUri(uri)}");
+                throw new Exception(string.Format(I18nService.Instance.Translate("服务端返回 has_more=true 但未给出 last_id，无法继续取下一页：GET {0}"), DescribeUri(uri)));
             }
 
             // 以实际生效的地址为基准翻页：重定向可能改写地址，甚至把查询串整个丢掉
             uri = BuildPageUri(effectiveUri, normalized, lastId);
         }
 
-        throw new Exception($"模型列表分页超过 {MaxModelListPages} 页仍未取完，已停止：GET {DescribeUri(uri)}");
+        throw new Exception(string.Format(I18nService.Instance.Translate("模型列表分页超过 {0} 页仍未取完，已停止：GET {1}"), MaxModelListPages, DescribeUri(uri)));
     }
 
     /// <summary>
@@ -124,11 +125,11 @@ public static class AutoComboModelListFetcher
             }
             catch (TaskCanceledException e) when (!ct.IsCancellationRequested)
             {
-                throw new Exception($"网络错误：请求超时（{HttpClient.Timeout.TotalSeconds:0} 秒未收到响应）：GET {DescribeUri(uri)}", e);
+                throw new Exception(string.Format(I18nService.Instance.Translate("网络错误：请求超时（{0} 秒未收到响应）：GET {1}"), HttpClient.Timeout.TotalSeconds.ToString("0"), DescribeUri(uri)), e);
             }
             catch (HttpRequestException e)
             {
-                throw new Exception($"网络错误：无法连接模型列表接口：GET {DescribeUri(uri)}：{e.Message}。请检查“LLM服务地址”、网络与代理设置", e);
+                throw new Exception(string.Format(I18nService.Instance.Translate("网络错误：无法连接模型列表接口：GET {0}：{1}。请检查“LLM服务地址”、网络与代理设置"), DescribeUri(uri), e.Message), e);
             }
 
             string body;
@@ -140,7 +141,7 @@ public static class AutoComboModelListFetcher
                 }
                 catch (IOException e)
                 {
-                    throw new Exception($"网络错误：读取模型列表响应失败：GET {DescribeUri(uri)}：{e.Message}", e);
+                    throw new Exception(string.Format(I18nService.Instance.Translate("网络错误：读取模型列表响应失败：GET {0}：{1}"), DescribeUri(uri), e.Message), e);
                 }
 
                 // 自动重定向是关的，3xx 会落到这里：同源跳转自己跟，跨源一律拒绝
@@ -202,20 +203,20 @@ public static class AutoComboModelListFetcher
 
         if (redirects >= MaxSameAuthorityRedirects)
         {
-            throw new Exception($"服务连续重定向超过 {MaxSameAuthorityRedirects} 次（最后一次 HTTP {status}）：GET {DescribeUri(current)}，已停止");
+            throw new Exception(string.Format(I18nService.Instance.Translate("服务连续重定向超过 {0} 次（最后一次 HTTP {1}）：GET {2}，已停止"), MaxSameAuthorityRedirects, status, DescribeUri(current)));
         }
 
         if (location is null)
         {
-            throw new Exception($"服务返回 HTTP {status} 但未给出 Location，无法继续：GET {DescribeUri(current)}");
+            throw new Exception(string.Format(I18nService.Instance.Translate("服务返回 HTTP {0} 但未给出 Location，无法继续：GET {1}"), status, DescribeUri(current)));
         }
 
         var target = location.IsAbsoluteUri ? location : new Uri(current, location);
         if (current.Scheme != target.Scheme || current.Host != target.Host || current.Port != target.Port)
         {
-            throw new Exception(
-                $"配置错误：服务返回了跨域重定向（HTTP {status} → {DescribeUri(target)}）。为避免密钥被转发到其他地址，这里不会跟随；" +
-                "请确认「LLM服务地址」填写的是该服务的地址。");
+            throw new Exception(string.Format(
+                I18nService.Instance.Translate("配置错误：服务返回了跨域重定向（HTTP {0} → {1}）。为避免密钥被转发到其他地址，这里不会跟随；请确认「LLM服务地址」填写的是该服务的地址。"),
+                status, DescribeUri(target)));
         }
 
         return target;
@@ -230,20 +231,20 @@ public static class AutoComboModelListFetcher
         var status = (int)response.StatusCode;
         var category = status switch
         {
-            401 or 403 => "鉴权失败",
-            404 => "配置错误",
-            >= 500 => "服务端错误",
-            _ => "服务端拒绝请求",
+            401 or 403 => I18nService.Instance.Translate("鉴权失败"),
+            404 => I18nService.Instance.Translate("配置错误"),
+            >= 500 => I18nService.Instance.Translate("服务端错误"),
+            _ => I18nService.Instance.Translate("服务端拒绝请求"),
         };
         var hint = status switch
         {
-            401 or 403 => "请检查 LLM 密钥是否正确；发鱼站通道无需密钥",
-            404 => "接口不存在，请检查“LLM服务地址”，OpenAI 兼容地址通常需要以 /v1 结尾",
-            >= 500 => "服务端暂时不可用，请稍后重试或联系服务提供方",
-            _ => "请检查服务商类型、服务地址以及服务端日志",
+            401 or 403 => I18nService.Instance.Translate("请检查 LLM 密钥是否正确；发鱼站通道无需密钥"),
+            404 => I18nService.Instance.Translate("接口不存在，请检查“LLM服务地址”，OpenAI 兼容地址通常需要以 /v1 结尾"),
+            >= 500 => I18nService.Instance.Translate("服务端暂时不可用，请稍后重试或联系服务提供方"),
+            _ => I18nService.Instance.Translate("请检查服务商类型、服务地址以及服务端日志"),
         };
 
-        return $"{category}：GET {DescribeUri(uri)} → HTTP {status} {response.ReasonPhrase}；{hint}。响应摘要：{Summarize(body)}";
+        return string.Format(I18nService.Instance.Translate("{0}：GET {1} → HTTP {2} {3}；{4}。响应摘要：{5}"), category, DescribeUri(uri), status, response.ReasonPhrase, hint, Summarize(body));
     }
 
     /// <summary>
@@ -268,7 +269,7 @@ public static class AutoComboModelListFetcher
         }
         catch (Exception e) when (e is JsonException or ArgumentException)
         {
-            throw new Exception($"服务端返回无法解析的模型列表响应：GET {DescribeUri(uri)}：{Summarize(body)}", e);
+            throw new Exception(string.Format(I18nService.Instance.Translate("服务端返回无法解析的模型列表响应：GET {0}：{1}"), DescribeUri(uri), Summarize(body)), e);
         }
 
         var ids = new List<string>();

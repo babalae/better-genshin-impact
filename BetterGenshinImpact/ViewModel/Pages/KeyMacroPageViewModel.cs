@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.KeyMacro;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.KeyMacro;
 using BetterGenshinImpact.View.Windows;
@@ -110,7 +111,7 @@ public partial class KeyMacroPageViewModel : ViewModel
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             _logger.LogError(e, "新建按键宏失败");
-            Toast.Error($"新建按键宏失败：{e.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("新建按键宏失败：{0}"), e.Message));
         }
     }
 
@@ -135,7 +136,7 @@ public partial class KeyMacroPageViewModel : ViewModel
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             _logger.LogError(e, "复制按键宏失败");
-            Toast.Error($"复制按键宏失败：{e.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("复制按键宏失败：{0}"), e.Message));
         }
     }
 
@@ -151,7 +152,7 @@ public partial class KeyMacroPageViewModel : ViewModel
             return;
         }
 
-        var result = ThemedMessageBox.Question($"确定删除按键宏「{item.Name}」吗？文件会移到回收站。", "删除按键宏",
+        var result = ThemedMessageBox.Question(string.Format(I18nService.Instance.Translate("确定删除按键宏「{0}」吗？文件会移到回收站。"), item.Name), I18nService.Instance.Translate("删除按键宏"),
             MessageBoxButton.OKCancel, MessageBoxResult.Cancel);
         if (result != MessageBoxResult.OK)
         {
@@ -166,7 +167,7 @@ public partial class KeyMacroPageViewModel : ViewModel
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or OperationCanceledException)
         {
             _logger.LogError(e, "删除按键宏失败");
-            Toast.Error($"删除按键宏失败：{e.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("删除按键宏失败：{0}"), e.Message));
             return;
         }
 
@@ -181,8 +182,8 @@ public partial class KeyMacroPageViewModel : ViewModel
     {
         var dialog = new OpenFileDialog
         {
-            Title = "导入按键宏",
-            Filter = "按键宏 (*.txt)|*.txt",
+            Title = I18nService.Instance.Translate("导入按键宏"),
+            Filter = I18nService.Instance.Translate("按键宏 (*.txt)|*.txt"),
             Multiselect = true
         };
         if (dialog.ShowDialog(Application.Current.MainWindow) != true)
@@ -193,12 +194,12 @@ public partial class KeyMacroPageViewModel : ViewModel
         var imported = _store.Import(dialog.FileNames);
         if (imported.Count == 0)
         {
-            Toast.Warning("没有导入任何宏，请查看日志");
+            Toast.Warning(I18nService.Instance.Translate("没有导入任何宏，请查看日志"));
             return;
         }
 
         SelectedItem = Items.FirstOrDefault(i => ReferenceEquals(i.Definition, imported[0]));
-        Toast.Success($"已导入 {imported.Count} 个宏，请为它们设置快捷键");
+        Toast.Success(string.Format(I18nService.Instance.Translate("已导入 {0} 个宏，请为它们设置快捷键"), imported.Count));
     }
 
     /// <summary>
@@ -215,7 +216,7 @@ public partial class KeyMacroPageViewModel : ViewModel
         catch (Exception e)
         {
             _logger.LogWarning(e, "打开按键宏目录失败");
-            Toast.Error($"无法打开目录：{e.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("无法打开目录：{0}"), e.Message));
         }
     }
 

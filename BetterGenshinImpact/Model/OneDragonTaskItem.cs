@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,14 +30,14 @@ public partial class OneDragonTaskItem : ObservableObject
     /// </summary>
     public static readonly IReadOnlyList<string> BuiltInTaskNames =
     [
-        "领取邮件",
-        "合成树脂",
-        "自动秘境",
-        "自动首领讨伐",
-        "自动幽境危战",
-        "自动地脉花",
-        "领取每日奖励",
-        "领取尘歌壶奖励",
+        I18nService.Key("领取邮件"),
+        I18nService.Key("合成树脂"),
+        I18nService.Key("自动秘境"),
+        I18nService.Key("自动首领讨伐"),
+        I18nService.Key("自动幽境危战"),
+        I18nService.Key("自动地脉花"),
+        I18nService.Key("领取每日奖励"),
+        I18nService.Key("领取尘歌壶奖励"),
     ];
 
     [ObservableProperty] private string _name;

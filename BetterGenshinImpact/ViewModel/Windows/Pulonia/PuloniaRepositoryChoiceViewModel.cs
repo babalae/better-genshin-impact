@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Core.Script.Repositories;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Wpf.Ui.Controls;
 
@@ -20,7 +21,8 @@ public partial class PuloniaRepositoryChoiceViewModel : ObservableObject
     public bool IsOfficial => Repository.IsOfficial;
 
     /// <summary>区分同名来源的紧凑类型标记。</summary>
-    public string TypeLabel => IsOfficial ? "官方" : Repository.Kind == "remote" ? "第三方" : "本地";
+    public string TypeLabel => IsOfficial ? I18nService.Instance.Translate("官方")
+        : Repository.Kind == "remote" ? I18nService.Instance.Translate("第三方") : I18nService.Instance.Translate("本地");
 
     /// <summary>来源图标：官方盾牌、远程分支、本地文件夹。</summary>
     public SymbolRegular Icon => IsOfficial ? SymbolRegular.Shield24
@@ -32,7 +34,8 @@ public partial class PuloniaRepositoryChoiceViewModel : ObservableObject
     private string _sourceDescription;
 
     /// <summary>完整位置通过悬停查看，不参与下拉选项宽度计算。</summary>
-    public string Tooltip => $"{DisplayName} · {TypeLabel}\n{SourceDescription}\n本地目录：{Repository.Directory}";
+    public string Tooltip => $"{DisplayName} · {TypeLabel}\n{SourceDescription}\n"
+                             + string.Format(I18nService.Instance.Translate("本地目录：{0}"), Repository.Directory);
 
     /// <summary>建立一项纯配置展示，不访问 Git、目录或任何资源正文。</summary>
     private PuloniaRepositoryChoiceViewModel(ScriptRepositoryRegistration repository, string sourceDescription)
@@ -82,14 +85,15 @@ public partial class PuloniaRepositoryChoiceViewModel : ObservableObject
 
     /// <summary>官方仅显示当前更新渠道，空配置沿用默认 CNB。</summary>
     private static string FormatOfficialChannel(string? channel)
-        => (channel is "CNB" or "GitHub" or "自定义" ? channel : "CNB") + " 更新源";
+        => string.Format(I18nService.Instance.Translate("{0} 更新源"),
+            channel is "CNB" or "GitHub" ? channel : channel == "自定义" ? I18nService.Instance.Translate("自定义") : "CNB");
 
     /// <summary>第三方显示托管主机、仓库位置和分支，省略协议、认证信息与 .git 后缀。</summary>
     private static string FormatRemote(ScriptRepositoryRegistration repository)
     {
         var remote = repository.Remotes.FirstOrDefault(r => r.Id == repository.ActiveRemoteId)
                      ?? repository.Remotes.FirstOrDefault();
-        var address = "尚未配置地址";
+        var address = I18nService.Instance.Translate("尚未配置地址");
         if (remote is not null && Uri.TryCreate(remote.Url, UriKind.Absolute, out var uri) && !string.IsNullOrEmpty(uri.Host))
         {
             var host = uri.Host + (uri.IsDefaultPort || uri.Port < 0 ? string.Empty : ":" + uri.Port);

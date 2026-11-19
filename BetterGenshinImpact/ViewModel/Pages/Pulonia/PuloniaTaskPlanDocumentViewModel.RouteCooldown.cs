@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json.Linq;
@@ -77,7 +78,7 @@ public partial class PuloniaTaskPlanDocumentViewModel
         draft.SetResource(ResolveCooldownPath(node.Model, isDirectory),
             node.Model.Resource ?? node.Model.Source?.Resource, isDirectory);
         if (isDirectory)
-            draft.SetDistribution("目录引用在运行前按固定版本展开，每个文件按自己的目录分别识别。");
+            draft.SetDistribution(I18nService.Instance.Translate("目录引用在运行前按固定版本展开，每个文件按自己的目录分别识别。"));
         else if (!node.IsLeaf)
             draft.SetDistribution(DescribeCooldownDistribution(node));
         return draft;
@@ -148,10 +149,12 @@ public partial class PuloniaTaskPlanDocumentViewModel
         var rules = Flatten(group).Where(item => !ReferenceEquals(item, group) && item.IsEffectivelyEnabled)
             .Select(ResolveCooldownRule).OfType<PuloniaRouteRefreshRule>().ToArray();
         if (rules.Length == 0)
-            return "此分组下没有直接添加的地图追踪路线；目录引用和计划引用中的路线各自识别。";
-        var groups = rules.GroupBy(rule => rule.MaterialName ?? "未识别")
+            return I18nService.Instance.Translate("此分组下没有直接添加的地图追踪路线；目录引用和计划引用中的路线各自识别。");
+        var groups = rules.GroupBy(rule => rule.MaterialName ?? I18nService.Instance.Translate("未识别"))
             .OrderByDescending(item => item.Count()).ToArray();
-        var text = string.Join("、", groups.Take(6).Select(item => $"{item.Key} {item.Count()}"));
-        return $"下属 {rules.Length} 条路线：{text}{(groups.Length > 6 ? " 等" : "")}。";
+        var text = string.Join(I18nService.Instance.Translate("、"), groups.Take(6).Select(item => $"{item.Key} {item.Count()}"));
+        return groups.Length > 6
+            ? string.Format(I18nService.Instance.Translate("下属 {0} 条路线：{1} 等。"), rules.Length, text)
+            : string.Format(I18nService.Instance.Translate("下属 {0} 条路线：{1}。"), rules.Length, text);
     }
 }

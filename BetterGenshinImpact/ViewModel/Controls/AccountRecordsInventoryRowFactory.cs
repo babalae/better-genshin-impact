@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.AccountRecords;
 using BetterGenshinImpact.Service.AccountRecords.Model;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Controls;
 
@@ -34,14 +35,24 @@ internal sealed class AccountRecordsInventoryRowFactory(InventoryCatalog catalog
             var origins = changes.Select(item => Display(item.Source)).Distinct().ToArray();
             var firstOrigin = origins.FirstOrDefault() ?? Display(active?.Source ?? reference);
             if (firstOrigin.Length > 24) firstOrigin = firstOrigin[..24] + "…";
-            var details = changes.Length > 0 ? $"变动来源：{firstOrigin}{(origins.Length > 1 ? $"，共 {origins.Length} 处" : "")}，累计变动：{changes.Sum(item => (decimal)item.Quantity):+0;-0;±0}" : $"核实来源：{firstOrigin}";
-            if (active is { State: "Completed", Kind: "Delta" }) details += $"，累计推算与确认库存：{(active.VerifiedCorrect == true ? "一致" : active.VerifiedCorrect == false ? "不一致" : "未记录比对结果")}，核实来源：{Display(active.VerificationSource)}";
+            var changeTotal = changes.Sum(item => (decimal)item.Quantity).ToString("+0;-0;±0");
+            var details = changes.Length > 0
+                ? origins.Length > 1
+                    ? string.Format(I18nService.Instance.Translate("变动来源：{0}，共 {1} 处，累计变动：{2}"), firstOrigin, origins.Length, changeTotal)
+                    : string.Format(I18nService.Instance.Translate("变动来源：{0}，累计变动：{1}"), firstOrigin, changeTotal)
+                : string.Format(I18nService.Instance.Translate("核实来源：{0}"), firstOrigin);
+            if (active is { State: "Completed", Kind: "Delta" })
+            {
+                var verified = active.VerifiedCorrect == true ? I18nService.Instance.Translate("一致")
+                    : active.VerifiedCorrect == false ? I18nService.Instance.Translate("不一致") : I18nService.Instance.Translate("未记录比对结果");
+                details += string.Format(I18nService.Instance.Translate("，累计推算与确认库存：{0}，核实来源：{1}"), verified, Display(active.VerificationSource));
+            }
             if (active?.Kind == "CategoryWarning")
-                details = $"上报来源：{Display(active.Source)}，分类采用本地值";
+                details = string.Format(I18nService.Instance.Translate("上报来源：{0}，分类采用本地值"), Display(active.Source));
             if (active?.Kind == "ExpirationCheck")
-                details = "已过期库存待检查；请重新上报到期批次或手动修订数量。";
+                details = I18nService.Instance.Translate("已过期库存待检查；请重新上报到期批次或手动修订数量。");
             if (active?.Kind == "ThresholdWarning")
-                details = "满足自定义规则；归档后本轮条件解除前不再提醒。";
+                details = I18nService.Instance.Translate("满足自定义规则；归档后本轮条件解除前不再提醒。");
             return new AccountRecordsInventoryRow
             {
                 LastScanAttemptId = recent?.FirstOrDefault(record => !string.IsNullOrEmpty(record.AttemptId))?.AttemptId
@@ -49,7 +60,7 @@ internal sealed class AccountRecordsInventoryRowFactory(InventoryCatalog catalog
                 Event = active, PendingDelta = pending.Length > 0 ? pending.Sum(item => (decimal)item.Quantity) : null, StatusDetails = details,
                 ErrorCount = events.Count(item => item.State == "Error"),
                 Name = name, ItemNameSortKey = catalog.GetItemNameSortKey(name), Prior = workspace.Inventory.Prior.Contains(name),
-                Category = string.IsNullOrEmpty(category) ? "未分类" : category,
+                Category = string.IsNullOrEmpty(category) ? I18nService.Key("未分类") : category,
                 Quantity = current?.Quantity, RecordedAt = current?.RecordedAt,
                 // 无总库存时仍展示增量中已知的到期批次；空记录仅用于批次重放，不作为确认数量。
                 Expirations = InventoryStore.EstimateExpirations(current ?? new InventoryRecord(), pending),

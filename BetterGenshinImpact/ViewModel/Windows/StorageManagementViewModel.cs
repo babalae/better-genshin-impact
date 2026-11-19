@@ -16,6 +16,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
@@ -104,13 +105,13 @@ public partial class StorageManagementViewModel : ObservableObject, IDisposable
     /// 占用总览的总大小
     /// </summary>
     [ObservableProperty]
-    private string _totalSizeText = "计算中…";
+    private string _totalSizeText = I18nService.Instance.Translate("计算中…");
 
     /// <summary>
     /// 一键清理的说明
     /// </summary>
     [ObservableProperty]
-    private string _quickCleanupText = "正在统计可清理的内容…";
+    private string _quickCleanupText = I18nService.Instance.Translate("正在统计可清理的内容…");
 
     /// <summary>
     /// 是否正在统计
@@ -143,7 +144,7 @@ public partial class StorageManagementViewModel : ObservableObject, IDisposable
 
         BuildGroups();
         IsMeasuring = true;
-        TotalSizeText = "计算中…";
+        TotalSizeText = I18nService.Instance.Translate("计算中…");
         try
         {
             // 各行并行统计，完成一行显示一行
@@ -177,8 +178,8 @@ public partial class StorageManagementViewModel : ObservableObject, IDisposable
         if (item.Area.RequiresConfirmation)
         {
             var confirm = await ThemedMessageBox.WarningAsync(
-                $"确定清除「{item.DisplayName}」（{item.SizeText}）吗？\n{item.Area.CleanupEffect}",
-                "清除确认", MessageBoxButton.OKCancel);
+                string.Format(I18nService.Instance.Translate("确定清除「{0}」（{1}）吗？\n{2}"), item.DisplayName, item.SizeText, item.CleanupEffectText),
+                I18nService.Instance.Translate("清除确认"), MessageBoxButton.OKCancel);
             if (confirm != MessageBoxResult.OK)
             {
                 return;
@@ -208,8 +209,9 @@ public partial class StorageManagementViewModel : ObservableObject, IDisposable
 
         var list = string.Join("\n", items.Select(item => $"· {item.DisplayName}（{item.SizeText}）"));
         var confirm = await ThemedMessageBox.QuestionAsync(
-            $"将清理以下内容，共约 {ByteSizeFormatter.Format(QuickCleanupBytes)}：\n{list}\n\n不会删除脚本、配置、截图和登录状态。",
-            "一键清理", MessageBoxButton.OKCancel);
+            string.Format(I18nService.Instance.Translate("将清理以下内容，共约 {0}：\n{1}\n\n不会删除脚本、配置、截图和登录状态。"),
+                ByteSizeFormatter.Format(QuickCleanupBytes), list),
+            I18nService.Instance.Translate("一键清理"), MessageBoxButton.OKCancel);
         if (confirm != MessageBoxResult.OK)
         {
             return;
@@ -341,7 +343,7 @@ public partial class StorageManagementViewModel : ObservableObject, IDisposable
         catch (Exception e)
         {
             _logger.LogError(e, "清理存储区域 {Area} 失败", item.Area.Id);
-            Toast.Error($"清理「{item.DisplayName}」失败：{e.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("清理「{0}」失败：{1}"), item.DisplayName, e.Message));
             return null;
         }
         finally
@@ -356,7 +358,7 @@ public partial class StorageManagementViewModel : ObservableObject, IDisposable
     private void UpdateOverview()
     {
         var overviewGroups = Groups.Where(group => !ExcludedFromOverview.Contains(group.Group)).ToList();
-        TotalSizeText = $"共 {ByteSizeFormatter.Format(overviewGroups.Sum(group => group.SizeBytes))}";
+        TotalSizeText = string.Format(I18nService.Instance.Translate("共 {0}"), ByteSizeFormatter.Format(overviewGroups.Sum(group => group.SizeBytes)));
 
         OverviewSegments.Clear();
         foreach (var group in overviewGroups.Where(group => group.SizeBytes > 0))
@@ -366,8 +368,8 @@ public partial class StorageManagementViewModel : ObservableObject, IDisposable
 
         QuickCleanupBytes = AllItems.Where(item => item.IsQuickCleanable && item.CanClean).Sum(item => item.SizeBytes ?? 0);
         QuickCleanupText = QuickCleanupBytes > 0
-            ? $"可安全清理 {ByteSizeFormatter.Format(QuickCleanupBytes)}，不会删除脚本、配置、截图和登录状态"
-            : "没有可以安全清理的内容";
+            ? string.Format(I18nService.Instance.Translate("可安全清理 {0}，不会删除脚本、配置、截图和登录状态"), ByteSizeFormatter.Format(QuickCleanupBytes))
+            : I18nService.Instance.Translate("没有可以安全清理的内容");
     }
 
     /// <summary>
@@ -376,16 +378,16 @@ public partial class StorageManagementViewModel : ObservableObject, IDisposable
     private static string Describe(StorageCleanupResult result)
     {
         var text = result.FreedBytes > 0 || !result.Deferred
-            ? $"已释放 {ByteSizeFormatter.Format(result.FreedBytes)}"
+            ? string.Format(I18nService.Instance.Translate("已释放 {0}"), ByteSizeFormatter.Format(result.FreedBytes))
             : "";
         if (result.Deferred)
         {
-            text += text.Length > 0 ? "，部分内容将在下次启动时清理" : "将在下次启动时清理";
+            text += text.Length > 0 ? I18nService.Instance.Translate("，部分内容将在下次启动时清理") : I18nService.Instance.Translate("将在下次启动时清理");
         }
 
         if (result.SkippedFiles > 0)
         {
-            text += $"，{result.SkippedFiles} 个文件正在使用，已跳过";
+            text += string.Format(I18nService.Instance.Translate("，{0} 个文件正在使用，已跳过"), result.SkippedFiles);
         }
 
         return text;

@@ -9,6 +9,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.QuestVoice;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.ViewModel.Pages.QuestVoiceSettings;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -122,7 +123,7 @@ public partial class QuestVoiceSettingsViewModel : ViewModel
     [RelayCommand]
     private void BrowseRoutingCatalog()
     {
-        if (PickFile("选择角色目录 JSON 文件", "JSON 配置文件 (*.json)|*.json|所有文件 (*.*)|*.*", Config.RoutingCatalogPath, useRelativeIfUnderStartup: true) is { } selected)
+        if (PickFile(I18nService.Instance.Translate("选择角色目录 JSON 文件"), I18nService.Instance.Translate("JSON 配置文件 (*.json)|*.json|所有文件 (*.*)|*.*"), Config.RoutingCatalogPath, useRelativeIfUnderStartup: true) is { } selected)
         {
             Config.RoutingCatalogPath = selected;
         }

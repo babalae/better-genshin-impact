@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers.Security;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using TextBox = Wpf.Ui.Controls.TextBox;
 
@@ -58,8 +59,8 @@ public class RedeemCodeManager
             Text = codes.Aggregate("", (current, code) => current + $"{code}\n"),
         };
         var p = new PromptDialog(
-            "从剪切版中获取到下面的兑换码，是否自动使用？",
-            "自动使用兑换码",
+            I18nService.Instance.Translate("从剪切版中获取到下面的兑换码，是否自动使用？"),
+            I18nService.Instance.Translate("自动使用兑换码"),
             multilineTextBox,
             null);
         p.Height = 500;

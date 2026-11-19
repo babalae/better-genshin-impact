@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -17,16 +18,16 @@ internal static class PuloniaSharedSettingText
     public static string Format(string key, JToken? value)
     {
         if (value is null || value.Type == JTokenType.Null)
-            return "未设置";
+            return I18nService.Instance.Translate("未设置");
         if (!PuloniaSettingCatalog.TryGet(key, out var definition))
             return value.ToString(Formatting.None);
         if (definition.Choices.FirstOrDefault(choice => JToken.DeepEquals(choice.Value, value)) is { } choice)
             return choice.Label;
         return definition.Editor switch
         {
-            PuloniaSettingEditorKind.Boolean => value.Value<bool>() ? "开" : "关",
+            PuloniaSettingEditorKind.Boolean => value.Value<bool>() ? I18nService.Instance.Translate("开") : I18nService.Instance.Translate("关"),
             PuloniaSettingEditorKind.RouteCooldown => PuloniaRouteCooldown.DescribeSettings(value),
-            _ when value.Type == JTokenType.String && string.IsNullOrEmpty(value.Value<string>()) => "空",
+            _ when value.Type == JTokenType.String && string.IsNullOrEmpty(value.Value<string>()) => I18nService.Instance.Translate("空"),
             _ when value.Type == JTokenType.String => value.Value<string>()!,
             _ => value.ToString(Formatting.None) + (definition.Unit is { } unit ? " " + unit : string.Empty)
         };

@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -88,9 +89,9 @@ public sealed partial class ConnectedInstanceItem : ObservableObject
         {
             var lines = new List<string> { DisplayName };
             if (AccountName is { } account)
-                lines.Add("当前账户：" + account);
+                lines.Add(string.Format(I18nService.Instance.Translate("当前账户：{0}"), account));
             if (RunningPlanName is { } plan)
-                lines.Add("正在运行：" + plan);
+                lines.Add(string.Format(I18nService.Instance.Translate("正在运行：{0}"), plan));
             lines.Add(_baseToolTip);
             return string.Join("\n", lines);
         }
@@ -103,7 +104,7 @@ public sealed partial class ConnectedInstanceItem : ObservableObject
     public bool IsRunning => RunningPlanName is not null;
 
     /// <summary>右键菜单中修改当前账户的子菜单标题。</summary>
-    public string AccountMenuHeader => "当前账户：" + AccountName;
+    public string AccountMenuHeader => string.Format(I18nService.Instance.Translate("当前账户：{0}"), AccountName);
 
     /// <summary>“+N”列表中显示的文字：实例名，有账户部分时加“ — 账户名”，正在运行计划时加“ · 运行中：计划名”。</summary>
     public string MenuText
@@ -111,7 +112,7 @@ public sealed partial class ConnectedInstanceItem : ObservableObject
         get
         {
             var text = AccountName is { } account ? $"{DisplayName} — {account}" : DisplayName;
-            return RunningPlanName is { } plan ? $"{text} · 运行中：{plan}" : text;
+            return RunningPlanName is { } plan ? string.Format(I18nService.Instance.Translate("{0} · 运行中：{1}"), text, plan) : text;
         }
     }
 
@@ -177,11 +178,11 @@ public sealed partial class ConnectedInstanceItem : ObservableObject
     {
         return endpoint.InstanceType switch
         {
-            BetterGiInstanceType.ChildSession => $"桌面分身（Session {endpoint.WindowsSessionId}）",
+            BetterGiInstanceType.ChildSession => string.Format(I18nService.Instance.Translate("桌面分身（Session {0}）"), endpoint.WindowsSessionId),
             BetterGiInstanceType.WebView when !string.IsNullOrWhiteSpace(endpoint.InstanceName) =>
-                $"云原神 · {endpoint.InstanceName}",
-            BetterGiInstanceType.WebView => $"云原神（进程 {endpoint.ProcessId}）",
-            _ => $"子实例（进程 {endpoint.ProcessId}）"
+                string.Format(I18nService.Instance.Translate("云原神 · {0}"), endpoint.InstanceName),
+            BetterGiInstanceType.WebView => string.Format(I18nService.Instance.Translate("云原神（进程 {0}）"), endpoint.ProcessId),
+            _ => string.Format(I18nService.Instance.Translate("子实例（进程 {0}）"), endpoint.ProcessId)
         };
     }
 

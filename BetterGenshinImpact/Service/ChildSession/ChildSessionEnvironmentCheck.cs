@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.I18n;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Win32;
@@ -221,7 +222,7 @@ internal static class ChildSessionEnvironmentCheck
             all.Add(new Issue(
                 spec.Id,
                 spec.Title,
-                $"未触发 · {spec.NormalSummary()}",
+                string.Format(I18nService.Instance.Translate("未触发 · {0}"), spec.NormalSummary()),
                 spec.NormalDetail(),
                 ChildSessionIssueSeverity.Normal,
                 CanAutoFix: false));
@@ -265,55 +266,56 @@ internal static class ChildSessionEnvironmentCheck
         [
             new IssueSpec(
                 "child-session-api-missing",
-                "系统版本过低",
-                () => "系统提供 Child Session 接口",
-                () => "检查项：wtsapi32 是否导出 WTSEnableChildSessions（Windows 10 1803 起提供）。"),
+                I18nService.Instance.Translate("系统版本过低"),
+                () => I18nService.Instance.Translate("系统提供 Child Session 接口"),
+                () => I18nService.Instance.Translate("检查项：wtsapi32 是否导出 WTSEnableChildSessions（Windows 10 1803 起提供）。")),
             new IssueSpec(
                 "termservice-disabled",
-                "远程桌面服务已被禁用",
-                () => $"启动类型：{QueryTermService().StartType}",
-                () => "检查项：TermService 的启动类型是否为「禁用」。"),
+                I18nService.Instance.Translate("远程桌面服务已被禁用"),
+                () => string.Format(I18nService.Instance.Translate("启动类型：{0}"), QueryTermService().StartType),
+                () => I18nService.Instance.Translate("检查项：TermService 的启动类型是否为「禁用」。")),
             new IssueSpec(
                 "termservice-stopped",
-                "远程桌面服务未运行",
-                () => $"运行状态：{QueryTermService().State}",
-                () => "检查项：TermService 是否处于运行状态。"),
+                I18nService.Instance.Translate("远程桌面服务未运行"),
+                () => string.Format(I18nService.Instance.Translate("运行状态：{0}"), QueryTermService().State),
+                () => I18nService.Instance.Translate("检查项：TermService 是否处于运行状态。")),
             new IssueSpec(
                 "rdp-disabled",
-                "远程桌面主机已关闭",
+                I18nService.Instance.Translate("远程桌面主机已关闭"),
                 () => $"fDenyTSConnections：{DescribeRdpDenyValue()}",
-                () => "检查项：注册表 fDenyTSConnections 是否为 1（关闭远程桌面）。"),
+                () => I18nService.Instance.Translate("检查项：注册表 fDenyTSConnections 是否为 1（关闭远程桌面）。")),
             new IssueSpec(
                 "hello-only",
-                "仅允许 Windows Hello 登录",
+                I18nService.Instance.Translate("仅允许 Windows Hello 登录"),
                 () => $"DevicePasswordLessBuildVersion：{DescribePasswordLessValue()}",
-                () => "检查项：DevicePasswordLessBuildVersion 是否为 2（仅允许 Windows Hello 登录）。"),
+                () => I18nService.Instance.Translate("检查项：DevicePasswordLessBuildVersion 是否为 2（仅允许 Windows Hello 登录）。")),
             new IssueSpec(
                 "rdp-wrapper",
-                "远程桌面服务被第三方补丁接管",
+                I18nService.Instance.Translate("远程桌面服务被第三方补丁接管"),
                 () => $"ServiceDll：{Path.GetFileName(ReadServiceDll() ?? string.Empty)}",
-                () => $"检查项：ServiceDll 是否指向原生 termsrv.dll（当前：{ReadServiceDll() ?? "读取失败"}）。"),
+                () => string.Format(
+                    I18nService.Instance.Translate("检查项：ServiceDll 是否指向原生 termsrv.dll（当前：{0}）。"),
+                    ReadServiceDll() ?? I18nService.Instance.Translate("读取失败"))),
             new IssueSpec(
                 "termservice-dll-type",
-                "ServiceDll 的值已损坏",
-                () => $"值类型：{DescribeServiceDllKind()}",
-                () => "检查项：ServiceDll 是否存在，且类型为 REG_EXPAND_SZ。"),
+                I18nService.Instance.Translate("ServiceDll 的值已损坏"),
+                () => string.Format(I18nService.Instance.Translate("值类型：{0}"), DescribeServiceDllKind()),
+                () => I18nService.Instance.Translate("检查项：ServiceDll 是否存在，且类型为 REG_EXPAND_SZ。")),
             new IssueSpec(
                 "termservice-key-broken",
-                "服务注册表项被整体覆盖",
-                () => $"异常字段：{DescribeServiceKeyDeviationCount()}",
-                () => "检查项：ImagePath / ObjectName / 依赖服务是否与系统默认一致。"),
+                I18nService.Instance.Translate("服务注册表项被整体覆盖"),
+                () => string.Format(I18nService.Instance.Translate("异常字段：{0}"), DescribeServiceKeyDeviationCount()),
+                () => I18nService.Instance.Translate("检查项：ImagePath / ObjectName / 依赖服务是否与系统默认一致。")),
             new IssueSpec(
                 "rdp-tool-persistence",
-                "存在破解工具的开机自启项",
+                I18nService.Instance.Translate("存在破解工具的开机自启项"),
                 () => DescribeToolPersistenceSummary(),
-                () => "检查项：计划任务与 Run 自启项中是否留有 RDP 破解工具"
-                      + "（计划任务需要管理员权限才能读取）。"),
+                () => I18nService.Instance.Translate("检查项：计划任务与 Run 自启项中是否留有 RDP 破解工具（计划任务需要管理员权限才能读取）。")),
             new IssueSpec(
                 "termsrv-dll-tampered",
-                "termsrv.dll 与系统组件库不一致",
+                I18nService.Instance.Translate("termsrv.dll 与系统组件库不一致"),
                 () => DescribeTermsrvState(GetTermsrvState()),
-                () => "检查项：termsrv.dll 与系统组件库是否一致（sfc /verifyfile）。")
+                () => I18nService.Instance.Translate("检查项：termsrv.dll 与系统组件库是否一致（sfc /verifyfile）。"))
         ];
     }
 
@@ -343,12 +345,11 @@ internal static class ChildSessionEnvironmentCheck
         {
             issues.Add(new Issue(
                 "child-session-api-missing",
-                "系统版本过低",
-                "当前系统不支持 Child Session，桌面分身无法使用。",
-                "桌面分身依赖 Windows 10 1803 起提供的 Child Session 接口"
-                + "（wtsapi32 的 WTSEnableChildSessions）。更早的系统没有这个导出，无法通过任何设置启用。"
+                I18nService.Instance.Translate("系统版本过低"),
+                I18nService.Instance.Translate("当前系统不支持 Child Session，桌面分身无法使用。"),
+                I18nService.Instance.Translate("桌面分身依赖 Windows 10 1803 起提供的 Child Session 接口（wtsapi32 的 WTSEnableChildSessions）。更早的系统没有这个导出，无法通过任何设置启用。")
                 + Environment.NewLine + Environment.NewLine
-                + "处理：升级到 Windows 10 1803 或更新版本。",
+                + I18nService.Instance.Translate("处理：升级到 Windows 10 1803 或更新版本。"),
                 ChildSessionIssueSeverity.Warning,
                 CanAutoFix: false));
         }
@@ -371,12 +372,11 @@ internal static class ChildSessionEnvironmentCheck
         {
             issues.Add(new Issue(
                 "termservice-disabled",
-                "远程桌面服务已被禁用",
-                "TermService 的启动类型是「禁用」，分身无法建立会话。",
-                "远程桌面服务（TermService）被设为「禁用」后，系统不会启动它，"
-                + "RDP 监听器也就不存在，桌面分身必然连接失败。"
+                I18nService.Instance.Translate("远程桌面服务已被禁用"),
+                I18nService.Instance.Translate("TermService 的启动类型是「禁用」，分身无法建立会话。"),
+                I18nService.Instance.Translate("远程桌面服务（TermService）被设为「禁用」后，系统不会启动它，RDP 监听器也就不存在，桌面分身必然连接失败。")
                 + Environment.NewLine + Environment.NewLine
-                + "处理：把启动类型改回「手动」并启动服务。诊断面板可以直接修复。",
+                + I18nService.Instance.Translate("处理：把启动类型改回「手动」并启动服务。诊断面板可以直接修复。"),
                 ChildSessionIssueSeverity.Warning,
                 CanAutoFix: true));
             return;
@@ -386,12 +386,11 @@ internal static class ChildSessionEnvironmentCheck
         {
             issues.Add(new Issue(
                 "termservice-stopped",
-                "远程桌面服务未运行",
-                "TermService 处于停止状态，分身无法建立会话。",
-                "远程桌面服务（TermService）当前没有运行。它通常是按需启动的，"
-                + "但如果启动失败，桌面分身就无法建立会话。"
+                I18nService.Instance.Translate("远程桌面服务未运行"),
+                I18nService.Instance.Translate("TermService 处于停止状态，分身无法建立会话。"),
+                I18nService.Instance.Translate("远程桌面服务（TermService）当前没有运行。它通常是按需启动的，但如果启动失败，桌面分身就无法建立会话。")
                 + Environment.NewLine + Environment.NewLine
-                + "处理：启动服务；若启动后立刻又停下，检查系统日志中 TermService 的错误。",
+                + I18nService.Instance.Translate("处理：启动服务；若启动后立刻又停下，检查系统日志中 TermService 的错误。"),
                 ChildSessionIssueSeverity.Warning,
                 CanAutoFix: true));
         }
@@ -417,19 +416,20 @@ internal static class ChildSessionEnvironmentCheck
 
         var byPolicy = policyValue is not null;
         var detail = byPolicy
-            ? "注册表 fDenyTSConnections = 1，且来自组策略。本机 RDP 监听器不会启动，桌面分身可能无法建立会话。"
+            ? I18nService.Instance.Translate("注册表 fDenyTSConnections = 1，且来自组策略。本机 RDP 监听器不会启动，桌面分身可能无法建立会话。")
               + Environment.NewLine + Environment.NewLine
-              + "处理：该值由组策略下发，修改本机注册表会被覆盖。请在 gpedit.msc 的"
-              + "「计算机配置 - 管理模板 - Windows 组件 - 远程桌面服务 - 远程桌面会话主机 - 连接」中"
-              + "启用「允许用户通过使用远程桌面服务进行远程连接」，或联系域管理员。"
-            : "注册表 fDenyTSConnections = 1，本机 RDP 监听器不会启动，桌面分身可能无法建立会话。"
+              + I18nService.Instance.Translate("处理：该值由组策略下发，修改本机注册表会被覆盖。请在 gpedit.msc 的「计算机配置 - 管理模板 - Windows 组件 - 远程桌面服务 - 远程桌面会话主机 - 连接」中启用「允许用户通过使用远程桌面服务进行远程连接」，或联系域管理员。")
+            : I18nService.Instance.Translate("注册表 fDenyTSConnections = 1，本机 RDP 监听器不会启动，桌面分身可能无法建立会话。")
               + Environment.NewLine + Environment.NewLine
-              + "处理：诊断面板可以直接修复（改回 0 并重启远程桌面服务）。";
+              + I18nService.Instance.Translate("处理：诊断面板可以直接修复（改回 0 并重启远程桌面服务）。");
 
+        // 文本按片段翻译，命令与注册表名称保持原样。
         issues.Add(new Issue(
             "rdp-disabled",
-            "远程桌面主机已关闭",
-            $"注册表 fDenyTSConnections = 1（{(byPolicy ? "组策略" : "本机设置")}）。",
+            I18nService.Instance.Translate("远程桌面主机已关闭"),
+            string.Format(
+                I18nService.Instance.Translate("注册表 fDenyTSConnections = 1（{0}）。"),
+                byPolicy ? I18nService.Instance.Translate("组策略") : I18nService.Instance.Translate("本机设置")),
             detail,
             ChildSessionIssueSeverity.Warning,
 
@@ -453,13 +453,11 @@ internal static class ChildSessionEnvironmentCheck
 
         issues.Add(new Issue(
             "hello-only",
-            "仅允许 Windows Hello 登录",
-            "系统只允许 Windows Hello 登录，密码凭据不可用。",
-            "系统已开启「为了提高安全性，仅允许对此设备上的 Microsoft 帐户使用 Windows Hello 登录」，"
-            + "此时 Microsoft 帐户在本机没有可用的密码凭据，桌面分身的登录会一直提示凭据无效，"
-            + "无论输入什么密码都会失败。"
+            I18nService.Instance.Translate("仅允许 Windows Hello 登录"),
+            I18nService.Instance.Translate("系统只允许 Windows Hello 登录，密码凭据不可用。"),
+            I18nService.Instance.Translate("系统已开启「为了提高安全性，仅允许对此设备上的 Microsoft 帐户使用 Windows Hello 登录」，此时 Microsoft 帐户在本机没有可用的密码凭据，桌面分身的登录会一直提示凭据无效，无论输入什么密码都会失败。")
             + Environment.NewLine + Environment.NewLine
-            + "处理：关闭该选项后注销或重启系统。诊断面板可以直接关闭，改完仍需重新登录。",
+            + I18nService.Instance.Translate("处理：关闭该选项后注销或重启系统。诊断面板可以直接关闭，改完仍需重新登录。"),
             ChildSessionIssueSeverity.Warning,
             CanAutoFix: true));
     }
@@ -477,14 +475,15 @@ internal static class ChildSessionEnvironmentCheck
 
         issues.Add(new Issue(
             "rdp-wrapper",
-            "远程桌面服务被第三方补丁接管",
-            $"ServiceDll 指向 {Path.GetFileName(serviceDll ?? string.Empty)}，不是系统原版。",
-            $"TermService 的 ServiceDll 当前是 {serviceDll}，不是系统的 termsrv.dll。"
-            + "这通常是 RDP Wrapper / SuperRDP 之类的多用户补丁留下的：它们替换了服务加载的模块，"
-            + "而桌面分身也依赖同一个服务，两者会互相干扰。"
+            I18nService.Instance.Translate("远程桌面服务被第三方补丁接管"),
+            string.Format(
+                I18nService.Instance.Translate("ServiceDll 指向 {0}，不是系统原版。"),
+                Path.GetFileName(serviceDll ?? string.Empty)),
+            string.Format(
+                I18nService.Instance.Translate("TermService 的 ServiceDll 当前是 {0}，不是系统的 termsrv.dll。这通常是 RDP Wrapper / SuperRDP 之类的多用户补丁留下的：它们替换了服务加载的模块，而桌面分身也依赖同一个服务，两者会互相干扰。"),
+                serviceDll)
             + Environment.NewLine + Environment.NewLine
-            + "处理：诊断面板可以还原原生模块并清理相关开机任务。"
-            + "注意还原后并发远程桌面（同一账户多会话）的能力会失效。",
+            + I18nService.Instance.Translate("处理：诊断面板可以还原原生模块并清理相关开机任务。注意还原后并发远程桌面（同一账户多会话）的能力会失效。"),
             ChildSessionIssueSeverity.Warning,
             CanAutoFix: true));
     }
@@ -516,24 +515,24 @@ internal static class ChildSessionEnvironmentCheck
         }
 
         var detail = !entry.Exists
-            ? "TermService 的 Parameters 子键里没有 ServiceDll 值，服务不知道该加载哪个模块。"
+            ? I18nService.Instance.Translate("TermService 的 Parameters 子键里没有 ServiceDll 值，服务不知道该加载哪个模块。")
             : emptyValue
-                ? "ServiceDll 的值是空字符串。类型虽然是 REG_EXPAND_SZ，但服务加载模块时拿到的是空路径，"
-                  + "表现同样是「服务起不来」。"
-                : $"ServiceDll 的值是 {entry.Value}，但类型为 {entry.Kind}。"
-                  + "写成 REG_SZ 时 %SystemRoot% 不会被展开，服务加载模块时会拿到字面量路径并失败，"
-                  + "表现出来只是「服务起不来」，而 DLL 名字看起来完全正常。";
+                ? I18nService.Instance.Translate("ServiceDll 的值是空字符串。类型虽然是 REG_EXPAND_SZ，但服务加载模块时拿到的是空路径，表现同样是「服务起不来」。")
+                : string.Format(
+                    I18nService.Instance.Translate("ServiceDll 的值是 {0}，但类型为 {1}。写成 REG_SZ 时 %SystemRoot% 不会被展开，服务加载模块时会拿到字面量路径并失败，表现出来只是「服务起不来」，而 DLL 名字看起来完全正常。"),
+                    entry.Value,
+                    entry.Kind);
 
         issues.Add(new Issue(
             "termservice-dll-type",
-            "ServiceDll 的值已损坏",
+            I18nService.Instance.Translate("ServiceDll 的值已损坏"),
             !entry.Exists
-                ? "ServiceDll 值缺失。"
+                ? I18nService.Instance.Translate("ServiceDll 值缺失。")
                 : emptyValue
-                    ? "ServiceDll 的值是空字符串。"
-                    : $"ServiceDll 的类型是 {entry.Kind}，应为 REG_EXPAND_SZ。",
+                    ? I18nService.Instance.Translate("ServiceDll 的值是空字符串。")
+                    : string.Format(I18nService.Instance.Translate("ServiceDll 的类型是 {0}，应为 REG_EXPAND_SZ。"), entry.Kind),
             detail + Environment.NewLine + Environment.NewLine
-                     + "处理：诊断面板可以写回原生路径与正确类型，然后重启服务。",
+                     + I18nService.Instance.Translate("处理：诊断面板可以写回原生路径与正确类型，然后重启服务。"),
             ChildSessionIssueSeverity.Warning,
             CanAutoFix: true));
     }
@@ -557,18 +556,21 @@ internal static class ChildSessionEnvironmentCheck
                 builder.AppendLine();
             }
 
-            builder.Append($"· {deviation.Field}：{deviation.Current}（应为 {deviation.Expect}）");
+            builder.Append(string.Format(
+                I18nService.Instance.Translate("· {0}：{1}（应为 {2}）"),
+                deviation.Field,
+                deviation.Current,
+                deviation.Expect));
         }
 
         issues.Add(new Issue(
             "termservice-key-broken",
-            "服务注册表项被整体覆盖",
-            $"{deviations.Count} 个字段与系统默认不一致。",
-            "TermService 的服务键被整体覆盖后，服务可能连可执行映像都找不到。"
-            + "这类覆盖常见于用 .reg 文件批量还原的脚本。"
+            I18nService.Instance.Translate("服务注册表项被整体覆盖"),
+            string.Format(I18nService.Instance.Translate("{0} 个字段与系统默认不一致。"), deviations.Count),
+            I18nService.Instance.Translate("TermService 的服务键被整体覆盖后，服务可能连可执行映像都找不到。这类覆盖常见于用 .reg 文件批量还原的脚本。")
             + Environment.NewLine + Environment.NewLine + builder
             + Environment.NewLine + Environment.NewLine
-            + "处理：诊断面板可以恢复默认值（依赖只追加，不会删掉本机已有的依赖）。",
+            + I18nService.Instance.Translate("处理：诊断面板可以恢复默认值（依赖只追加，不会删掉本机已有的依赖）。"),
             ChildSessionIssueSeverity.Warning,
             CanAutoFix: true));
     }
@@ -592,12 +594,11 @@ internal static class ChildSessionEnvironmentCheck
 
         issues.Add(new Issue(
             "rdp-tool-persistence",
-            "存在破解工具的开机自启项",
+            I18nService.Instance.Translate("存在破解工具的开机自启项"),
             DescribeHitCount(hits.Count),
-            "这些任务会在开机时把补丁写回系统。只还原 ServiceDll 而不清理它们，"
-            + "用户重启后问题会再次出现，看起来就像「修了没用」。"
+            I18nService.Instance.Translate("这些任务会在开机时把补丁写回系统。只还原 ServiceDll 而不清理它们，用户重启后问题会再次出现，看起来就像「修了没用」。")
             + Environment.NewLine + Environment.NewLine + builder
-            + Environment.NewLine + "处理：诊断面板可以导出备份后删除这些项。",
+            + Environment.NewLine + I18nService.Instance.Translate("处理：诊断面板可以导出备份后删除这些项。"),
             ChildSessionIssueSeverity.Notice,
             CanAutoFix: true));
     }
@@ -616,25 +617,22 @@ internal static class ChildSessionEnvironmentCheck
         }
 
         var backups = state.Backups.Count == 0
-            ? "未发现备份文件"
+            ? I18nService.Instance.Translate("未发现备份文件")
             : string.Join("、", state.Backups);
 
         issues.Add(new Issue(
             "termsrv-dll-tampered",
-            "termsrv.dll 与系统组件库不一致",
-            state.Exists ? "sfc 校验发现该文件被直接修改过。" : "termsrv.dll 不存在。",
-            "少数改版不走「替换 ServiceDll」那条路，而是直接给 termsrv.dll 打二进制补丁。"
-            + "这种情况下 ServiceDll 指向原生 DLL 也没用，因为原生 DLL 本身已经被改过。"
+            I18nService.Instance.Translate("termsrv.dll 与系统组件库不一致"),
+            state.Exists
+                ? I18nService.Instance.Translate("sfc 校验发现该文件被直接修改过。")
+                : I18nService.Instance.Translate("termsrv.dll 不存在。"),
+            I18nService.Instance.Translate("少数改版不走「替换 ServiceDll」那条路，而是直接给 termsrv.dll 打二进制补丁。这种情况下 ServiceDll 指向原生 DLL 也没用，因为原生 DLL 本身已经被改过。")
             + Environment.NewLine + Environment.NewLine
-            + $"疑似备份文件：{backups}"
+            + string.Format(I18nService.Instance.Translate("疑似备份文件：{0}"), backups)
             + Environment.NewLine + Environment.NewLine
-            + "判定方式：用 sfc 与该文件的系统组件库副本比对（termsrv.dll 只有目录签名，"
-            + "数字签名校验在这里不可靠）。"
+            + I18nService.Instance.Translate("判定方式：用 sfc 与该文件的系统组件库副本比对（termsrv.dll 只有目录签名，数字签名校验在这里不可靠）。")
             + Environment.NewLine
-            + "处理：点「修复」即可——它先用工具留下的备份还原（还原后复核，不通过自动回滚），"
-            + "还原不出来时自己继续处理，不需要你干预。"
-            + "如果要手动修，以管理员身份运行 sfc /scannow（通常 5~15 分钟），"
-            + "完成后重新检测；提示需要重启的话，重启后再检测一次。",
+            + I18nService.Instance.Translate("处理：点「修复」即可——它先用工具留下的备份还原（还原后复核，不通过自动回滚），还原不出来时自己继续处理，不需要你干预。如果要手动修，以管理员身份运行 sfc /scannow（通常 5~15 分钟），完成后重新检测；提示需要重启的话，重启后再检测一次。"),
             ChildSessionIssueSeverity.Warning,
             CanAutoFix: true));
     }
@@ -755,7 +753,7 @@ internal static class ChildSessionEnvironmentCheck
                 // 而「跳过空值」会让整条检查显示正常。
                 deviations.Add(new ServiceKeyDeviation(
                     "ImagePath",
-                    "（缺失）",
+                    I18nService.Instance.Translate("（缺失）"),
                     @"%SystemRoot%\System32\svchost.exe -k NetworkService"));
             }
             else if (!LooksLikeSvchostNetworkService(imagePath))
@@ -771,7 +769,7 @@ internal static class ChildSessionEnvironmentCheck
             {
                 deviations.Add(new ServiceKeyDeviation(
                     "ObjectName",
-                    "（缺失）",
+                    I18nService.Instance.Translate("（缺失）"),
                     @"NT AUTHORITY\NetworkService"));
             }
             else if (!IsNetworkServiceAccount(objectName))
@@ -797,7 +795,7 @@ internal static class ChildSessionEnvironmentCheck
                 // 「跳过空值」会让整条检查显示「异常字段：无」，还连修复按钮都不给。
                 deviations.Add(new ServiceKeyDeviation(
                     "DependOnService",
-                    "（缺失）",
+                    I18nService.Instance.Translate("（缺失）"),
                     expectedDependencies));
             }
             else if (!Contains(dependencies, "RPCSS")
@@ -1085,7 +1083,7 @@ internal static class ChildSessionEnvironmentCheck
                     hits.Add(new ToolPersistenceHit(
                         "task",
                         taskPath,
-                        "任务名包含破解工具特征",
+                        I18nService.Instance.Translate("任务名包含破解工具特征"),
                         TaskPath: taskPath));
                     continue;
                 }
@@ -1107,7 +1105,7 @@ internal static class ChildSessionEnvironmentCheck
                 hits.Add(new ToolPersistenceHit(
                     "task",
                     taskPath,
-                    "任务内容指向破解工具",
+                    I18nService.Instance.Translate("任务内容指向破解工具"),
                     TaskPath: taskPath));
             }
         }
@@ -1679,8 +1677,8 @@ internal static class ChildSessionEnvironmentCheck
             TerminalServerRegistryPath,
             "fDenyTSConnections");
         return policyValue is not null
-            ? $"{policyValue}（组策略）"
-            : localValue?.ToString() ?? "未设置";
+            ? string.Format(I18nService.Instance.Translate("{0}（组策略）"), policyValue)
+            : localValue?.ToString() ?? I18nService.Instance.Translate("未设置");
     }
 
     private static string DescribePasswordLessValue()
@@ -1688,19 +1686,19 @@ internal static class ChildSessionEnvironmentCheck
         return ReadInt(
             RegistryHive.LocalMachine,
             PasswordLessRegistryPath,
-            "DevicePasswordLessBuildVersion")?.ToString() ?? "未设置";
+            "DevicePasswordLessBuildVersion")?.ToString() ?? I18nService.Instance.Translate("未设置");
     }
 
     private static string DescribeServiceDllKind()
     {
         var entry = GetServiceDllEntry();
-        return entry.Exists ? entry.Kind.ToString() : "值不存在";
+        return entry.Exists ? entry.Kind.ToString() : I18nService.Instance.Translate("值不存在");
     }
 
     private static string DescribeServiceKeyDeviationCount()
     {
         var count = GetServiceKeyDeviations().Count;
-        return count == 0 ? "无" : $"{count} 个字段异常";
+        return count == 0 ? I18nService.Instance.Translate("无") : string.Format(I18nService.Instance.Translate("{0} 个字段异常"), count);
     }
 
     /// <summary>
@@ -1711,9 +1709,9 @@ internal static class ChildSessionEnvironmentCheck
     /// </summary>
     private static string DescribeHitCount(int count)
     {
-        var summary = $"{count} 个开机任务或自启项指向 RDP 破解工具。";
+        var summary = string.Format(I18nService.Instance.Translate("{0} 个开机任务或自启项指向 RDP 破解工具。"), count);
         return IsTaskScanIncomplete()
-            ? summary + "部分路径系统拒绝访问，扫描不完整。"
+            ? summary + I18nService.Instance.Translate("部分路径系统拒绝访问，扫描不完整。")
             : summary;
     }
 
@@ -1727,28 +1725,28 @@ internal static class ChildSessionEnvironmentCheck
     {
         if (!IsTaskScanReadable())
         {
-            return "计划任务未读取（需要管理员权限）";
+            return I18nService.Instance.Translate("计划任务未读取（需要管理员权限）");
         }
 
         var count = GetToolPersistenceHits().Count;
         return IsTaskScanIncomplete()
-            ? $"命中项：{count}；部分路径系统拒绝访问，扫描不完整"
-            : $"命中项：{count}";
+            ? string.Format(I18nService.Instance.Translate("命中项：{0}；部分路径系统拒绝访问，扫描不完整"), count)
+            : string.Format(I18nService.Instance.Translate("命中项：{0}"), count);
     }
 
     private static string DescribeTermsrvState(TermsrvFileState state)
     {
         if (!state.Exists)
         {
-            return "文件不存在";
+            return I18nService.Instance.Translate("文件不存在");
         }
 
         if (!state.Verified)
         {
-            return "暂时无法验证（需要管理员权限，或正在等待 sfc）";
+            return I18nService.Instance.Translate("暂时无法验证（需要管理员权限，或正在等待 sfc）");
         }
 
-        return state.Intact ? "与系统组件库一致" : "与系统组件库不一致";
+        return state.Intact ? I18nService.Instance.Translate("与系统组件库一致") : I18nService.Instance.Translate("与系统组件库不一致");
     }
 }
 

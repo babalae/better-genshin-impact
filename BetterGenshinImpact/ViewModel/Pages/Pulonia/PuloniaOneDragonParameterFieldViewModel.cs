@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System;
 using System.Collections.Generic;
@@ -116,10 +117,10 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
     /// <summary>秘境来源的说明：跟随时说明程序怎么选秘境，指定时说明选择框列出哪类秘境。</summary>
     public string DomainSourceDescription => (_scalar.DomainPicker, _isManualDomain) switch
     {
-        (TrainingGuideDomainOptions.MaterialOverflowPicker, false) => "跟随培养计划：按提升指南选择精通或炼武秘境。",
-        (TrainingGuideDomainOptions.MaterialOverflowPicker, true) => "只列出精通秘境与炼武秘境。",
-        (TrainingGuideDomainOptions.BlessingOverflowPicker, false) => "跟随培养计划：刷提升指南中养成角色推荐圣遗物所在的祝圣秘境。",
-        (TrainingGuideDomainOptions.BlessingOverflowPicker, true) => "只列出祝圣秘境。",
+        (TrainingGuideDomainOptions.MaterialOverflowPicker, false) => I18nService.Instance.Translate("跟随培养计划：按提升指南选择精通或炼武秘境。"),
+        (TrainingGuideDomainOptions.MaterialOverflowPicker, true) => I18nService.Instance.Translate("只列出精通秘境与炼武秘境。"),
+        (TrainingGuideDomainOptions.BlessingOverflowPicker, false) => I18nService.Instance.Translate("跟随培养计划：刷提升指南中养成角色推荐圣遗物所在的祝圣秘境。"),
+        (TrainingGuideDomainOptions.BlessingOverflowPicker, true) => I18nService.Instance.Translate("只列出祝圣秘境。"),
         _ => string.Empty
     };
     /// <summary>当前任务允许的策略类型。</summary>
@@ -175,7 +176,7 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
         _isManualDomain = HasDomainSource && !IsFollowTrainingPlanValue(TextValue);
         if (Resin is not null)
             Resin.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(Resin.Value)) OnPropertyChanged(nameof(Resin)); };
-        Description = schema.Value<string>("description") ?? (required ? "请选择或填写此项设置。" : "未修改的设置继续使用参数来源中的值。");
+        Description = schema.Value<string>("description") ?? (required ? I18nService.Instance.Translate("请选择或填写此项设置。") : I18nService.Instance.Translate("未修改的设置继续使用参数来源中的值。"));
         _isArray = schema["type"] is JArray allowedTypes
             ? allowedTypes.Values<string>().Contains("array")
             : schema.Value<string>("type") == "array";

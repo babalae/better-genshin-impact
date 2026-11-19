@@ -14,6 +14,7 @@ using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Wpf.Ui;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -26,12 +27,6 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 /// </summary>
 public partial class PuloniaAccountsPageViewModel : ViewModel
 {
-    /// <summary>只有一个账户时的页首说明，文字按统筹设计 9.3 节。</summary>
-    private const string SingleAccountHeader = "只有一个账号时不需要任何设置。有多个账号时，在这里添加账户，并在标题栏选择每个实例当前运行的账户。";
-
-    /// <summary>有多个账户时的页首说明。</summary>
-    private const string MultipleAccountsHeader = "为每个账户填写 UID，并在标题栏或本页顶部选择每个实例当前运行的账户；需要 BetterGI 自动切换时，再填写登录资料。";
-
     /// <summary>账户目录、实例当前账户与删除检查的应用服务。</summary>
     private readonly IPuloniaAccountService _accounts;
 
@@ -122,14 +117,18 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
     /// <summary>是否显示左侧账户列表。</summary>
     public bool ShowAccountList => !IsSingleAccount;
 
-    /// <summary>页首说明：只有一个账户与有多个账户时不同。</summary>
-    public string HeaderText => IsSingleAccount ? SingleAccountHeader : MultipleAccountsHeader;
+    /// <summary>页首说明：只有一个账户与有多个账户时不同；只有一个账户时的文字按统筹设计 9.3 节。</summary>
+    public string HeaderText => IsSingleAccount
+        // 只有一个账户时的页首说明
+        ? I18nService.Instance.Translate("只有一个账号时不需要任何设置。有多个账号时，在这里添加账户，并在标题栏选择每个实例当前运行的账户。")
+        // 有多个账户时的页首说明
+        : I18nService.Instance.Translate("为每个账户填写 UID，并在标题栏或本页顶部选择每个实例当前运行的账户；需要 BetterGI 自动切换时，再填写登录资料。");
 
     /// <summary>本实例的名称，如“主实例”“云原神 · 小号a”。</summary>
     public string CurrentInstanceName => PuloniaInstanceKey.DescribeDirectory(PuloniaInstanceKey.ToDirectoryName(_accounts.CurrentInstanceKey));
 
     /// <summary>顶部当前账户的说明文字。</summary>
-    public string CurrentInstanceText => CurrentInstanceName + " · 本实例的游戏现在登录的账户；修改立即保存，下一次运行开始时生效。";
+    public string CurrentInstanceText => string.Format(I18nService.Instance.Translate("{0} · 本实例的游戏现在登录的账户；修改立即保存，下一次运行开始时生效。"), CurrentInstanceName);
 
     /// <summary>本实例是否是云原神实例；云原神实例不能切换账户。</summary>
     public bool IsCloudInstance => _accounts.CurrentInstanceKey.StartsWith(PuloniaInstanceKey.WebViewPrefix, StringComparison.Ordinal);
@@ -148,7 +147,7 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
 
     /// <summary>本实例当前账户为“未确定”时的提示；已确定时为 null。</summary>
     public string? CurrentAccountHint => _loaded && _currentAccountId is null
-        ? "本实例当前账户未确定，跟随当前账户的运行会进入待处理。请选择游戏中现在登录的账户。"
+        ? I18nService.Instance.Translate("本实例当前账户未确定，跟随当前账户的运行会进入待处理。请选择游戏中现在登录的账户。")
         : null;
 
     /// <summary>是否显示当前账户提示。</summary>
@@ -158,21 +157,21 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
     public bool HasUnsavedChanges => !Accounts.Select(account => account.Id).SequenceEqual(_savedOrder)
                                      || Accounts.Any(account => account.IsDirty);
 
-    /// <summary>服务器时区选项，与触发器使用同一组取值。</summary>
-    public IReadOnlyDictionary<PuloniaTaskServerTimeZone, string> ServerTimeZones { get; } = new Dictionary<PuloniaTaskServerTimeZone, string>
+    /// <summary>服务器时区选项，与触发器使用同一组取值；键是保存的枚举值，值只用于显示，读取时按界面语言翻译。</summary>
+    public IReadOnlyDictionary<PuloniaTaskServerTimeZone, string> ServerTimeZones => new Dictionary<PuloniaTaskServerTimeZone, string>
     {
-        [PuloniaTaskServerTimeZone.UtcPlus8] = "国服 / 亚服 / 港澳台（UTC+8）",
-        [PuloniaTaskServerTimeZone.Europe] = "欧服（UTC+1）",
-        [PuloniaTaskServerTimeZone.America] = "美服（UTC-5）"
+        [PuloniaTaskServerTimeZone.UtcPlus8] = I18nService.Instance.Translate("国服 / 亚服 / 港澳台（UTC+8）"),
+        [PuloniaTaskServerTimeZone.Europe] = I18nService.Instance.Translate("欧服（UTC+1）"),
+        [PuloniaTaskServerTimeZone.America] = I18nService.Instance.Translate("美服（UTC-5）")
     };
 
-    /// <summary>登录方式的中文选项。</summary>
-    public IReadOnlyDictionary<PuloniaGenshinAccountLoginMode, string> LoginModes { get; } = new Dictionary<PuloniaGenshinAccountLoginMode, string>
+    /// <summary>登录方式的中文选项；键是保存的枚举值，值只用于显示，读取时按界面语言翻译。</summary>
+    public IReadOnlyDictionary<PuloniaGenshinAccountLoginMode, string> LoginModes => new Dictionary<PuloniaGenshinAccountLoginMode, string>
     {
-        [PuloniaGenshinAccountLoginMode.Automatic] = "自动：图片 → 列表文字 → 可选密码",
-        [PuloniaGenshinAccountLoginMode.Image] = "账户图片",
-        [PuloniaGenshinAccountLoginMode.ListText] = "列表文字",
-        [PuloniaGenshinAccountLoginMode.Password] = "账号密码"
+        [PuloniaGenshinAccountLoginMode.Automatic] = I18nService.Instance.Translate("自动：图片 → 列表文字 → 可选密码"),
+        [PuloniaGenshinAccountLoginMode.Image] = I18nService.Instance.Translate("账户图片"),
+        [PuloniaGenshinAccountLoginMode.ListText] = I18nService.Instance.Translate("列表文字"),
+        [PuloniaGenshinAccountLoginMode.Password] = I18nService.Instance.Translate("账号密码")
     };
 
     /// <summary>进入页面：订阅账户变化并重新读取；有未保存的修改时保留草稿，只刷新当前账户。</summary>
@@ -241,14 +240,14 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
             if (force || !_loaded || (!HasUnsavedChanges && settings.Revision != _revision))
                 ApplyDirectory(settings);
             else if (HasUnsavedChanges && settings.Revision != _revision)
-                Message = "账户目录已在其他地方修改。本页有未保存的修改，保存时会提示冲突；可以先“放弃修改”再查看最新内容。";
+                Message = I18nService.Instance.Translate("账户目录已在其他地方修改。本页有未保存的修改，保存时会提示冲突；可以先“放弃修改”再查看最新内容。");
             _loaded = true;
             // 2. 本实例当前账户与各实例的当前账户
             await RefreshCurrentAccountsCoreAsync();
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Message = "账户读取失败：" + ex.Message;
+            Message = I18nService.Instance.Translate("账户读取失败：") + ex.Message;
         }
     }
 
@@ -295,7 +294,7 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
     private async Task RefreshCurrentAccountsAsync()
     {
         try { await RefreshCurrentAccountsCoreAsync(); }
-        catch (Exception ex) when (ex is not OperationCanceledException) { Message = "当前账户读取失败：" + ex.Message; }
+        catch (Exception ex) when (ex is not OperationCanceledException) { Message = I18nService.Instance.Translate("当前账户读取失败：") + ex.Message; }
     }
 
     /// <summary>
@@ -311,18 +310,22 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
             .OrderBy(entry => InstanceOrder(entry.DirectoryName)).ThenBy(entry => entry.DirectoryName, StringComparer.Ordinal)
             .GroupBy(entry => entry.Settings.CurrentAccountId!, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => string.Join("、", group.Select(entry =>
-                PuloniaInstanceKey.DescribeDirectory(entry.DirectoryName) + (entry.DirectoryName == currentDirectory ? "（本实例）" : ""))),
+                entry.DirectoryName == currentDirectory
+                    ? string.Format(I18nService.Instance.Translate("{0}（本实例）"), PuloniaInstanceKey.DescribeDirectory(entry.DirectoryName))
+                    : PuloniaInstanceKey.DescribeDirectory(entry.DirectoryName))),
                 StringComparer.Ordinal);
         foreach (var item in Accounts)
         {
             item.InstancesText = names.GetValueOrDefault(item.Id) ?? "";
             // 账户占用（任一实例中正在使用该账户的运行）：新增尚未保存的账户没有占用文件
             item.RunningText = item.Saved is not null && _accounts.GetAccountOccupant(item.Id) is { } occupant
-                ? "运行中 · " + (string.IsNullOrEmpty(occupant.InstanceKey) ? "另一个实例" : PuloniaInstanceKey.Describe(occupant.InstanceKey))
+                ? string.Format(I18nService.Instance.Translate("运行中 · {0}"), string.IsNullOrEmpty(occupant.InstanceKey)
+                    ? I18nService.Instance.Translate("另一个实例")
+                    : PuloniaInstanceKey.Describe(occupant.InstanceKey))
                 : "";
         }
         if (instances.Failures.Count > 0)
-            Message = "有实例设置文件无法读取，“作为哪些实例的当前账户”可能不完整：" + string.Join("；", instances.Failures);
+            Message = I18nService.Instance.Translate("有实例设置文件无法读取，“作为哪些实例的当前账户”可能不完整：") + string.Join("；", instances.Failures);
     }
 
     /// <summary>实例目录的显示顺序：主实例、桌面分身、云原神实例。</summary>
@@ -358,7 +361,7 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
         {
             await _accounts.SetCurrentAccountAsync(_accounts.CurrentInstanceKey, accountId);
             var name = CurrentAccountOptions.FirstOrDefault(option => option.Id == accountId)?.Name ?? accountId;
-            Message = $"本实例当前账户已改为“{name}”，下一次运行开始时生效。";
+            Message = string.Format(I18nService.Instance.Translate("本实例当前账户已改为“{0}”，下一次运行开始时生效。"), name);
             // 各实例的当前账户随之变化；页面不可见时没有订阅事件，这里直接刷新
             if (!_isActive)
                 await RefreshCurrentAccountsAsync();
@@ -366,7 +369,7 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             SetCurrentAccountIdSilently(previous);
-            Message = "未能修改本实例当前账户：" + ex.Message;
+            Message = I18nService.Instance.Translate("未能修改本实例当前账户：") + ex.Message;
         }
     }
 
@@ -375,15 +378,16 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
     private void AddAccount()
     {
         var names = Accounts.Select(item => item.Name.Trim()).ToHashSet(StringComparer.Ordinal);
-        var name = "新账户";
+        // 默认名称按界面语言生成；保存后即为用户的账户名称，不再随语言变化
+        var name = I18nService.Instance.Translate("新账户");
         for (var index = 2; names.Contains(name); index++)
-            name = $"新账户 {index}";
+            name = string.Format(I18nService.Instance.Translate("新账户 {0}"), index);
         var account = new PuloniaGenshinAccountProfile { Name = name, ServerTimeZone = PuloniaServerTime.GetDefaultServerTimeZone() };
         var item = Attach(new PuloniaAccountItemViewModel(account, isSaved: false));
         Accounts.Add(item);
         SelectedAccount = item;
         SelectedDetailTabIndex = 0;
-        Message = "已新增账户草稿：填写名称和完整 UID（可以从当前游戏读取），选择服务器后点“保存”。";
+        Message = I18nService.Instance.Translate("已新增账户草稿：填写名称和完整 UID（可以从当前游戏读取），选择服务器后点“保存”。");
     }
 
     /// <summary>所选账户能否上移。</summary>
@@ -413,7 +417,7 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
             return;
         Accounts.Move(index, target);
         SelectedAccount = account;
-        Message = "已调整账户顺序，点“保存”后生效。";
+        Message = I18nService.Instance.Translate("已调整账户顺序，点“保存”后生效。");
     }
 
     /// <summary>是否选中了可编辑的账户。</summary>
@@ -425,11 +429,11 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
     {
         if (SelectedAccount is not { } account)
             return;
-        var name = PromptDialog.Prompt("请输入新的账户名称，名称不能与其他账户重复。", "账户改名", account.Name).Trim();
+        var name = PromptDialog.Prompt(I18nService.Instance.Translate("请输入新的账户名称，名称不能与其他账户重复。"), I18nService.Instance.Translate("账户改名"), account.Name).Trim();
         if (string.IsNullOrWhiteSpace(name) || name == account.Name.Trim())
             return;
         account.Name = name;
-        Message = $"账户已改名为“{name}”，点“保存”后生效。";
+        Message = string.Format(I18nService.Instance.Translate("账户已改名为“{0}”，点“保存”后生效。"), name);
     }
 
     /// <summary>所选账户能否删除：目录中只剩一个账户时不能删除。</summary>
@@ -448,7 +452,7 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
         if (account.Saved is null)
         {
             RemoveFromDraft(account);
-            Message = $"已移除尚未保存的账户“{account.Name}”。";
+            Message = string.Format(I18nService.Instance.Translate("已移除尚未保存的账户“{0}”。"), account.Name);
             return;
         }
         IsBusy = true;
@@ -457,8 +461,8 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
             // 2. 检查已保存的引用；有阻碍时说明原因，不删除
             if (await _accounts.CheckAccountRemovalAsync(account.Id) is { } blocker)
             {
-                Message = "不能删除账户：" + blocker;
-                await ThemedMessageBox.WarningAsync(blocker, "不能删除账户");
+                Message = I18nService.Instance.Translate("不能删除账户：") + blocker;
+                await ThemedMessageBox.WarningAsync(blocker, I18nService.Instance.Translate("不能删除账户"));
                 return;
             }
             // 3. 确认后从草稿移除并立即保存整个目录；保存失败时恢复原位置
@@ -471,17 +475,17 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
             {
                 var items = (await _accounts.DescribeAccountRemovalAsync(account.Id)).Describe();
                 dataText = items.Count == 0
-                    ? "这个账户没有保存登录凭据、账户图片、路线 CD 完成记录、首领领奖次数或狛荷屋记录。"
-                    : "将一并删除：\n" + string.Join("\n", items.Select(item => "• " + item));
+                    ? I18nService.Instance.Translate("这个账户没有保存登录凭据、账户图片、路线 CD 完成记录、首领领奖次数或狛荷屋记录。")
+                    : I18nService.Instance.Translate("将一并删除：") + "\n" + string.Join("\n", items.Select(item => "• " + item));
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                dataText = "将一并删除它保存的登录凭据和账户图片，以及该账户的路线 CD 完成记录、首领领奖次数和狛荷屋记录"
-                           + $"（未能读取具体数据：{ex.Message}）。";
+                dataText = string.Format(I18nService.Instance.Translate("将一并删除它保存的登录凭据和账户图片，以及该账户的路线 CD 完成记录、首领领奖次数和狛荷屋记录（未能读取具体数据：{0}）。"), ex.Message);
             }
-            var confirm = $"删除账户“{account.Name}”？\n\n{dataText}\n\n删除后不能撤销。"
-                          + (othersDirty ? "\n本页其他未保存的修改会一并保存。" : "");
-            if (await ThemedMessageBox.ShowAsync(confirm, "删除账户", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning,
+            var confirm = string.Format(I18nService.Instance.Translate("删除账户“{0}”？"), account.Name) + $"\n\n{dataText}\n\n"
+                          + I18nService.Instance.Translate("删除后不能撤销。")
+                          + (othersDirty ? "\n" + I18nService.Instance.Translate("本页其他未保存的修改会一并保存。") : "");
+            if (await ThemedMessageBox.ShowAsync(confirm, I18nService.Instance.Translate("删除账户"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning,
                     MessageBoxResult.No) != MessageBoxResult.Yes)
                 return;
             var index = Accounts.IndexOf(account);
@@ -490,8 +494,8 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
             {
                 // 凭据或狛荷屋记录等关联数据未能处理时，保留保存结果中的说明
                 Message = _lastSaveWarning is { } warning
-                    ? $"已删除账户“{account.Name}”，但{warning}"
-                    : $"已删除账户“{account.Name}”。";
+                    ? string.Format(I18nService.Instance.Translate("已删除账户“{0}”，但{1}"), account.Name, warning)
+                    : string.Format(I18nService.Instance.Translate("已删除账户“{0}”。"), account.Name);
                 return;
             }
             // 保存失败（例如修订冲突后放弃了重新读取）：账户仍在目录中，放回原位置
@@ -503,7 +507,7 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Message = "未删除：" + ex.Message;
+            Message = I18nService.Instance.Translate("未删除：") + ex.Message;
         }
         finally
         {
@@ -565,7 +569,9 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
             // 凭据写入失败与狛荷屋记录改名、删除失败都不回滚目录，一并显示在消息里
             var warnings = new[] { result.CredentialError, result.DataWarning }.OfType<string>().ToArray();
             _lastSaveWarning = warnings.Length > 0 ? string.Join("；", warnings) : null;
-            Message = _lastSaveWarning is { } warning ? "账户目录已保存，但" + warning : "账户目录已保存。";
+            Message = _lastSaveWarning is { } warning
+                ? I18nService.Instance.Translate("账户目录已保存，但") + warning
+                : I18nService.Instance.Translate("账户目录已保存。");
             // 新增的账户保存后才有最近一次运行与指定的计划
             _ = RefreshOverviewAsync();
             return true;
@@ -574,16 +580,16 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
         {
             if (!await IsRevisionConflictAsync())
             {
-                Message = "未保存：" + ex.Message;
+                Message = I18nService.Instance.Translate("未保存：") + ex.Message;
                 return false;
             }
             // 修订冲突：其他实例或页面已保存账户目录，本页草稿基于旧内容，不能覆盖
-            Message = "未保存：账户目录已被其他实例或页面修改。";
-            if (await ThemedMessageBox.ShowAsync("账户目录已被其他实例或页面修改，本页的修改不能直接保存。\n\n要重新读取最新的账户目录吗？本页未保存的修改会丢失。",
-                    "账户目录已变更", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No) == MessageBoxResult.Yes)
+            Message = I18nService.Instance.Translate("未保存：账户目录已被其他实例或页面修改。");
+            if (await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("账户目录已被其他实例或页面修改，本页的修改不能直接保存。\n\n要重新读取最新的账户目录吗？本页未保存的修改会丢失。"),
+                    I18nService.Instance.Translate("账户目录已变更"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No) == MessageBoxResult.Yes)
             {
                 await LoadCoreAsync(force: true);
-                Message = "已重新读取最新的账户目录，请重新修改后保存。";
+                Message = I18nService.Instance.Translate("已重新读取最新的账户目录，请重新修改后保存。");
             }
             return false;
         }
@@ -603,10 +609,10 @@ public partial class PuloniaAccountsPageViewModel : ViewModel
     [RelayCommand(CanExecute = nameof(CanDiscardChanges))]
     private async Task DiscardChangesAsync()
     {
-        if (await ThemedMessageBox.QuestionAsync("放弃本页未保存的修改，并重新读取账户目录？", "放弃修改") != MessageBoxResult.Yes)
+        if (await ThemedMessageBox.QuestionAsync(I18nService.Instance.Translate("放弃本页未保存的修改，并重新读取账户目录？"), I18nService.Instance.Translate("放弃修改")) != MessageBoxResult.Yes)
             return;
         await LoadAsync(force: true);
-        Message = "已放弃未保存的修改。";
+        Message = I18nService.Instance.Translate("已放弃未保存的修改。");
     }
 
     /// <summary>账户目录在本进程保存后重新读取（只在页面可见且空闲时）；修订未变时保留草稿。</summary>

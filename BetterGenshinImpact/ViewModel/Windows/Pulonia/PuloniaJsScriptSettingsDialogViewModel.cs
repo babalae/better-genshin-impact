@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
@@ -24,15 +25,17 @@ public partial class PuloniaJsScriptSettingsDialogViewModel : ObservableObject
     public string ScriptName { get; }
 
     /// <summary>弹窗标题。</summary>
-    public string WindowTitle => _isCreation ? $"添加 JS 脚本任务：{ScriptName}" : $"脚本自定义设置：{ScriptName}";
+    public string WindowTitle => string.Format(_isCreation
+        ? I18nService.Instance.Translate("添加 JS 脚本任务：{0}")
+        : I18nService.Instance.Translate("脚本自定义设置：{0}"), ScriptName);
 
     /// <summary>表单说明。</summary>
     public string Description => _isCreation
-        ? "以下设置由脚本声明，仅对这个任务生效；添加后仍可在“编辑配置”中修改。"
-        : "以下设置由脚本声明，仅对这个任务生效；确认后立即保存。";
+        ? I18nService.Instance.Translate("以下设置由脚本声明，仅对这个任务生效；添加后仍可在“编辑配置”中修改。")
+        : I18nService.Instance.Translate("以下设置由脚本声明，仅对这个任务生效；确认后立即保存。");
 
     /// <summary>确认按钮文本。</summary>
-    public string ConfirmText => _isCreation ? "添加任务" : "确定";
+    public string ConfirmText => _isCreation ? I18nService.Instance.Translate("添加任务") : I18nService.Instance.Translate("确定");
 
     /// <summary>settings_ui 声明的设置字段。</summary>
     public ObservableCollection<PuloniaJsScriptSettingFieldViewModel> Fields { get; } = [];

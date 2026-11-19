@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.GameTask.KeyMacro.Script;
 using System.Windows;
 using System.Windows.Input;
@@ -56,7 +57,7 @@ public class KeyCaptureBox : TextBox
     protected override void OnGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
     {
         base.OnGotKeyboardFocus(e);
-        Text = "请按键…";
+        Text = I18nService.Instance.Translate("请按键…");
     }
 
     /// <summary>
@@ -109,7 +110,7 @@ public class KeyCaptureBox : TextBox
         }
 
         Text = string.IsNullOrEmpty(KeyName)
-            ? "点击后按键"
+            ? I18nService.Instance.Translate("点击后按键")
             : KeyMacroKeys.TryParseKey(KeyName, out var vk) ? KeyMacroKeys.GetDisplayName(vk) : KeyName;
     }
 }

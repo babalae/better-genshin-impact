@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Pulonia.Executors;
@@ -64,17 +65,17 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     /// </summary>
     public string TypeDisplayName => _model.Source?.Kind switch
     {
-        "plan" => "计划引用",
-        "directory" => "目录引用",
+        "plan" => I18nService.Instance.Translate("计划引用"),
+        "directory" => I18nService.Instance.Translate("目录引用"),
         _ => _model.TaskType switch
         {
-            "group" => "分组",
-            "pathing" => "地图追踪",
-            "javascript" => "JS 脚本",
-            "keymouse" => "录制回放",
+            "group" => I18nService.Instance.Translate("分组"),
+            "pathing" => I18nService.Instance.Translate("地图追踪"),
+            "javascript" => I18nService.Instance.Translate("JS 脚本"),
+            "keymouse" => I18nService.Instance.Translate("录制回放"),
             "shell" => "Shell",
-            "csharp" => "进程内 C#",
-            _ when PuloniaSoloTaskExecutor.IsSoloTaskType(_model.TaskType) => "独立任务",
+            "csharp" => I18nService.Instance.Translate("进程内 C#"),
+            _ when PuloniaSoloTaskExecutor.IsSoloTaskType(_model.TaskType) => I18nService.Instance.Translate("独立任务"),
             _ => _model.TaskType
         }
     };
@@ -115,7 +116,7 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
 
     /// <summary>任务当前使用资源正文声明的版本号，仅用于界面展示。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ResourceUpdateText), nameof(ResourceUpdateToolTip), nameof(ResourceVersionText))]
+    [NotifyPropertyChangedFor(nameof(ResourceUpdateText), nameof(ResourceUpdateToolTip), nameof(ResourceVersionText), nameof(CurrentResourceVersionText))]
     private string? _approvedDeclaredVersion;
 
     /// <summary>本机仓库当前资源正文声明的版本号，仅用于界面展示。</summary>
@@ -142,19 +143,19 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
 
     /// <summary>小标签的状态文本，不以颜色作为唯一提示。</summary>
     public string ResourceUpdateText => ResourceCheckError is not null
-        ? ResourceCheckError.StartsWith("来源中已移除：", StringComparison.Ordinal) ? "来源中已移除"
-        : _model.Resource is not null || _model.Source?.Resource is not null ? "检查失败" : "资源不可用"
-        : ReferencedResourceUpdateCount > 0 ? $"{ReferencedResourceUpdateCount} 项有更新"
-        : HasDeclaredVersionChange ? $"有更新 {FormatDeclaredVersion(ApprovedDeclaredVersion)} → {FormatDeclaredVersion(CurrentDeclaredVersion)}"
-        : "有更新";
+        ? ResourceCheckError.StartsWith("来源中已移除：", StringComparison.Ordinal) ? I18nService.Instance.Translate("来源中已移除")
+        : _model.Resource is not null || _model.Source?.Resource is not null ? I18nService.Instance.Translate("检查失败") : I18nService.Instance.Translate("资源不可用")
+        : ReferencedResourceUpdateCount > 0 ? string.Format(I18nService.Instance.Translate("{0} 项有更新"), ReferencedResourceUpdateCount)
+        : HasDeclaredVersionChange ? string.Format(I18nService.Instance.Translate("有更新 {0} → {1}"), FormatDeclaredVersion(ApprovedDeclaredVersion), FormatDeclaredVersion(CurrentDeclaredVersion))
+        : I18nService.Instance.Translate("有更新");
 
     /// <summary>标签的具体原因，文件更新必须用户确认后才影响新运行。</summary>
     public string ResourceUpdateToolTip => ResourceCheckError
         ?? (ReferencedResourceUpdateCount > 0
-            ? $"引用计划中有 {ReferencedResourceUpdateCount} 项任务资源可更新。"
+            ? string.Format(I18nService.Instance.Translate("引用计划中有 {0} 项任务资源可更新。"), ReferencedResourceUpdateCount)
             : HasDeclaredVersionChange
-                ? $"任务使用版本 {ApprovedDeclaredVersion}，本机仓库版本 {CurrentDeclaredVersion}。可右键更新此任务资源，或在计划卡片上更新整个计划。"
-                : "本机仓库内容与任务使用版本不同；可右键更新此任务资源，或在计划卡片上更新整个计划。");
+                ? string.Format(I18nService.Instance.Translate("任务使用版本 {0}，本机仓库版本 {1}。可右键更新此任务资源，或在计划卡片上更新整个计划。"), ApprovedDeclaredVersion, CurrentDeclaredVersion)
+                : I18nService.Instance.Translate("本机仓库内容与任务使用版本不同；可右键更新此任务资源，或在计划卡片上更新整个计划。"));
 
     /// <summary>声明版本仅在两端都有值且文字不同时显示箭头，不参与更新判断。</summary>
     private bool HasDeclaredVersionChange => HasResourceUpdate
@@ -177,9 +178,14 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
                 ? _model.Source.Version
                 : _model.ResourceVersion;
             if (!string.IsNullOrWhiteSpace(ApprovedDeclaredVersion)) return ApprovedDeclaredVersion;
-            return string.IsNullOrWhiteSpace(version) ? "未固定" : "已固定";
+            return string.IsNullOrWhiteSpace(version) ? I18nService.Instance.Translate("未固定") : I18nService.Instance.Translate("已固定");
         }
     }
+
+    /// <summary>
+    /// 带“当前使用”标签的资源版本摘要，供设置弹窗展示。
+    /// </summary>
+    public string CurrentResourceVersionText => string.Format(I18nService.Instance.Translate("当前使用：{0}"), ResourceVersionText);
 
     /// <summary>
     /// 节点名称；失焦提交时作为一次可撤销编辑。
@@ -246,6 +252,7 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     internal void NotifyResourceVersionChanged()
     {
         OnPropertyChanged(nameof(ResourceVersionText));
+        OnPropertyChanged(nameof(CurrentResourceVersionText));
         OnPropertyChanged(nameof(CanUpdateResourceVersion));
         OnPropertyChanged(nameof(HasResourceUpdate));
         OnPropertyChanged(nameof(HasResourceNotice));

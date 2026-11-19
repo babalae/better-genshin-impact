@@ -8,6 +8,7 @@ using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -46,7 +47,7 @@ public partial class PuloniaAccountsPageViewModel
         {
             PlanUsages.Clear();
             OnPropertyChanged(nameof(HasPlanUsages));
-            LastRunText = account is null ? "" : "保存后显示。";
+            LastRunText = account is null ? "" : I18nService.Instance.Translate("保存后显示。");
             return;
         }
         // 1. 指定了该账户的计划
@@ -69,11 +70,11 @@ public partial class PuloniaAccountsPageViewModel
                 : (await _runOverview.ListAsync()).Runs.Where(run => run.AccountId == account.Id)
                     .OrderByDescending(run => run.SubmittedAt).FirstOrDefault() is { } run
                     ? DescribeRun(run)
-                    : "还没有运行记录。";
+                    : I18nService.Instance.Translate("还没有运行记录。");
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            lastRun = "读取执行记录失败：" + ex.Message;
+            lastRun = I18nService.Instance.Translate("读取执行记录失败：") + ex.Message;
         }
         if (version != _overviewVersion)
             return;

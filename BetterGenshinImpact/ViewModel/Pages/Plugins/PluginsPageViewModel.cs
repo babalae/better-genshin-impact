@@ -10,6 +10,7 @@ using System.Windows;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Plugins.Hosting;
 using BetterGenshinImpact.Core.Plugins.Pluggables;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -124,7 +125,7 @@ public sealed partial class PluginsPageViewModel : ViewModel
         }
         catch (Exception e)
         {
-            _ = ThemedMessageBox.ErrorAsync($"无法打开插件目录：{e.Message}", "插件");
+            _ = ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("无法打开插件目录：{0}"), e.Message), I18nService.Instance.Translate("插件"));
         }
     }
 
@@ -136,8 +137,8 @@ public sealed partial class PluginsPageViewModel : ViewModel
     {
         var dialog = new OpenFileDialog
         {
-            Title = "选择插件安装包",
-            Filter = "BetterGI 插件 (*.zip;*.nupkg)|*.zip;*.nupkg",
+            Title = I18nService.Instance.Translate("选择插件安装包"),
+            Filter = I18nService.Instance.Translate("BetterGI 插件 (*.zip;*.nupkg)|*.zip;*.nupkg"),
             CheckFileExists = true,
         };
         if (dialog.ShowDialog() != true)
@@ -153,19 +154,19 @@ public sealed partial class PluginsPageViewModel : ViewModel
         }
         catch (Exception e) when (e is InvalidDataException or IOException or UnauthorizedAccessException)
         {
-            await ThemedMessageBox.ErrorAsync($"无法读取安装包：{e.Message}", "安装插件");
+            await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("无法读取安装包：{0}"), e.Message), I18nService.Instance.Translate("安装插件"));
             return;
         }
 
         var manifest = package.Manifest;
         if (package.CompatibilityError is { } error)
         {
-            await ThemedMessageBox.ErrorAsync($"插件“{manifest.Name}”无法在当前版本中使用：{error}", "安装插件");
+            await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("插件“{0}”无法在当前版本中使用：{1}"), manifest.Name, error), I18nService.Instance.Translate("安装插件"));
             return;
         }
 
         // 2. 确认
-        if (await ThemedMessageBox.QuestionAsync(BuildInstallConfirmation(package), "安装插件") != MessageBoxResult.Yes)
+        if (await ThemedMessageBox.QuestionAsync(BuildInstallConfirmation(package), I18nService.Instance.Translate("安装插件")) != MessageBoxResult.Yes)
         {
             return;
         }
@@ -177,19 +178,19 @@ public sealed partial class PluginsPageViewModel : ViewModel
             var result = await _manager.InstallAsync(package);
             if (result.RequiresRestart)
             {
-                await ThemedMessageBox.InformationAsync("该插件已加载，新版本将在重启 BetterGI 后生效。", "安装插件");
+                await ThemedMessageBox.InformationAsync(I18nService.Instance.Translate("该插件已加载，新版本将在重启 BetterGI 后生效。"), I18nService.Instance.Translate("安装插件"));
             }
             else if (result.Entry.State == PluginState.Disabled
-                     && await ThemedMessageBox.QuestionAsync($"插件“{manifest.Name}”已安装，是否立即启用？", "安装插件") == MessageBoxResult.Yes
+                     && await ThemedMessageBox.QuestionAsync(string.Format(I18nService.Instance.Translate("插件“{0}”已安装，是否立即启用？"), manifest.Name), I18nService.Instance.Translate("安装插件")) == MessageBoxResult.Yes
                      && !_manager.Enable(result.Entry))
             {
-                await ThemedMessageBox.ErrorAsync($"启用插件“{manifest.Name}”失败：{result.Entry.Error}", "启用插件");
+                await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("启用插件“{0}”失败：{1}"), manifest.Name, result.Entry.Error), I18nService.Instance.Translate("启用插件"));
             }
         }
         catch (Exception e)
         {
             _logger.LogError(e, "安装插件 {Id} 失败", manifest.Id);
-            await ThemedMessageBox.ErrorAsync($"安装插件失败：{e.Message}", "安装插件");
+            await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("安装插件失败：{0}"), e.Message), I18nService.Instance.Translate("安装插件"));
         }
         finally
         {
@@ -210,8 +211,8 @@ public sealed partial class PluginsPageViewModel : ViewModel
 
         var dataDirectory = Global.Absolute(Path.Combine("User", "PluginData", item.Id));
         if (await ThemedMessageBox.QuestionAsync(
-                $"确定卸载插件“{item.Name}”吗？\n\n插件的数据保留在 {dataDirectory}，重新安装后恢复。",
-                "卸载插件") != MessageBoxResult.Yes)
+                string.Format(I18nService.Instance.Translate("确定卸载插件“{0}”吗？\n\n插件的数据保留在 {1}，重新安装后恢复。"), item.Name, dataDirectory),
+                I18nService.Instance.Translate("卸载插件")) != MessageBoxResult.Yes)
         {
             return;
         }
@@ -221,13 +222,13 @@ public sealed partial class PluginsPageViewModel : ViewModel
         {
             if (await _manager.UninstallAsync(item.Entry))
             {
-                await ThemedMessageBox.InformationAsync("插件已停用，文件将在下次启动 BetterGI 时删除。", "卸载插件");
+                await ThemedMessageBox.InformationAsync(I18nService.Instance.Translate("插件已停用，文件将在下次启动 BetterGI 时删除。"), I18nService.Instance.Translate("卸载插件"));
             }
         }
         catch (Exception e)
         {
             _logger.LogError(e, "卸载插件 {Id} 失败", item.Id);
-            await ThemedMessageBox.ErrorAsync($"卸载插件失败：{e.Message}", "卸载插件");
+            await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("卸载插件失败：{0}"), e.Message), I18nService.Instance.Translate("卸载插件"));
         }
         finally
         {
@@ -243,24 +244,24 @@ public sealed partial class PluginsPageViewModel : ViewModel
         var manifest = package.Manifest;
         var installed = _manager.Find(manifest.Id);
         var text = new StringBuilder();
-        text.AppendLine($"名称：{manifest.Name}");
-        text.AppendLine($"标识：{manifest.Id}");
+        text.AppendLine(string.Format(I18nService.Instance.Translate("名称：{0}"), manifest.Name));
+        text.AppendLine(string.Format(I18nService.Instance.Translate("标识：{0}"), manifest.Id));
         text.AppendLine(installed is null
-            ? $"版本：{manifest.Version}"
-            : $"版本：{installed.Manifest.Version} → {manifest.Version}");
+            ? string.Format(I18nService.Instance.Translate("版本：{0}"), manifest.Version)
+            : string.Format(I18nService.Instance.Translate("版本：{0} → {1}"), installed.Manifest.Version, manifest.Version));
         if (manifest.Authors.Count > 0)
         {
-            text.AppendLine($"作者：{string.Join("、", manifest.Authors)}");
+            text.AppendLine(string.Format(I18nService.Instance.Translate("作者：{0}"), string.Join("、", manifest.Authors)));
         }
 
-        text.AppendLine($"大小：{package.TotalBytes / 1024d / 1024d:F1} MB，{package.FileCount} 个文件");
+        text.AppendLine(string.Format(I18nService.Instance.Translate("大小：{0:F1} MB，{1} 个文件"), package.TotalBytes / 1024d / 1024d, package.FileCount));
         if (installed is not null && Global.IsNewVersion(manifest.Version, installed.Manifest.Version))
         {
-            text.AppendLine("注意：安装包的版本低于已安装的版本。");
+            text.AppendLine(I18nService.Instance.Translate("注意：安装包的版本低于已安装的版本。"));
         }
 
         text.AppendLine();
-        text.Append("插件拥有与 BetterGI 相同的系统权限（管理员），请只安装可信来源的插件。是否安装？");
+        text.Append(I18nService.Instance.Translate("插件拥有与 BetterGI 相同的系统权限（管理员），请只安装可信来源的插件。是否安装？"));
         return text.ToString();
     }
 
@@ -294,5 +295,7 @@ public sealed partial class PluginsPageViewModel : ViewModel
     /// 按可插拔能力标识取显示名称。
     /// </summary>
     private string GetPluggableName(string pluggableId)
-        => _registry.All.FirstOrDefault(d => d.Id == pluggableId)?.DisplayName ?? pluggableId;
+        => _registry.All.FirstOrDefault(d => d.Id == pluggableId)?.DisplayName is { } name
+            ? I18nService.Instance.Translate(name)
+            : pluggableId;
 }

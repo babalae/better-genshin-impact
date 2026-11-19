@@ -10,6 +10,7 @@ using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
@@ -81,9 +82,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     public IReadOnlyList<PuloniaDirectoryImportModeOption> DirectoryImportModes { get; } =
     [
-        new(PuloniaTaskDirectoryImportMode.Reference, "引用目录（推荐）", "保存固定目录版本，资源清单在运行准备时展开；计划树保持简洁。"),
-        new(PuloniaTaskDirectoryImportMode.Structured, "展开为任务并保留目录", "把当前文件清单写成可逐项编辑的任务树，并保留子目录结构。"),
-        new(PuloniaTaskDirectoryImportMode.Flat, "展开为扁平任务", "把当前文件清单写入一个分组，不保留子目录层级。")
+        new(PuloniaTaskDirectoryImportMode.Reference, I18nService.Instance.Translate("引用目录（推荐）"), I18nService.Instance.Translate("保存固定目录版本，资源清单在运行准备时展开；计划树保持简洁。")),
+        new(PuloniaTaskDirectoryImportMode.Structured, I18nService.Instance.Translate("展开为任务并保留目录"), I18nService.Instance.Translate("把当前文件清单写成可逐项编辑的任务树，并保留子目录结构。")),
+        new(PuloniaTaskDirectoryImportMode.Flat, I18nService.Instance.Translate("展开为扁平任务"), I18nService.Instance.Translate("把当前文件清单写入一个分组，不保留子目录层级。"))
     ];
 
     /// <summary>
@@ -122,12 +123,12 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     public string WindowTitle => _creationTaskType switch
     {
-        "pathing" => "添加地图追踪任务",
-        "javascript" => "添加 JS 脚本任务",
-        "keymouse" => "添加录制回放任务",
-        "shell" => "添加 Shell 任务",
-        "csharp" => "添加进程内 C# 任务",
-        _ => "添加任务"
+        "pathing" => I18nService.Instance.Translate("添加地图追踪任务"),
+        "javascript" => I18nService.Instance.Translate("添加 JS 脚本任务"),
+        "keymouse" => I18nService.Instance.Translate("添加录制回放任务"),
+        "shell" => I18nService.Instance.Translate("添加 Shell 任务"),
+        "csharp" => I18nService.Instance.Translate("添加进程内 C# 任务"),
+        _ => I18nService.Instance.Translate("添加任务")
     };
 
     /// <summary>
@@ -167,18 +168,18 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     public string RunSettingsHint => SelectedDefinition?.TaskType switch
     {
-        "pathing" => "队伍、拾取、战斗与路线 CD 等共享设置沿用所在分组或计划的设置，添加后可在“编辑配置 → 共享设置”中单独修改。",
+        "pathing" => I18nService.Instance.Translate("队伍、拾取、战斗与路线 CD 等共享设置沿用所在分组或计划的设置，添加后可在“编辑配置 → 共享设置”中单独修改。"),
         "javascript" => (HasJavaScriptSettings
-                            ? "此脚本提供自定义设置，点击“添加任务”后会弹出设置窗口。"
+                            ? I18nService.Instance.Translate("此脚本提供自定义设置，点击“添加任务”后会弹出设置窗口。")
                             : JavaScriptSettingsMessage)
-                        + "\n队伍、拾取与战斗等共享设置沿用所在分组或计划的设置，添加后可在“编辑配置 → 共享设置”中单独修改。",
+                        + "\n" + I18nService.Instance.Translate("队伍、拾取与战斗等共享设置沿用所在分组或计划的设置，添加后可在“编辑配置 → 共享设置”中单独修改。"),
         _ => string.Empty
     };
 
     /// <summary>
     /// 当前资源详情区标题；JS 详情只展示 README.md。
     /// </summary>
-    public string ResourcePreviewTitle => IsJavaScriptTask ? "README.md" : "资源详情";
+    public string ResourcePreviewTitle => IsJavaScriptTask ? "README.md" : I18nService.Instance.Translate("资源详情");
 
     /// <summary>
     /// 当前资源是否可以使用原生 Markdown 控件展示 README.md。
@@ -196,19 +197,19 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     public bool IsLoading => !IsRepositoryManagerOpen && (IsBusy || IsResourceDetailsLoading);
 
     /// <summary>
-    /// 当前能力说明。
+    /// 当前能力说明；定义中的说明以 i18n Key 标记，这里按界面语言展示。
     /// </summary>
-    public string DefinitionDescription => SelectedDefinition?.Description ?? string.Empty;
+    public string DefinitionDescription => SelectedDefinition is null ? string.Empty : I18nService.Instance.Translate(SelectedDefinition.Description);
 
     /// <summary>
     /// 资源搜索框提示文本。
     /// </summary>
     public string ResourceSearchPlaceholder => SelectedDefinition?.TaskType switch
     {
-        "pathing" => "搜索路线名称或相对路径",
-        "javascript" => "搜索脚本名称或目录",
-        "keymouse" => "搜索录制名称或相对路径",
-        _ => "搜索资源"
+        "pathing" => I18nService.Instance.Translate("搜索路线名称或相对路径"),
+        "javascript" => I18nService.Instance.Translate("搜索脚本名称或目录"),
+        "keymouse" => I18nService.Instance.Translate("搜索录制名称或相对路径"),
+        _ => I18nService.Instance.Translate("搜索资源")
     };
 
     /// <summary>
@@ -267,7 +268,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// 当前资源的按需预览。
     /// </summary>
     [ObservableProperty]
-    private string _resourcePreview = "请选择一项资源查看详情。";
+    private string _resourcePreview = I18nService.Instance.Translate("请选择一项资源查看详情。");
 
     /// <summary>
     /// 当前 JS 项目的 README.md 完整路径。
@@ -285,7 +286,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(RunSettingsHint))]
-    private string _javaScriptSettingsMessage = "请选择一个 JS 项目。";
+    private string _javaScriptSettingsMessage = I18nService.Instance.Translate("请选择一个 JS 项目。");
 
     /// <summary>
     /// 弹窗底部的加载或校验状态。
@@ -349,7 +350,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         _resourceLoadCancellationTokenSource = cancellationTokenSource;
         var ct = cancellationTokenSource.Token;
         IsBusy = true;
-        StatusMessage = "正在读取已拉取的资源清单…";
+        StatusMessage = I18nService.Instance.Translate("正在读取已拉取的资源清单…");
         try
         {
             if (SupportsRepositories)
@@ -358,14 +359,14 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                 if (SelectedRepository is null)
                 {
                     ClearResourceSelection();
-                    StatusMessage = "尚未添加仓库，请添加远程仓库或已拉取的本地仓库。";
+                    StatusMessage = I18nService.Instance.Translate("尚未添加仓库，请添加远程仓库或已拉取的本地仓库。");
                     return;
                 }
                 await _resourceCatalog.Repositories.SelectRepositoryAsync(definition.TaskType, SelectedRepository.Id, ct);
                 if (SelectedRepository.IsRemote && !Directory.Exists(SelectedRepository.Directory))
                 {
                     ClearResourceSelection();
-                    StatusMessage = "所选仓库尚未下载，请打开仓库管理进行下载。";
+                    StatusMessage = I18nService.Instance.Translate("所选仓库尚未下载，请打开仓库管理进行下载。");
                     return;
                 }
             }
@@ -375,10 +376,10 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             _allResources = index.Resources;
             ApplyResourceFilter();
             StatusMessage = index.IsTruncated
-                ? $"资源超过安全扫描上限，仅显示已建立索引的 {_allResources.Count} 项。"
-                : $"已找到 {_allResources.Count} 项可用资源。";
+                ? string.Format(I18nService.Instance.Translate("资源超过安全扫描上限，仅显示已建立索引的 {0} 项。"), _allResources.Count)
+                : string.Format(I18nService.Instance.Translate("已找到 {0} 项可用资源。"), _allResources.Count);
             if (index.SkippedDirectoryCount > 0)
-                StatusMessage += $" 已跳过 {index.SkippedDirectoryCount} 个不可访问目录。";
+                StatusMessage += " " + string.Format(I18nService.Instance.Translate("已跳过 {0} 个不可访问目录。"), index.SkippedDirectoryCount);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -389,7 +390,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         {
             _allResources = [];
             ApplyResourceFilter();
-            StatusMessage = "读取资源失败：" + ex.Message;
+            StatusMessage = string.Format(I18nService.Instance.Translate("读取资源失败：{0}"), ex.Message);
         }
         finally
         {
@@ -509,16 +510,18 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         ReleasePreview();
         JavaScriptSettingFields.Clear();
         _javaScriptSettingsLoadFailed = false;
-        JavaScriptSettingsMessage = IsJavaScriptTask ? "正在读取脚本设置…" : string.Empty;
+        JavaScriptSettingsMessage = IsJavaScriptTask ? I18nService.Instance.Translate("正在读取脚本设置…") : string.Empty;
         OnPropertyChanged(nameof(HasParameters));
         OnPropertyChanged(nameof(HasJavaScriptSettings));
         OnPropertyChanged(nameof(RunSettingsHint));
         if (value is null)
         {
             IsResourceDetailsLoading = false;
-            ResourcePreview = _allResources.Count == 0 ? "没有可预览的资源。" : "请选择一项资源查看详情。";
+            ResourcePreview = _allResources.Count == 0
+                ? I18nService.Instance.Translate("没有可预览的资源。")
+                : I18nService.Instance.Translate("请选择一项资源查看详情。");
             if (IsJavaScriptTask)
-                JavaScriptSettingsMessage = "请选择一个 JS 项目。";
+                JavaScriptSettingsMessage = I18nService.Instance.Translate("请选择一个 JS 项目。");
             return;
         }
 
@@ -555,8 +558,8 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         {
             var policy = PuloniaRouteCooldown.Resolve(resource.FullPath, resource.Resource, new JObject());
             return policy.Source == PuloniaRouteRefreshRuleSource.Unmatched
-                ? "路线 CD：未识别刷新规则，成功后不会跳过；添加后可在“共享设置 → 路线 CD”中选择自定义周期。"
-                : $"路线 CD：{policy.MaterialName} · {policy.Description}";
+                ? I18nService.Instance.Translate("路线 CD：未识别刷新规则，成功后不会跳过；添加后可在“共享设置 → 路线 CD”中选择自定义周期。")
+                : string.Format(I18nService.Instance.Translate("路线 CD：{0} · {1}"), policy.MaterialName, policy.DisplayDescription);
         }
         // 目录：统计索引中目录下的路线文件按自动识别的结果
         var prefix = resource.RelativePath.TrimEnd('/', '\\') + "/";
@@ -568,10 +571,15 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         var unmatched = policies.Count(policy => policy.Source == PuloniaRouteRefreshRuleSource.Unmatched);
         var groups = policies.Where(policy => policy.MaterialName is not null).GroupBy(policy => policy.MaterialName!)
             .OrderByDescending(group => group.Count()).ToArray();
-        var recognized = string.Join("、", groups.Take(4).Select(group => $"{group.Key} {group.Count()}")) + (groups.Length > 4 ? " 等" : "");
-        return $"路线 CD：{files.Length} 个路线文件，识别 {files.Length - unmatched} 个"
-               + (recognized.Length > 0 ? $"（{recognized}）" : string.Empty)
-               + (unmatched > 0 ? $"，{unmatched} 个未识别刷新规则（成功后不会跳过）" : string.Empty) + "。";
+        var recognized = string.Join("、", groups.Take(4).Select(group => $"{group.Key} {group.Count()}"))
+                         + (groups.Length > 4 ? " " + I18nService.Instance.Translate("等") : "");
+        var detail = recognized.Length > 0 ? $"（{recognized}）" : string.Empty;
+        // 每种情况使用整句格式串，便于翻译调整语序
+        return unmatched > 0
+            ? string.Format(I18nService.Instance.Translate("路线 CD：{0} 个路线文件，识别 {1} 个{2}，{3} 个未识别刷新规则（成功后不会跳过）。"),
+                files.Length, files.Length - unmatched, detail, unmatched)
+            : string.Format(I18nService.Instance.Translate("路线 CD：{0} 个路线文件，识别 {1} 个{2}。"),
+                files.Length, files.Length - unmatched, detail);
     }
 
     /// <summary>
@@ -631,45 +639,45 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         Result = null;
         if (IsRepositoryManagerOpen)
         {
-            StatusMessage = "请先关闭仓库管理窗口。";
+            StatusMessage = I18nService.Instance.Translate("请先关闭仓库管理窗口。");
             return;
         }
         if (IsLoading)
         {
-            StatusMessage = "资源仍在加载，请稍候。";
+            StatusMessage = I18nService.Instance.Translate("资源仍在加载，请稍候。");
             return;
         }
         if (SelectedDefinition is null)
         {
-            StatusMessage = "请选择任务类型。";
+            StatusMessage = I18nService.Instance.Translate("请选择任务类型。");
             return;
         }
         var name = TaskName.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
-            StatusMessage = "任务名称不能为空。";
+            StatusMessage = I18nService.Instance.Translate("任务名称不能为空。");
             return;
         }
         if (RequiresResource && SelectedResource is null)
         {
-            StatusMessage = "请先选择要执行的资源。";
+            StatusMessage = I18nService.Instance.Translate("请先选择要执行的资源。");
             return;
         }
         if (SelectedDefinition.TaskType == "javascript" && _javaScriptSettingsLoadFailed)
         {
-            StatusMessage = "脚本设置文件解析失败，请修复脚本配置或选择其他脚本。";
+            StatusMessage = I18nService.Instance.Translate("脚本设置文件解析失败，请修复脚本配置或选择其他脚本。");
             return;
         }
         // 仓库资源尚未提取到本地目录，由固定版本读取和提取校验确认存在性；传统资源仍检查磁盘。
         if (SelectedResource is { Resource: null } resource
             && resource.IsDirectory != Directory.Exists(resource.FullPath))
         {
-            StatusMessage = "选中的资源已经不存在，请刷新后重新选择。";
+            StatusMessage = I18nService.Instance.Translate("选中的资源已经不存在，请刷新后重新选择。");
             return;
         }
         if (SelectedResource is { Resource: null, IsDirectory: false } fileResource && !File.Exists(fileResource.FullPath))
         {
-            StatusMessage = "选中的资源已经不存在，请刷新后重新选择。";
+            StatusMessage = I18nService.Instance.Translate("选中的资源已经不存在，请刷新后重新选择。");
             return;
         }
 
@@ -692,7 +700,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
 
             // 参数合并校验、资源版本固定和任务树建立由服务完成；服务先校验参数，失败时不会读取资源。
             IsBusy = true;
-            StatusMessage = RequiresResource ? "正在固定资源版本…" : "正在创建任务…";
+            StatusMessage = RequiresResource ? I18nService.Instance.Translate("正在固定资源版本…") : I18nService.Instance.Translate("正在创建任务…");
             var task = await _creationService.BuildAsync(new PuloniaTaskCreationRequest
                 {
                     Name = name,
@@ -702,7 +710,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                     DirectoryImportMode = SelectedDirectoryImportMode?.Mode ?? PuloniaTaskDirectoryImportMode.Reference,
                     IncludeSubdirectories = IncludeSubdirectories
                 },
-                (current, total) => StatusMessage = $"正在固定资源版本（{current}/{total}）…");
+                (current, total) => StatusMessage = string.Format(I18nService.Instance.Translate("正在固定资源版本（{0}/{1}）…"), current, total));
             if (_isClosed) return;
             // 设置定义只是内存对象，不依赖随弹窗释放的预览目录；任务计划据此在添加后弹出脚本设置窗口。
             var isJavaScript = SelectedDefinition.TaskType == "javascript";
@@ -807,7 +815,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         CancellationTokenSource cancellationTokenSource)
     {
         IsResourceDetailsLoading = true;
-        ResourcePreview = "正在读取资源详情…";
+        ResourcePreview = I18nService.Instance.Translate("正在读取资源详情…");
         var taskType = SelectedDefinition?.TaskType;
         try
         {
@@ -831,9 +839,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             }
             JavaScriptSettingsMessage = preview.JavaScriptSettingsError
                                         ?? (preview.HasSettingsHtml
-                                            ? "此脚本提供设置页面，点击“添加任务”后会打开。"
+                                            ? I18nService.Instance.Translate("此脚本提供设置页面，点击“添加任务”后会打开。")
                                             : JavaScriptSettingFields.Count == 0
-                                                ? "此脚本未提供自定义设置。"
+                                                ? I18nService.Instance.Translate("此脚本未提供自定义设置。")
                                                 : string.Empty);
             _javaScriptSettingsLoadFailed = !string.IsNullOrWhiteSpace(preview.JavaScriptSettingsError);
             OnPropertyChanged(nameof(HasParameters));
@@ -850,8 +858,8 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         {
             if (generation == _previewGeneration)
             {
-                ResourcePreview = "无法读取资源详情：" + ex.Message;
-                JavaScriptSettingsMessage = IsJavaScriptTask ? "无法读取脚本设置。" : string.Empty;
+                ResourcePreview = string.Format(I18nService.Instance.Translate("无法读取资源详情：{0}"), ex.Message);
+                JavaScriptSettingsMessage = IsJavaScriptTask ? I18nService.Instance.Translate("无法读取脚本设置。") : string.Empty;
                 _javaScriptSettingsLoadFailed = IsJavaScriptTask;
             }
         }

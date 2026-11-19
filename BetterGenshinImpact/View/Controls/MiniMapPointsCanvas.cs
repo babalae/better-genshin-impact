@@ -72,6 +72,25 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
         ((MiniMapPointsCanvas)d).UpdateViewport(rect.X, rect.Y, rect.Width, rect.Height);
     }
 
+    /// <summary>
+    /// 是否隐藏已标记的标点；false 时已标记的点位半透明绘制
+    /// </summary>
+    public static readonly DependencyProperty HideMarkedPointsProperty =
+        DependencyProperty.Register(
+            nameof(HideMarkedPoints),
+            typeof(bool),
+            typeof(MiniMapPointsCanvas),
+            new PropertyMetadata(false, (d, _) => ((MiniMapPointsCanvas)d).Refresh()));
+
+    /// <summary>
+    /// 是否隐藏已标记的标点
+    /// </summary>
+    public bool HideMarkedPoints
+    {
+        get => (bool)GetValue(HideMarkedPointsProperty);
+        set => SetValue(HideMarkedPointsProperty, value);
+    }
+
     public MiniMapPointsCanvas()
     {
         _children = new VisualCollection(this);
@@ -209,7 +228,7 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
 
         foreach (var point in _allPoints)
         {
-            if (!expandedViewport.Contains(point.ImageX, point.ImageY))
+            if (!point.IsDrawn(HideMarkedPoints) || !expandedViewport.Contains(point.ImageX, point.ImageY))
             {
                 continue;
             }

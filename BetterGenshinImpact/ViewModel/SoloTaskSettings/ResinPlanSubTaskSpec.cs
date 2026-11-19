@@ -6,6 +6,7 @@ using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.ResinPlan;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.Service.I18n;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
@@ -45,36 +46,36 @@ public sealed record ResinPlanSubTaskSpec(
     /// 自动秘境：根据提升指南养成；树脂、秘境与奖励识别由体力计划决定，备选秘境用于剩余树脂，
     /// 盛材移涌与祝圣移涌的秘境单独选择（默认跟随培养计划）。
     /// </summary>
-    public static ResinPlanSubTaskSpec Domain { get; } = new("domain", AutoDomainTask.TaskId, "自动秘境",
-        "按游戏内养成计划（冒险之证 → 提升指南）选择秘境，可连续刷多个秘境；剩余树脂可刷备选秘境；移涌活动的秘境在设置中选择，默认跟随培养计划。",
+    public static ResinPlanSubTaskSpec Domain { get; } = new("domain", AutoDomainTask.TaskId, I18nService.Key("自动秘境"),
+        I18nService.Key("按游戏内养成计划（冒险之证 → 提升指南）选择秘境，可连续刷多个秘境；剩余树脂可刷备选秘境；移涌活动的秘境在设置中选择，默认跟随培养计划。"),
         ["resin_usage", "domain_name", "sunday_selected_value", "training_guide_calculate_runs_enabled",
             "reward_recognition_enabled", "target_items", "training_targets_json"],
         // 移涌活动秘境为空表示跟随培养计划，摘要只显示手动指定的秘境
-        [("party_name", "队伍"), ("training_guide_fallback_domain_name", "备选秘境"),
-            ("material_overflow_domain_name", "盛材移涌"), ("blessing_overflow_domain_name", "祝圣移涌")]);
+        [("party_name", I18nService.Key("队伍")), ("training_guide_fallback_domain_name", I18nService.Key("备选秘境")),
+            ("material_overflow_domain_name", I18nService.Key("盛材移涌")), ("blessing_overflow_domain_name", I18nService.Key("祝圣移涌"))]);
 
     /// <summary>
     /// 自动首领讨伐：次数沿用首领自己的树脂使用设置（指定次数或刷至耗尽），在体力计划中只用原粹，不使用须臾、脆弱补充。
     /// </summary>
-    public static ResinPlanSubTaskSpec Boss { get; } = new("boss", AutoBossTask.TaskId, "自动首领讨伐",
-        "按首领的树脂使用设置讨伐，只使用原粹树脂；战斗不稳定，默认不开启。",
+    public static ResinPlanSubTaskSpec Boss { get; } = new("boss", AutoBossTask.TaskId, I18nService.Key("自动首领讨伐"),
+        I18nService.Key("按首领的树脂使用设置讨伐，只使用原粹树脂；战斗不稳定，默认不开启。"),
         ["reward_recognition_enabled", "target_items", "combat_strategy_path"],
-        [("boss_name", "首领"), ("team_name", "队伍")],
+        [("boss_name", I18nService.Key("首领")), ("team_name", I18nService.Key("队伍"))],
         "strategy_name", "combat_strategy_path",
         FieldTaskType: BossResinTaskKey, ResinCapability: ResinPlanBudget.BossCapability);
 
     /// <summary>自动幽境危战：剩余树脂的第一项，紊乱爆发期结束后自动跳过。</summary>
-    public static ResinPlanSubTaskSpec Stygian { get; } = new("stygian", AutoStygianOnslaughtTask.TaskId, "自动幽境危战",
-        "消耗剩余树脂；只有紊乱爆发期能领取，爆发期结束后自动跳过。",
+    public static ResinPlanSubTaskSpec Stygian { get; } = new("stygian", AutoStygianOnslaughtTask.TaskId, I18nService.Key("自动幽境危战"),
+        I18nService.Key("消耗剩余树脂；只有紊乱爆发期能领取，爆发期结束后自动跳过。"),
         ["resin_usage", "combat_script_bag_path", "dire_prestige_target"],
-        [("boss_num", "首领序号"), ("fight_team_name", "队伍")],
+        [("boss_num", I18nService.Key("首领序号")), ("fight_team_name", I18nService.Key("队伍"))],
         "strategy_name", "combat_script_bag_path", ClearMirror: true);
 
     /// <summary>自动地脉花：在幽境危战之后消耗剩余树脂。</summary>
-    public static ResinPlanSubTaskSpec LeyLine { get; } = new("ley_line", AutoLeyLineOutcropTask.TaskId, "自动地脉花",
-        "消耗剩余树脂，按设置的国家与地脉花类型刷取。",
+    public static ResinPlanSubTaskSpec LeyLine { get; } = new("ley_line", AutoLeyLineOutcropTask.TaskId, I18nService.Key("自动地脉花"),
+        I18nService.Key("消耗剩余树脂，按设置的国家与地脉花类型刷取。"),
         ["resin_usage", "target_items"],
-        [("country", "国家"), ("ley_line_outcrop_type", "类型")]);
+        [("country", I18nService.Key("国家")), ("ley_line_outcrop_type", I18nService.Key("类型"))]);
 
     /// <summary>
     /// 读取子任务的树脂使用设置，并去掉体力计划不使用的树脂种类，供界面展示。

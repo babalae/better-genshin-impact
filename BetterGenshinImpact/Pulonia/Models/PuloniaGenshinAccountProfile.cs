@@ -1,3 +1,5 @@
+using BetterGenshinImpact.Service.I18n;
+
 namespace BetterGenshinImpact.Pulonia.Models;
 
 /// <summary>
@@ -37,5 +39,6 @@ public sealed class PuloniaGenshinAccountProfile
     /// <param name="serverTimeZone">服务器时区，由调用方按通用配置决定</param>
     /// <returns>新的“我的账户”</returns>
     public static PuloniaGenshinAccountProfile CreateMyAccount(PuloniaTaskServerTimeZone serverTimeZone)
-        => new() { Name = MyAccountName, ServerTimeZone = serverTimeZone };
+        // 名称按当前界面语言生成；之后作为用户内容保存，可自由改名。
+        => new() { Name = I18nService.Instance.Translate("我的账户"), ServerTimeZone = serverTimeZone };
 }

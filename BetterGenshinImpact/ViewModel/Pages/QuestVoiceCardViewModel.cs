@@ -9,6 +9,7 @@ using System.Windows.Threading;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.QuestVoice;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -73,7 +74,7 @@ public partial class QuestVoiceCardViewModel : ObservableObject
             var window = new QuestVoiceSettingsWindow(_settings) { Owner = Application.Current.MainWindow };
             window.ShowDialog();
             if (!await _settings.FlushSettingsAsync())
-                CommandError = "角色目录有未保存的修改：请在设置窗口修正输入或处理文件冲突。";
+                CommandError = I18nService.Instance.Translate("角色目录有未保存的修改：请在设置窗口修正输入或处理文件冲突。");
         }
         catch (Exception exception) { CommandError = exception.Message; }
     }

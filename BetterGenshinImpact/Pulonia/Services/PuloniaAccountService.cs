@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -218,7 +219,7 @@ public sealed class PuloniaAccountService : IPuloniaAccountService
         foreach (var account in accounts)
         {
             if (_store.GetAccountOccupant(account.Id) is { } occupant)
-                return $"账户“{account.Name}”正在{DescribeOccupant(occupant)}运行，请等它结束后再删除。";
+                return string.Format(I18nService.Instance.Translate("账户“{0}”正在{1}运行，请等它结束后再删除。"), account.Name, DescribeOccupant(occupant));
         }
         return null;
     }
@@ -230,9 +231,9 @@ public sealed class PuloniaAccountService : IPuloniaAccountService
     internal static string DescribeOccupant(PuloniaLockOwner occupant)
     {
         if (string.IsNullOrEmpty(occupant.InstanceKey))
-            return "另一个实例";
+            return I18nService.Instance.Translate("另一个实例");
         var instance = PuloniaInstanceKey.Describe(occupant.InstanceKey);
-        return occupant.RunId is { } runId ? $"{instance}（运行 {runId}）" : instance;
+        return occupant.RunId is { } runId ? string.Format(I18nService.Instance.Translate("{0}（运行 {1}）"), instance, runId) : instance;
     }
 
     /// <inheritdoc />
@@ -374,13 +375,14 @@ public sealed class PuloniaAccountService : IPuloniaAccountService
             return null;
         var plans = await _store.ListPlansWithFailuresAsync(ct).ConfigureAwait(false);
         if (plans.Failures.Count > 0)
-            return "有计划文件无法读取，暂时不能确认账户未被计划指定，请先修复或移走这些文件："
+            return I18nService.Instance.Translate("有计划文件无法读取，暂时不能确认账户未被计划指定，请先修复或移走这些文件：")
                    + string.Join("；", plans.Failures);
         foreach (var account in accounts)
         {
             var users = plans.Items.Where(plan => plan.AccountId == account.Id).Select(plan => "“" + plan.Name + "”").ToArray();
             if (users.Length > 0)
-                return $"计划 {string.Join("、", users)} 指定了账户“{account.Name}”，请先把这些计划改为其他账户或跟随当前账户。";
+                return string.Format(I18nService.Instance.Translate("计划 {0} 指定了账户“{1}”，请先把这些计划改为其他账户或跟随当前账户。"),
+                    string.Join(I18nService.Instance.Translate("、"), users), account.Name);
         }
         return null;
     }
@@ -397,14 +399,15 @@ public sealed class PuloniaAccountService : IPuloniaAccountService
             return null;
         var instances = await _store.ListInstanceSettingsAsync(ct).ConfigureAwait(false);
         if (instances.Failures.Count > 0)
-            return "有实例设置文件无法读取，暂时不能确认账户不是某个实例的当前账户，请先修复或移走这些文件："
+            return I18nService.Instance.Translate("有实例设置文件无法读取，暂时不能确认账户不是某个实例的当前账户，请先修复或移走这些文件：")
                    + string.Join("；", instances.Failures);
         foreach (var account in accounts)
         {
             var users = instances.Items.Where(item => item.Settings.CurrentAccountId == account.Id)
                 .Select(item => PuloniaInstanceKey.DescribeDirectory(item.DirectoryName)).ToArray();
             if (users.Length > 0)
-                return $"账户“{account.Name}”是{string.Join("、", users)}的当前账户，请先把这些实例改为其他账户。";
+                return string.Format(I18nService.Instance.Translate("账户“{0}”是{1}的当前账户，请先把这些实例改为其他账户。"),
+                    account.Name, string.Join(I18nService.Instance.Translate("、"), users));
         }
         return null;
     }
@@ -422,7 +425,7 @@ public sealed class PuloniaAccountService : IPuloniaAccountService
         foreach (var handler in _dataHandlers)
         {
             if (await handler.CheckUidChangeAsync(change.OldUid, change.NewUid, ct).ConfigureAwait(false) is { } reason)
-                return $"不能修改账户“{change.Account.Name}”的 UID：{reason}";
+                return string.Format(I18nService.Instance.Translate("不能修改账户“{0}”的 UID：{1}"), change.Account.Name, reason);
         }
         return null;
     }
@@ -450,7 +453,8 @@ public sealed class PuloniaAccountService : IPuloniaAccountService
                 {
                     _logger.LogWarning(ex, "账户 {Account} 的 UID 已从 {OldUid} 改为 {NewUid}，但{Data}未能随之改名",
                         change.Account.Id, change.OldUid, change.NewUid, handler.DataName);
-                    failures.Add($"“{change.Account.Name}”的{handler.DataName}未能从 UID {change.OldUid} 改到 {change.NewUid}：{ex.Message}");
+                    failures.Add(string.Format(I18nService.Instance.Translate("“{0}”的{1}未能从 UID {2} 改到 {3}：{4}"),
+                        change.Account.Name, I18nService.Instance.Translate(handler.DataName), change.OldUid, change.NewUid, ex.Message));
                 }
             }
             // 2. 被删除的账户：一并删除它的数据；没有 UID 的账户没有数据
@@ -460,7 +464,8 @@ public sealed class PuloniaAccountService : IPuloniaAccountService
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "账户 {Account}（UID {Uid}）已删除，但{Data}未能删除", account.Id, account.Uid, handler.DataName);
-                    failures.Add($"“{account.Name}”的{handler.DataName}未能删除：{ex.Message}");
+                    failures.Add(string.Format(I18nService.Instance.Translate("“{0}”的{1}未能删除：{2}"),
+                        account.Name, I18nService.Instance.Translate(handler.DataName), ex.Message));
                 }
             }
         }

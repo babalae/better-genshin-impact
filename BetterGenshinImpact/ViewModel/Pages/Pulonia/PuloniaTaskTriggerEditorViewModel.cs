@@ -7,6 +7,7 @@ using System.Linq;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -54,22 +55,22 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     public string LocalizedHotkeyTypeName => HotkeyType.ToLocalizedName();
     /// <summary>当前热键类型支持的输入及生效条件。</summary>
     public string HotkeyHelp => HotkeyType == HotKeyTypeEnum.GlobalRegister
-        ? "全局热键：支持组合键或功能键，BGI 运行时生效。普通键请搭配 Ctrl / Alt / Win；F12 为系统保留。"
-        : "键鼠监听：支持键盘单键或鼠标侧键，不支持组合键。与现有快捷键一致，启动功能、开启键鼠监听且游戏在前台时生效。";
+        ? I18nService.Instance.Translate("全局热键：支持组合键或功能键，BGI 运行时生效。普通键请搭配 Ctrl / Alt / Win；F12 为系统保留。")
+        : I18nService.Instance.Translate("键鼠监听：支持键盘单键或鼠标侧键，不支持组合键。与现有快捷键一致，启动功能、开启键鼠监听且游戏在前台时生效。");
     /// <summary>原神服务器使用的固定时区选项。</summary>
     public IReadOnlyDictionary<PuloniaTaskServerTimeZone, string> ServerTimeZones { get; }
         = new Dictionary<PuloniaTaskServerTimeZone, string>
         {
-            [PuloniaTaskServerTimeZone.UtcPlus8] = "UTC+8｜天空岛/世界树",
-            [PuloniaTaskServerTimeZone.Europe] = "UTC+1｜欧服",
-            [PuloniaTaskServerTimeZone.America] = "UTC-5｜美服"
+            [PuloniaTaskServerTimeZone.UtcPlus8] = I18nService.Instance.Translate("UTC+8｜天空岛/世界树"),
+            [PuloniaTaskServerTimeZone.Europe] = I18nService.Instance.Translate("UTC+1｜欧服"),
+            [PuloniaTaskServerTimeZone.America] = I18nService.Instance.Translate("UTC-5｜美服")
         };
     /// <summary>忙碌策略的用户文本。</summary>
     public IReadOnlyDictionary<PuloniaTaskBusyPolicy, string> BusyPolicies { get; } = new Dictionary<PuloniaTaskBusyPolicy, string>
     {
-        [PuloniaTaskBusyPolicy.Skip] = "同计划已忙碌：跳过 / 合并（推荐）",
-        [PuloniaTaskBusyPolicy.QueueOnce] = "同计划运行后：再排一次",
-        [PuloniaTaskBusyPolicy.StopCurrent] = "停止当前任务，清理后优先执行"
+        [PuloniaTaskBusyPolicy.Skip] = I18nService.Instance.Translate("同计划已忙碌：跳过 / 合并（推荐）"),
+        [PuloniaTaskBusyPolicy.QueueOnce] = I18nService.Instance.Translate("同计划运行后：再排一次"),
+        [PuloniaTaskBusyPolicy.StopCurrent] = I18nService.Instance.Translate("停止当前任务，清理后优先执行")
     };
     /// <summary>完整计划或编辑树内可选子树。</summary>
     public IReadOnlyDictionary<string, string> Targets { get; }
@@ -90,9 +91,9 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
 
     /// <summary>执行实例的说明文字。</summary>
     public string InstanceHint => IsHotkey
-        ? "计划热键只在主实例生效。"
-        : (IsInstanceMultiSelect ? "" : "计划指定了运行账户，同一账户不能同时在多个实例运行，只能选一个执行实例。")
-          + "到点时由执行实例自己检查并运行，实例需要开着；没开时，启动后按补触发规则处理。";
+        ? I18nService.Instance.Translate("计划热键只在主实例生效。")
+        : (IsInstanceMultiSelect ? "" : I18nService.Instance.Translate("计划指定了运行账户，同一账户不能同时在多个实例运行，只能选一个执行实例。"))
+          + I18nService.Instance.Translate("到点时由执行实例自己检查并运行，实例需要开着；没开时，启动后按补触发规则处理。");
 
     /// <summary>从计划和触发器建立独立草稿。</summary>
     /// <param name="trigger">要编辑的触发器</param>
@@ -111,7 +112,7 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
         TargetTaskId = trigger.TargetTaskId ?? "";
         WindowMinutes = trigger.WindowMinutes.ToString(CultureInfo.InvariantCulture);
         CatchUp = trigger.CatchUp; BusyPolicy = trigger.BusyPolicy;
-        var targets = new Dictionary<string, string> { [""] = "整个计划" };
+        var targets = new Dictionary<string, string> { [""] = I18nService.Instance.Translate("整个计划") };
         AddTargets(plan.RootTask, targets, 0);
         Targets = targets;
         _initializing = false;
@@ -263,7 +264,7 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
             var trigger = BuildTrigger();
             if (IsHotkey)
             {
-                PreviewText = "保存后在左侧卡片启用。" + HotkeyHelp + " 快捷键冲突会在下方显示。";
+                PreviewText = string.Format(I18nService.Instance.Translate("保存后在左侧卡片启用。{0} 快捷键冲突会在下方显示。"), HotkeyHelp);
                 IsValid = true;
                 return;
             }
@@ -278,11 +279,11 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
                 lines.Add(next.Value.ToOffset(utcOffset).ToString("yyyy-MM-dd ddd HH:mm zzz", CultureInfo.GetCultureInfo("zh-CN")));
                 after = next.Value;
             }
-            var instances = string.Join("、", InstanceOptions.Where(option => option.IsSelected).Select(option => option.InstanceName));
-            PreviewText = (lines.Count > 0 ? "接下来执行（所选时区）：\n" + string.Join("\n", lines) : "未来八年没有可执行时间。")
-                          + "\n执行实例：" + instances;
+            var instances = string.Join(I18nService.Instance.Translate("、"), InstanceOptions.Where(option => option.IsSelected).Select(option => option.InstanceName));
+            PreviewText = (lines.Count > 0 ? I18nService.Instance.Translate("接下来执行（所选时区）：") + "\n" + string.Join("\n", lines) : I18nService.Instance.Translate("未来八年没有可执行时间。"))
+                          + "\n" + I18nService.Instance.Translate("执行实例：") + instances;
             IsValid = true;
         }
-        catch (Exception ex) { PreviewText = "配置无效：" + ex.Message; IsValid = false; }
+        catch (Exception ex) { PreviewText = I18nService.Instance.Translate("配置无效：") + ex.Message; IsValid = false; }
     }
 }

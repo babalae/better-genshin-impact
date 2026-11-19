@@ -8,6 +8,7 @@ using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service.Instance;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Pulonia.Remote;
 
@@ -87,11 +88,11 @@ public sealed class PuloniaRunDispatcher
     /// <returns>界面显示名称</returns>
     public static string Describe(InstanceEndpoint endpoint) => endpoint.InstanceType switch
     {
-        BetterGiInstanceType.Primary => "主实例",
-        BetterGiInstanceType.ChildSession => "桌面分身",
-        BetterGiInstanceType.WebView when !string.IsNullOrWhiteSpace(endpoint.InstanceName) => "云原神 · " + endpoint.InstanceName,
-        BetterGiInstanceType.WebView => $"云原神（进程 {endpoint.ProcessId}）",
-        _ => $"子实例（进程 {endpoint.ProcessId}）"
+        BetterGiInstanceType.Primary => I18nService.Instance.Translate("主实例"),
+        BetterGiInstanceType.ChildSession => I18nService.Instance.Translate("桌面分身"),
+        BetterGiInstanceType.WebView when !string.IsNullOrWhiteSpace(endpoint.InstanceName) => string.Format(I18nService.Instance.Translate("云原神 · {0}"), endpoint.InstanceName),
+        BetterGiInstanceType.WebView => string.Format(I18nService.Instance.Translate("云原神（进程 {0}）"), endpoint.ProcessId),
+        _ => string.Format(I18nService.Instance.Translate("子实例（进程 {0}）"), endpoint.ProcessId)
     };
 
     /// <summary>
@@ -151,7 +152,7 @@ public sealed class PuloniaRunDispatcher
                 Instance = instance,
                 InstanceName = Describe(target),
                 Status = PuloniaTaskRunStatus.Queued,
-                Message = "已下发，等待子实例执行。",
+                Message = I18nService.Instance.Translate("已下发，等待子实例执行。"),
                 SubmittedAt = _timeProvider.GetUtcNow()
             });
         }
@@ -188,7 +189,7 @@ public sealed class PuloniaRunDispatcher
                 _runs[runId] = current with
                 {
                     Status = PuloniaTaskRunStatus.Cancelling,
-                    Message = "已请求停止，等待子实例结束运行。"
+                    Message = I18nService.Instance.Translate("已请求停止，等待子实例结束运行。")
                 };
         }
         RaiseChanged();

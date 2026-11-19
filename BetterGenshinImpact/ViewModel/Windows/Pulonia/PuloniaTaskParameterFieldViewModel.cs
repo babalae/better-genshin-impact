@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.ViewModel.Resin;
@@ -307,20 +308,20 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
     /// </summary>
     private static string GetDescription(string name) => name switch
     {
-        "settings" => "传给 JS 项目的 settings JSON 对象。",
-        "party_name" => "留空表示不指定固定队伍。",
-        "skip_party_switch" => "开启后不执行自动切换队伍。",
-        "auto_pick_enabled" => "运行期间启用自动拾取触发器。",
-        "auto_fight_enabled" => "路线遇敌时允许自动战斗。",
-        "auto_skip_enabled" => "路线过程中允许自动跳过对话。",
-        "with_delay" => "按照录制文件中的延时节奏回放。",
-        "file_name" => "例如 cmd.exe、powershell.exe 或一个可执行文件路径。",
-        "arguments" => "填写 JSON 字符串数组，例如 [\"/d\", \"/c\", \"echo hello\"]。",
-        "working_directory" => "可选；留空时使用 BetterGI 程序目录。",
-        "operation" => "必须是当前进程中显式注册的稳定操作名。",
-        "values" => "填写 JSON 数字数组。",
-        "delay_milliseconds" => "用于延迟执行；当前样例允许 0—600000。",
-        "country" => "选择任务要前往的国家。",
-        _ => "参数键：" + name
+        "settings" => I18nService.Instance.Translate("传给 JS 项目的 settings JSON 对象。"),
+        "party_name" => I18nService.Instance.Translate("留空表示不指定固定队伍。"),
+        "skip_party_switch" => I18nService.Instance.Translate("开启后不执行自动切换队伍。"),
+        "auto_pick_enabled" => I18nService.Instance.Translate("运行期间启用自动拾取触发器。"),
+        "auto_fight_enabled" => I18nService.Instance.Translate("路线遇敌时允许自动战斗。"),
+        "auto_skip_enabled" => I18nService.Instance.Translate("路线过程中允许自动跳过对话。"),
+        "with_delay" => I18nService.Instance.Translate("按照录制文件中的延时节奏回放。"),
+        "file_name" => I18nService.Instance.Translate("例如 cmd.exe、powershell.exe 或一个可执行文件路径。"),
+        "arguments" => string.Format(I18nService.Instance.Translate("填写 JSON 字符串数组，例如 {0}。"), "[\"/d\", \"/c\", \"echo hello\"]"),
+        "working_directory" => I18nService.Instance.Translate("可选；留空时使用 BetterGI 程序目录。"),
+        "operation" => I18nService.Instance.Translate("必须是当前进程中显式注册的稳定操作名。"),
+        "values" => I18nService.Instance.Translate("填写 JSON 数字数组。"),
+        "delay_milliseconds" => I18nService.Instance.Translate("用于延迟执行；当前样例允许 0—600000。"),
+        "country" => I18nService.Instance.Translate("选择任务要前往的国家。"),
+        _ => string.Format(I18nService.Instance.Translate("参数键：{0}"), name)
     };
 }

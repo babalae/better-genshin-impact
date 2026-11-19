@@ -10,6 +10,7 @@ using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
@@ -47,7 +48,7 @@ public partial class PuloniaBossRewardOverviewViewModel : ObservableObject
     [ObservableProperty] private string _summaryText = string.Empty;
 
     /// <summary>列表为空时的说明。</summary>
-    [ObservableProperty] private string _emptyText = "请先选择账户。";
+    [ObservableProperty] private string _emptyText = I18nService.Instance.Translate("请先选择账户。");
 
     /// <summary>正在读取。</summary>
     [ObservableProperty]
@@ -106,7 +107,7 @@ public partial class PuloniaBossRewardOverviewViewModel : ObservableObject
         {
             Entries = [];
             SummaryText = string.Empty;
-            EmptyText = "请先选择账户。";
+            EmptyText = I18nService.Instance.Translate("请先选择账户。");
             return;
         }
         IsLoading = true;
@@ -119,7 +120,7 @@ public partial class PuloniaBossRewardOverviewViewModel : ObservableObject
                 if (generation != _generation) return;
                 Entries = [];
                 SummaryText = string.Empty;
-                EmptyText = "任务计划加载失败，无法列出首领讨伐任务。";
+                EmptyText = I18nService.Instance.Translate("任务计划加载失败，无法列出首领讨伐任务。");
                 return;
             }
             // 2. 收集各计划自身的自动首领讨伐节点；引用计划中的节点按它所在的计划记录，不在引用处重复列出
@@ -137,11 +138,11 @@ public partial class PuloniaBossRewardOverviewViewModel : ObservableObject
             Entries = entries;
             SummaryText = nodes.Count == 0
                 ? string.Empty
-                : $"共 {nodes.Count} 个自动首领讨伐任务，其中 {entries.Count} 个在当前重置批次内有领奖记录。"
-                  + "次数按任务分别统计，在任务设置中“清空累计”后重新从 0 开始。";
+                : string.Format(I18nService.Instance.Translate("共 {0} 个自动首领讨伐任务，其中 {1} 个在当前重置批次内有领奖记录。"), nodes.Count, entries.Count)
+                  + I18nService.Instance.Translate("次数按任务分别统计，在任务设置中“清空累计”后重新从 0 开始。");
             EmptyText = nodes.Count == 0
-                ? "任务计划和一条龙配置中没有自动首领讨伐任务。"
-                : "这个账户在当前重置批次内还没有首领领奖记录。";
+                ? I18nService.Instance.Translate("任务计划和一条龙配置中没有自动首领讨伐任务。")
+                : I18nService.Instance.Translate("这个账户在当前重置批次内还没有首领领奖记录。");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Newtonsoft.Json.JsonException
                                        or PuloniaTaskValidationException or InvalidOperationException)
@@ -149,7 +150,7 @@ public partial class PuloniaBossRewardOverviewViewModel : ObservableObject
             if (generation != _generation) return;
             Entries = [];
             SummaryText = string.Empty;
-            EmptyText = "读取首领领奖次数失败：" + ex.Message;
+            EmptyText = I18nService.Instance.Translate("读取首领领奖次数失败：") + ex.Message;
         }
         finally
         {
@@ -164,7 +165,7 @@ public partial class PuloniaBossRewardOverviewViewModel : ObservableObject
     {
         var nodes = new List<BossNode>();
         foreach (var (document, prefix) in _session.Documents.Select(document => (document, string.Empty))
-                     .Concat(_session.OneDragonDocuments.Select(document => (document, "一条龙："))))
+                     .Concat(_session.OneDragonDocuments.Select(document => (document, I18nService.Instance.Translate("一条龙：")))))
         {
             foreach (var node in document.EnumerateNodes().Where(node => node.IsLeaf && node.TaskType == BossTaskType))
             {
@@ -219,5 +220,7 @@ public partial class PuloniaBossRewardOverviewViewModel : ObservableObject
 public sealed record PuloniaBossRewardEntryViewModel(string PlanName, string NodeName, int Count, int Limit)
 {
     /// <summary>次数说明，设置了累计上限时一并显示，例如“3 次（上限 10）”。</summary>
-    public string CountText => Limit > 0 ? $"{Count} 次（上限 {Limit}）" : $"{Count} 次";
+    public string CountText => Limit > 0
+        ? string.Format(I18nService.Instance.Translate("{0} 次（上限 {1}）"), Count, Limit)
+        : string.Format(I18nService.Instance.Translate("{0} 次"), Count);
 }

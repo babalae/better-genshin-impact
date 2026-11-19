@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Input.Backends.WebSdk;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.Infrastructure.WebView;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
@@ -92,7 +93,7 @@ public partial class CloudWebHostWindow : Window
         // 宿主窗口仍主动启用 Per-Monitor DPI 感知，避免它在主窗口初始化时序变化后被 Windows
         // 虚拟化客户区尺寸和坐标，确保 1920x1080 不随系统缩放变化。
         this.InitializeDpiAwareness();
-        Title = $"云原神 · {_instanceName}";
+        Title = string.Format(I18nService.Instance.Translate("云原神 · {0}"), _instanceName);
 
         _statusTimer.Tick += OnStatusTimerTick;
         SourceInitialized += OnSourceInitialized;
@@ -347,7 +348,7 @@ public partial class CloudWebHostWindow : Window
         catch (Exception ex)
         {
             _logger.LogError(ex, "云原神宿主窗口初始化失败");
-            await ThemedMessageBox.ErrorAsync($"云原神页面初始化失败：{ex.Message}\n请确认已安装 Microsoft Edge WebView2 Runtime。");
+            await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("云原神页面初始化失败：{0}\n请确认已安装 Microsoft Edge WebView2 Runtime。"), ex.Message));
             Close();
         }
     }
@@ -376,13 +377,13 @@ public partial class CloudWebHostWindow : Window
         {
             if (e.ProcessFailedKind == CoreWebView2ProcessFailedKind.BrowserProcessExited)
             {
-                await ThemedMessageBox.ErrorAsync($"云原神「{_instanceName}」的网页进程已退出，请关闭该实例后重新打开。");
+                await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("云原神「{0}」的网页进程已退出，请关闭该实例后重新打开。"), _instanceName));
                 return;
             }
 
             var result = await ThemedMessageBox.QuestionAsync(
-                $"云原神「{_instanceName}」的页面进程异常退出，截图已停止。\n是否重新加载页面？登录状态会保留。",
-                "云原神页面异常", MessageBoxButton.OKCancel, MessageBoxResult.OK);
+                string.Format(I18nService.Instance.Translate("云原神「{0}」的页面进程异常退出，截图已停止。\n是否重新加载页面？登录状态会保留。"), _instanceName),
+                I18nService.Instance.Translate("云原神页面异常"), MessageBoxButton.OKCancel, MessageBoxResult.OK);
             if (result == MessageBoxResult.OK && !_isClosed)
             {
                 _controller?.CoreWebView2.Navigate(CloudGameUrl);
@@ -488,7 +489,7 @@ public partial class CloudWebHostWindow : Window
             _stoppingCaptureForClose = false;
             _isClosed = false;
             _statusTimer.Start();
-            await ThemedMessageBox.ErrorAsync($"停止截图器失败：{ex.Message}");
+            await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("停止截图器失败：{0}"), ex.Message));
         }
     }
 

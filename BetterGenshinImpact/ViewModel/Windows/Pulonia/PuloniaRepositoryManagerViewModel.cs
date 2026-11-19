@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -64,7 +65,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     [ObservableProperty] private string _gitToken = string.Empty;
 
     /// <summary>官方界面保留现有三种渠道，第三方不展示多远端选择器。</summary>
-    public string[] OfficialChannels { get; } = ["CNB", "GitHub", "自定义"];
+    public string[] OfficialChannels { get; } = ["CNB", "GitHub", I18nService.Key("自定义")];
     /// <summary>官方身份只由当前真实注册决定，添加草稿在独立窗口中维护。</summary>
     public bool IsOfficial => SelectedRepository?.IsOfficial == true;
     /// <summary>第三方编辑区域只用于已选中的远程来源。</summary>
@@ -84,11 +85,11 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     /// <summary>只有非官方真实注册才展示移除仓库操作。</summary>
     public bool CanShowRemove => SelectedRepository is { IsOfficial: false };
     /// <summary>远程来源展示本机仓库副本，本地来源展示用户维护目录。</summary>
-    public string DirectoryLabel => IsRemote ? "本机仓库副本" : "本地仓库目录";
+    public string DirectoryLabel => IsRemote ? I18nService.Instance.Translate("本机仓库副本") : I18nService.Instance.Translate("本地仓库目录");
     /// <summary>用户看到的来源类型说明。</summary>
-    public string RepositoryKindText => IsOfficial ? "官方仓库 · 不可移除" : IsLocal ? "本地仓库 · 由用户维护" : "第三方远程仓库";
+    public string RepositoryKindText => IsOfficial ? I18nService.Instance.Translate("官方仓库 · 不可移除") : IsLocal ? I18nService.Instance.Translate("本地仓库 · 由用户维护") : I18nService.Instance.Translate("第三方远程仓库");
     /// <summary>远程来源统一使用同步语义，首次操作也只是建立本机仓库副本。</summary>
-    public string UpdateButtonText => "同步仓库";
+    public string UpdateButtonText => I18nService.Instance.Translate("同步仓库");
     /// <summary>关闭后返回稳定身份，让添加任务页面刷新和定位来源。</summary>
     public string? SelectedRepositoryId => SelectedRepository?.Id;
 
@@ -105,7 +106,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
             GitUsername = credential?.UserName ?? string.Empty;
             GitToken = credential?.Password ?? string.Empty;
         }
-        catch (Exception ex) { StatusMessage = "无法读取 Git 认证，可使用公开仓库或重新填写认证：" + ex.Message; }
+        catch (Exception ex) { StatusMessage = I18nService.Instance.Translate("无法读取 Git 认证，可使用公开仓库或重新填写认证：") + ex.Message; }
     }
 
     /// <summary>窗口显示后读取注册记录，不下载或展开任何仓库内容。</summary>
@@ -121,7 +122,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
             PuloniaRepositoryChoiceViewModel.CreateChoices(repositories, _service.OfficialConfig.SelectedChannelName));
         SelectedRepository = Repositories.FirstOrDefault(r => r.Id == selectedId) ?? Repositories.FirstOrDefault(r => r.IsOfficial);
         FillRepository();
-        if (!Directory.Exists(SelectedRepository?.Directory)) StatusMessage = "尚未同步，请点击同步仓库。";
+        if (!Directory.Exists(SelectedRepository?.Directory)) StatusMessage = I18nService.Instance.Translate("尚未同步，请点击同步仓库。");
     }
 
     /// <summary>切换来源时显示已保存的配置，第三方隐藏的其他远端不会被覆盖。</summary>
@@ -143,9 +144,9 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         finally { _applyingConfig = false; }
         NotifyState();
         if (!IsBusy) StatusMessage = SelectedRepository is not { } current ? string.Empty
-            : !Directory.Exists(current.Directory) ? "尚未同步，请点击同步仓库。"
-            : current.IsRemote ? "本机仓库副本可用；同步仓库不会修改任务计划使用的版本。"
-            : "本地仓库可用；刷新目录不会修改任务计划使用的版本。";
+            : !Directory.Exists(current.Directory) ? I18nService.Instance.Translate("尚未同步，请点击同步仓库。")
+            : current.IsRemote ? I18nService.Instance.Translate("本机仓库副本可用；同步仓库不会修改任务计划使用的版本。")
+            : I18nService.Instance.Translate("本地仓库可用；刷新目录不会修改任务计划使用的版本。");
     }
 
     /// <summary>接收旧官方窗口的渠道变化，始终在窗口所属 UI 线程处理绑定。</summary>
@@ -217,7 +218,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         await RunAsync(async ct =>
         {
             await ReloadAsync(repository.Id, ct);
-            StatusMessage = "已添加远程仓库，请同步仓库以获取本机仓库副本。";
+            StatusMessage = I18nService.Instance.Translate("已添加远程仓库，请同步仓库以获取本机仓库副本。");
         });
     }
 
@@ -231,7 +232,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         await RunAsync(async ct =>
         {
             await ReloadAsync(repository.Id, ct);
-            StatusMessage = "已添加本地仓库；任务计划使用的资源版本未改变。";
+            StatusMessage = I18nService.Instance.Translate("已添加本地仓库；任务计划使用的资源版本未改变。");
         });
     }
 
@@ -241,7 +242,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     {
         var repository = await _service.SaveRemoteAsync(SelectedRepository!.Id, RepositoryName, RemoteUrl, Branch, ct);
         await ReloadAsync(repository.Id, ct);
-        StatusMessage = "配置已保存，可以同步仓库。";
+        StatusMessage = I18nService.Instance.Translate("配置已保存，可以同步仓库。");
     });
 
     /// <summary>拉取前保存第三方编辑，并通过 UI 上下文展示 Git 阶段进度。</summary>
@@ -250,7 +251,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     {
         var repository = SelectedRepository!;
         if (IsThirdParty) repository = await _service.SaveRemoteAsync(repository.Id, RepositoryName, RemoteUrl, Branch, ct);
-        StatusMessage = "正在同步仓库；任务计划使用的版本不会改变…";
+        StatusMessage = I18nService.Instance.Translate("正在同步仓库；任务计划使用的版本不会改变…");
         var progress = new Progress<(string Text, int Done, int Total)>(state =>
         {
             if (_closed || ct.IsCancellationRequested) return;
@@ -261,7 +262,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         var updated = await _service.UpdateAsync(repository.Id,
             (text, done, total) => ((IProgress<(string, int, int)>)progress).Report((text, done, total)), ct);
         await ReloadAsync(repository.Id, ct);
-        StatusMessage = updated ? "同步完成；需要在任务计划中更新任务资源后才会采用新内容。" : "已经是远端最新版本；任务使用版本未改变。";
+        StatusMessage = updated ? I18nService.Instance.Translate("同步完成；需要在任务计划中更新任务资源后才会采用新内容。") : I18nService.Instance.Translate("已经是远端最新版本；任务使用版本未改变。");
     });
 
     /// <summary>重新读取本地仓库目录并通知任务检查，不访问远端。</summary>
@@ -269,7 +270,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     private Task RefreshLocalAsync() => RunAsync(async ct =>
     {
         await _service.RefreshLocalAsync(SelectedRepository!.Id, ct);
-        StatusMessage = "本地仓库已刷新；需要在任务计划中更新任务资源后才会采用变化。";
+        StatusMessage = I18nService.Instance.Translate("本地仓库已刷新；需要在任务计划中更新任务资源后才会采用变化。");
     });
 
     /// <summary>确认后清理托管副本，注册和已经确认的内容保留。</summary>
@@ -277,14 +278,14 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     private async Task ResetAsync()
     {
         var repository = SelectedRepository!;
-        var result = await ThemedMessageBox.QuestionAsync("重置将清理当前本机仓库副本，之后需要重新同步。任务使用的旧内容会保留。",
-            "重置仓库", MessageBoxButton.YesNo);
+        var result = await ThemedMessageBox.QuestionAsync(I18nService.Instance.Translate("重置将清理当前本机仓库副本，之后需要重新同步。任务使用的旧内容会保留。"),
+            I18nService.Instance.Translate("重置仓库"), MessageBoxButton.YesNo);
         if (result != MessageBoxResult.Yes || _closed) return;
         await RunAsync(async ct =>
         {
             await _service.ResetAsync(repository.Id, ct);
             await ReloadAsync(repository.Id, ct);
-            StatusMessage = "仓库已重置，请重新同步。";
+            StatusMessage = I18nService.Instance.Translate("仓库已重置，请重新同步。");
         });
     }
 
@@ -294,7 +295,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     {
         await _service.Repositories.RemoveRepositoryAsync(SelectedRepository!.Id, ct);
         await ReloadAsync(ScriptRepositoryStore.OfficialRepositoryId, ct);
-        StatusMessage = "已移除仓库；只移除仓库注册，本地文件与任务使用版本仍保留。";
+        StatusMessage = I18nService.Instance.Translate("已移除仓库；只移除仓库注册，本地文件与任务使用版本仍保留。");
     });
 
     /// <summary>在系统文件管理器查看本地目录。</summary>
@@ -309,9 +310,9 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         {
             CredentialManagerHelper.SaveCredential(CredentialName, GitUsername, GitToken,
                 "Git credentials for BetterGenshinImpact script repository", CredentialPersistence.LocalMachine);
-            StatusMessage = "Git 认证已保存到 Windows 凭据管理器。";
+            StatusMessage = I18nService.Instance.Translate("Git 认证已保存到 Windows 凭据管理器。");
         }
-        catch (Exception ex) { StatusMessage = "保存认证失败：" + ex.Message; }
+        catch (Exception ex) { StatusMessage = I18nService.Instance.Translate("保存认证失败：") + ex.Message; }
     }
 
     /// <summary>统一处理取消、错误和忙碌状态，后台操作结束后释放取消源。</summary>
@@ -331,7 +332,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
             if (!_closed)
             {
                 StatusMessage = ex.Message;
-                await ThemedMessageBox.ErrorAsync(ex.Message, "仓库操作失败");
+                await ThemedMessageBox.ErrorAsync(ex.Message, I18nService.Instance.Translate("仓库操作失败"));
             }
         }
         finally

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System.Collections.Generic;
 
 namespace BetterGenshinImpact.Pulonia.Models;
@@ -27,10 +28,10 @@ public sealed record PuloniaAccountRemovalImpact(int RouteCompletionCount, int B
     public IReadOnlyList<string> Describe()
     {
         var items = new List<string>();
-        if (HasCredential) items.Add("保存的登录凭据（账号密码）");
-        if (ImageCount > 0) items.Add($"账户图片 {ImageCount} 张");
-        if (RouteCompletionCount > 0) items.Add($"路线 CD 完成记录 {RouteCompletionCount} 条");
-        if (BossRewardEntryCount > 0) items.Add($"首领领奖次数 {BossRewardEntryCount} 项");
+        if (HasCredential) items.Add(I18nService.Instance.Translate("保存的登录凭据（账号密码）"));
+        if (ImageCount > 0) items.Add(string.Format(I18nService.Instance.Translate("账户图片 {0} 张"), ImageCount));
+        if (RouteCompletionCount > 0) items.Add(string.Format(I18nService.Instance.Translate("路线 CD 完成记录 {0} 条"), RouteCompletionCount));
+        if (BossRewardEntryCount > 0) items.Add(string.Format(I18nService.Instance.Translate("首领领奖次数 {0} 项"), BossRewardEntryCount));
         items.AddRange(OtherData);
         return items;
     }

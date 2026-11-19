@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -24,8 +25,8 @@ public partial class PuloniaPlanCreationDialogViewModel : ObservableObject
 
     /// <summary>方案下拉框下方的说明；没有方案时提示新建入口。</summary>
     public string ProfileHint => ProfileOptions.Count > 1
-        ? "方案中的设置会传给计划中的全部任务；之后可在“计划共享设置…”中更换。"
-        : "还没有设置方案。可在计划列表右键“设置方案…”中新建，再到“计划共享设置…”中选用。";
+        ? I18nService.Instance.Translate("方案中的设置会传给计划中的全部任务；之后可在“计划共享设置…”中更换。")
+        : I18nService.Instance.Translate("还没有设置方案。可在计划列表右键“设置方案…”中新建，再到“计划共享设置…”中选用。");
 
     /// <summary>计划名称草稿。</summary>
     [ObservableProperty]
@@ -56,9 +57,9 @@ public partial class PuloniaPlanCreationDialogViewModel : ObservableObject
         // 选项文字与共享设置窗口的方案下拉框一致，默认不使用方案
         ProfileOptions =
         [
-            new PuloniaSettingsProfileOptionViewModel(null, "不使用方案"),
+            new PuloniaSettingsProfileOptionViewModel(null, I18nService.Instance.Translate("不使用方案")),
             .. profiles.Select(profile => new PuloniaSettingsProfileOptionViewModel(profile.Id,
-                $"{profile.Name}（{profile.Settings.Count} 项）"))
+                string.Format(I18nService.Instance.Translate("{0}（{1} 项）"), profile.Name, profile.Settings.Count)))
         ];
         _selectedProfileOption = ProfileOptions[0];
     }
@@ -72,7 +73,7 @@ public partial class PuloniaPlanCreationDialogViewModel : ObservableObject
         var name = PlanName.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
-            StatusMessage = "计划名称不能为空。";
+            StatusMessage = I18nService.Instance.Translate("计划名称不能为空。");
             return;
         }
         Result = new PuloniaPlanCreationResult(name, SelectedProfileOption?.Id);

@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Threading;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.View.Controls.Markdown;
 
@@ -358,7 +359,7 @@ public partial class MarkdownView : UserControl
         {
             ReportResourceDiagnostic(new MarkdownDiagnostic(
                 MarkdownDiagnosticSeverity.Warning,
-                $"无法打开链接：{ex.Message}",
+                string.Format(I18nService.Instance.Translate("无法打开链接：{0}"), ex.Message),
                 Source: request.RawTarget));
         }
     }
@@ -594,7 +595,7 @@ public partial class MarkdownView : UserControl
         {
             ReportResourceDiagnostic(new MarkdownDiagnostic(
                 MarkdownDiagnosticSeverity.Warning,
-                $"无法监听 Markdown 文件变化：{ex.Message}",
+                string.Format(I18nService.Instance.Translate("无法监听 Markdown 文件变化：{0}"), ex.Message),
                 Source: FilePath));
         }
     }

@@ -11,6 +11,7 @@ using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Pulonia;
@@ -66,7 +67,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// 页面底部的最近操作结果。
     /// </summary>
     [ObservableProperty]
-    private string _statusMessage = "使用工具栏“添加”或在任务列表中右键添加任务；所有修改都会自动保存。";
+    private string _statusMessage = I18nService.Instance.Translate("使用工具栏“添加”或在任务列表中右键添加任务；所有修改都会自动保存。");
 
     /// <summary>
     /// 普通任务计划列表，即编辑会话中的普通计划集合。
@@ -223,7 +224,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     private void NewPlan()
     {
         // 1. 预填不重名的默认名称，方案选项取当前已加载的设置方案
-        var baseName = "新任务计划";
+        // 默认名称按当前界面语言生成，之后作为用户内容保存
+        var baseName = I18nService.Instance.Translate("新任务计划");
         var suffix = 1;
         var name = baseName;
         while (Documents.Any(document => document.Name == name))
@@ -234,7 +236,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
 
         // 2. 所选方案作为计划级共享设置挂在根节点上
         SelectedDocument = Session.CreatePlanDocument(creation.Name, creation.ProfileId);
-        StatusMessage = $"已新建计划“{creation.Name}”。";
+        StatusMessage = string.Format(I18nService.Instance.Translate("已新建计划“{0}”。"), creation.Name);
     }
 
     /// <summary>
@@ -245,12 +247,12 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         if (document is null)
             return;
-        var name = PromptDialog.Prompt("请输入新的计划名称。", "重命名任务计划", document.Name).Trim();
+        var name = PromptDialog.Prompt(I18nService.Instance.Translate("请输入新的计划名称。"), I18nService.Instance.Translate("重命名任务计划"), document.Name).Trim();
         if (string.IsNullOrWhiteSpace(name) || name == document.Name)
             return;
         SelectedDocument = document;
         document.Name = name;
-        StatusMessage = $"计划已重命名为“{name}”。";
+        StatusMessage = string.Format(I18nService.Instance.Translate("计划已重命名为“{0}”。"), name);
     }
 
     /// <summary>
@@ -271,11 +273,12 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         if (!TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
             return;
-        var name = PromptDialog.Prompt("请先填写分组名称；取消不会创建占位节点。", "添加分组", "新分组").Trim();
+        var name = PromptDialog.Prompt(I18nService.Instance.Translate("请先填写分组名称；取消不会创建占位节点。"),
+            I18nService.Instance.Translate("添加分组"), I18nService.Instance.Translate("新分组")).Trim();
         if (string.IsNullOrWhiteSpace(name))
             return;
         document.InsertNode(new PuloniaTask { Name = name, TaskType = "group" }, parent, index);
-        StatusMessage = $"已添加分组“{name}”。";
+        StatusMessage = string.Format(I18nService.Instance.Translate("已添加分组“{0}”。"), name);
     }
 
     /// <summary>
@@ -292,7 +295,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         var definition = Session.TaskService.Definitions.FirstOrDefault(item => item.TaskType == taskType);
         if (definition is null)
         {
-            StatusMessage = $"没有注册任务类型 {taskType}。";
+            StatusMessage = string.Format(I18nService.Instance.Translate("没有注册任务类型 {0}。"), taskType);
             return;
         }
         if (!TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
@@ -310,7 +313,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             task = created;
         }
         document.InsertNode(task, parent, index);
-        StatusMessage = $"已添加任务“{task.Name}”。";
+        StatusMessage = string.Format(I18nService.Instance.Translate("已添加任务“{0}”。"), I18nService.Instance.Translate(task.Name));
     }
 
     /// <summary>
@@ -373,7 +376,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         if (!TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
             return;
         document.InsertNode(task, parent, index);
-        StatusMessage = $"已添加任务“{task.Name}”。";
+        StatusMessage = string.Format(I18nService.Instance.Translate("已添加任务“{0}”。"), I18nService.Instance.Translate(task.Name));
     }
 
     /// <summary>
@@ -394,7 +397,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             Owner = Application.Current.MainWindow
         };
         if (dialog.ShowDialog() == true)
-            StatusMessage = $"已保存“{node.Name}”的配置。";
+            StatusMessage = string.Format(I18nService.Instance.Translate("已保存“{0}”的配置。"), I18nService.Instance.Translate(node.Name));
     }
 
     /// <summary>
@@ -407,7 +410,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             return;
         if (node.IsLeaf && node.Document.GetSharedSettingUsage(node).Keys is not { Count: > 0 })
         {
-            StatusMessage = $"“{node.Name}”这类任务不使用共享设置，请在“编辑配置”中修改任务参数。";
+            StatusMessage = string.Format(I18nService.Instance.Translate("“{0}”这类任务不使用共享设置，请在“编辑配置”中修改任务参数。"),
+                I18nService.Instance.Translate(node.Name));
             return;
         }
         SelectedDocument = node.Document;
@@ -453,7 +457,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             SelectedIndex = 0,
             MinWidth = 280
         };
-        var dialog = new PromptDialog("选择要引用的任务计划；之后修改该计划会同步影响这里。", "引用已有任务计划", selector, null);
+        var dialog = new PromptDialog(I18nService.Instance.Translate("选择要引用的任务计划；之后修改该计划会同步影响这里。"),
+            I18nService.Instance.Translate("引用已有任务计划"), selector, null);
         if (dialog.ShowDialog() != true
             || selector.SelectedItem is not PuloniaTaskPlanDocumentViewModel referencePlan)
             return;
@@ -461,8 +466,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
 
         if (Session.WouldCreatePlanReferenceCycle(sourceDocument, referencePlan))
         {
-            StatusMessage = $"不能引用“{referencePlan.Name}”：两个计划会互相引用。";
-            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法引用任务计划");
+            StatusMessage = string.Format(I18nService.Instance.Translate("不能引用“{0}”：两个计划会互相引用。"),
+                I18nService.Instance.Translate(referencePlan.Name));
+            await ThemedMessageBox.ErrorAsync(StatusMessage, I18nService.Instance.Translate("无法引用任务计划"));
             return;
         }
 
@@ -475,12 +481,13 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             return;
         var reference = new PuloniaTask
         {
-            Name = "引用：" + referencePlan.Name,
+            // 节点名称按当前界面语言生成，之后作为用户内容保存
+            Name = string.Format(I18nService.Instance.Translate("引用：{0}"), I18nService.Instance.Translate(referencePlan.Name)),
             TaskType = "group",
             Source = new PuloniaTaskSource { Kind = "plan", PlanId = referencePlan.Id }
         };
         document.InsertNode(reference, parent, index);
-        StatusMessage = $"已引用计划“{referencePlan.Name}”。";
+        StatusMessage = string.Format(I18nService.Instance.Translate("已引用计划“{0}”。"), I18nService.Instance.Translate(referencePlan.Name));
     }
 
     /// <summary>
@@ -498,10 +505,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         if (document.HasPasteInheritanceDifference(source, pasted, effectiveParameters, parent))
         {
             var result = await ThemedMessageBox.ShowAsync(
-                $"复制内容来自“{clipboard.SourcePlanName}”，目标位置继承的共享设置会改变部分有效设置。\n\n" +
-                "选择“是”：保留复制时的有效设置，不同的项写在粘贴的节点上。\n" +
-                "选择“否”：使用目标位置的继承结果。\n选择“取消”：不粘贴。",
-                "粘贴时发现设置差异", MessageBoxButton.YesNoCancel,
+                string.Format(I18nService.Instance.Translate("复制内容来自“{0}”，目标位置继承的共享设置会改变部分有效设置。\n\n选择“是”：保留复制时的有效设置，不同的项写在粘贴的节点上。\n选择“否”：使用目标位置的继承结果。\n选择“取消”：不粘贴。"),
+                    I18nService.Instance.Translate(clipboard.SourcePlanName)),
+                I18nService.Instance.Translate("粘贴时发现设置差异"), MessageBoxButton.YesNoCancel,
                 ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.Cancel);
             if (result == MessageBoxResult.Cancel)
                 return;
@@ -510,7 +516,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         }
 
         document.InsertNode(pasted, parent, index);
-        StatusMessage = "已粘贴；粘贴的任务是独立副本，修改不会影响原任务。";
+        StatusMessage = I18nService.Instance.Translate("已粘贴；粘贴的任务是独立副本，修改不会影响原任务。");
     }
 
     /// <summary>
@@ -565,7 +571,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             if (Session.MoveDocument(document, dropInfo.InsertIndex))
             {
                 SelectedDocument = document;
-                StatusMessage = $"已调整“{document.Name}”的计划列表顺序。";
+                StatusMessage = string.Format(I18nService.Instance.Translate("已调整“{0}”的计划列表顺序。"), I18nService.Instance.Translate(document.Name));
             }
             return;
         }
@@ -577,7 +583,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         // 跨父节点移动可能改变继承的共享设置，有变化时显示非模态提示
         var settingsChange = source.Document.MoveNodeTrackingSettings(source, parent, index);
         ShowMoveSettingsNotice(settingsChange);
-        StatusMessage = $"已移动“{source.Name}”。";
+        StatusMessage = string.Format(I18nService.Instance.Translate("已移动“{0}”。"), I18nService.Instance.Translate(source.Name));
     }
 
     /// <summary>

@@ -3,6 +3,7 @@ using System.Linq;
 using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -19,14 +20,14 @@ public partial class ComboCategoryViewModel : StrategyCategoryViewModel
     [ObservableProperty] private string _statusText = "";
 
     /// <summary>创建自动连招类别。</summary>
-    public ComboCategoryViewModel(Action<CombatStrategyRef> select) : base(CombatStrategyKind.Combo, AutoFightParam.ComboStrategyName) => _select = select;
+    public ComboCategoryViewModel(Action<CombatStrategyRef> select) : base(CombatStrategyKind.Combo, I18nService.Instance.Translate(AutoFightParam.ComboStrategyName)) => _select = select;
 
     /// <summary>每次打开时读取最新建树会话。</summary>
     public void Refresh()
     {
         var session = AutoComboRuntime.Session;
         IsTreeBuilt = session != null;
-        StatusText = session == null ? "⚠ 尚未建树，请先运行一次“自动连招建树”。" : "已建树：" + string.Join(" · ", session.Avatars.Select(a => a.Name));
+        StatusText = session == null ? I18nService.Instance.Translate("⚠ 尚未建树，请先运行一次“自动连招建树”。") : string.Format(I18nService.Instance.Translate("已建树：{0}"), string.Join(" · ", session.Avatars.Select(a => a.Name)));
     }
 
     /// <summary>使用自动连招，实际运行时由工厂检查建树状态。</summary>

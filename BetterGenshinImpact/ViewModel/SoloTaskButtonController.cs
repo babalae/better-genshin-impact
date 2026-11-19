@@ -6,6 +6,7 @@ using System.Windows;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
@@ -135,7 +136,7 @@ public sealed class SoloTaskButtonController
         var status = _instanceService.GetSoloTaskStatus(target);
         if (status.IsActive && status.TaskId != taskId)
         {
-            Toast.Warning($"当前实例正在运行“{_registry.GetDisplayName(status.TaskId)}”，请先等待该任务结束或使用其停止入口。");
+            Toast.Warning(string.Format(I18nService.Instance.Translate("当前实例正在运行“{0}”，请先等待该任务结束或使用其停止入口。"), _registry.GetLocalizedDisplayName(status.TaskId)));
             return;
         }
 
@@ -161,7 +162,7 @@ public sealed class SoloTaskButtonController
 
             if (!response.Accepted)
             {
-                Toast.Warning(response.ErrorMessage ?? "目标实例拒绝了本次操作。");
+                Toast.Warning(response.ErrorMessage ?? I18nService.Instance.Translate("目标实例拒绝了本次操作。"));
             }
         }
         catch (TimeoutException ex)
@@ -175,11 +176,11 @@ public sealed class SoloTaskButtonController
                 // 查询失败时保留原始超时提示，连接状态事件会继续校正按钮。
             }
 
-            await ThemedMessageBox.WarningAsync($"独立任务操作等待确认超时：{ex.Message}", "独立任务");
+            await ThemedMessageBox.WarningAsync(string.Format(I18nService.Instance.Translate("独立任务操作等待确认超时：{0}"), ex.Message), I18nService.Instance.Translate("独立任务"));
         }
         catch (Exception ex)
         {
-            await ThemedMessageBox.ErrorAsync($"独立任务操作失败：{ex.Message}", "独立任务");
+            await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("独立任务操作失败：{0}"), ex.Message), I18nService.Instance.Translate("独立任务"));
         }
         finally
         {

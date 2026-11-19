@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Resin;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
@@ -164,7 +165,7 @@ public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
     public AutoDomainSettingsViewModel(JObject original, IResinSettingsDialogs? dialogs = null) : base(original)
     {
         _originalResin = ResinUsageViewModelSupport.Read(Original["resin_usage"], AutoDomainTask.ResinCapability);
-        Resin = new("自动秘境", AutoDomainTask.ResinCapability, _originalResin, dialogs);
+        Resin = new(I18nService.Key("自动秘境"), AutoDomainTask.ResinCapability, _originalResin, dialogs);
         TrackEdits([Resin]);
         _originalPartyName = ReadString(Original, "party_name");
         _originalDomainName = ReadString(Original, "domain_name");

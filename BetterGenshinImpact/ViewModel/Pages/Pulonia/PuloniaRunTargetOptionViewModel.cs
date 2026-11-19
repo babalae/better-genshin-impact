@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,7 +53,7 @@ public sealed partial class PuloniaRunTargetOptionViewModel : ObservableObject
     /// <summary>实例当前账户名称；“未确定”时为“未确定”。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Display))]
-    private string _accountName = "未确定";
+    private string _accountName = I18nService.Instance.Translate("未确定");
 
     /// <summary>账户下拉框的选项：键为账户 ID，当前账户未确定时首项为“未确定”占位。</summary>
     [ObservableProperty] private IReadOnlyList<KeyValuePair<string, string>> _accountChoices = [];
@@ -107,12 +108,12 @@ public sealed partial class PuloniaRunTargetOptionViewModel : ObservableObject
         var choices = new List<KeyValuePair<string, string>>();
         // 当前账户未确定（或已不在目录中）时以占位项显示，选择真实账户后消失
         if (current is null)
-            choices.Add(new KeyValuePair<string, string>(UndeterminedKey, "未确定"));
+            choices.Add(new KeyValuePair<string, string>(UndeterminedKey, I18nService.Instance.Translate("未确定")));
         choices.AddRange(accounts.Select(account =>
             new KeyValuePair<string, string>(account.Id, PuloniaAccountChoiceViewModel.Describe(account))));
         AccountChoices = choices;
         CanChangeAccount = accounts.Count > 1 || (current is null && accounts.Count > 0);
-        AccountName = current?.Name ?? "未确定";
+        AccountName = current?.Name ?? I18nService.Instance.Translate("未确定");
         CurrentAccountId = current?.Id;
         OnPropertyChanged(nameof(SelectedAccountId));
     }

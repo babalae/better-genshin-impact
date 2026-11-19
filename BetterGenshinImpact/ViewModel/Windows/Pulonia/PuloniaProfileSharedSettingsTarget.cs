@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
@@ -25,10 +26,10 @@ public sealed class PuloniaProfileSharedSettingsTarget : PuloniaSharedSettingsTa
     public PuloniaProfileSharedSettingsTarget(PuloniaSettingsProfile draft) => Draft = draft;
 
     /// <inheritdoc />
-    public override string Title => $"设置方案「{Draft.Name}」";
+    public override string Title => string.Format(I18nService.Instance.Translate("设置方案「{0}」"), Draft.Name);
 
     /// <inheritdoc />
-    public override string Description => "方案只保存设置过的项；挂到节点后，这些项从该节点开始向下传播，节点自己修改的项优先。";
+    public override string Description => I18nService.Instance.Translate("方案只保存设置过的项；挂到节点后，这些项从该节点开始向下传播，节点自己修改的项优先。");
 
     /// <inheritdoc />
     public override bool ShowsInheritance => false;
@@ -46,9 +47,9 @@ public sealed class PuloniaProfileSharedSettingsTarget : PuloniaSharedSettingsTa
     public override IReadOnlyDictionary<string, PuloniaSharedSettingEffectiveValue> GetEffective()
         => PuloniaSettingCatalog.Definitions.ToDictionary(definition => definition.Key, definition =>
             Draft.Settings.TryGetValue(definition.Key, out var value)
-                ? new PuloniaSharedSettingEffectiveValue(value.DeepClone(), "已在方案中设置", PuloniaSharedSettingSourceKind.Own)
+                ? new PuloniaSharedSettingEffectiveValue(value.DeepClone(), I18nService.Instance.Translate("已在方案中设置"), PuloniaSharedSettingSourceKind.Own)
                 : new PuloniaSharedSettingEffectiveValue(definition.DefaultValue.DeepClone(),
-                    "未设置，挂到节点后沿用上层设置", PuloniaSharedSettingSourceKind.Default),
+                    I18nService.Instance.Translate("未设置，挂到节点后沿用上层设置"), PuloniaSharedSettingSourceKind.Default),
             StringComparer.Ordinal);
 
     /// <inheritdoc />

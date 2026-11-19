@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -9,7 +10,7 @@ public partial class ResinKindRowViewModel : ObservableObject
     /// <summary>本行对应的树脂。</summary>
     public ResinKind Kind { get; }
     /// <summary>树脂全称。</summary>
-    public string DisplayName => ResinUsageText.DisplayName(Kind);
+    public string DisplayName => ResinUsageText.LocalizedDisplayName(Kind);
     /// <summary>本次是否允许使用。</summary>
     [ObservableProperty] private bool _isAllowed;
     /// <summary>按树脂分别指定的领奖次数。</summary>
@@ -40,6 +41,6 @@ public partial class ResinKindRowViewModel : ObservableObject
         ShowToggle = !ShowCount;
         IsEditable = capability.IsSupported(Kind) && (ShowCount || capability.LockedKind != Kind);
         Description = ResinUsageText.KindDescription(Kind, mode, capability);
-        AutomationName = DisplayName + (ShowCount ? "领奖次数" : "使用开关");
+        AutomationName = DisplayName + (ShowCount ? I18nService.Instance.Translate("领奖次数") : I18nService.Instance.Translate("使用开关"));
     }
 }

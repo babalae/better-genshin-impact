@@ -1,5 +1,6 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.JsScriptHtmlSettingsWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -40,7 +41,7 @@
                     IsOpen="{Binding HasError, Mode=OneWay}"
                     Message="{Binding ErrorMessage, Mode=OneWay}"
                     Severity="Error"
-                    Title="设置页无法正常显示">
+                    Title="{i18n:T 设置页无法正常显示}">
             <ui:InfoBar.Style>
                 <Style TargetType="ui:InfoBar" BasedOn="{StaticResource {x:Type ui:InfoBar}}">
                     <Style.Triggers>

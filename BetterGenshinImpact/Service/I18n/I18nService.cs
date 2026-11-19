@@ -11,6 +11,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using Wpf.Ui.Violeta.Appearance;
 
 namespace BetterGenshinImpact.Service.I18n;
 
@@ -34,6 +35,7 @@ public sealed class I18nService : INotifyPropertyChanged
         new("en", "English"),
         new("ja", "日本語"),
         new("ru", "Русский"),
+        new("pt-BR", "Português (Brasil)"),
     ];
 
     /// <summary>
@@ -167,6 +169,12 @@ public sealed class I18nService : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 标记数据值（如保存在配置中、参与逻辑比较的中文选项）为 i18n Key，原样返回，不做翻译。
+    /// 同步工具会扫描 <c>I18nService.Key("...")</c> 收集 Key；界面展示时再通过 <see cref="TBindingExtension"/> 翻译。
+    /// </summary>
+    public static string Key(string key) => key;
+
     public string Translate(string key)
     {
         var table = _table;
@@ -239,9 +247,10 @@ public sealed class I18nService : INotifyPropertyChanged
             builtin is null ? EmptyTranslations : LoadBuiltinTranslations(builtin.Code),
             string.Equals(effective, TraditionalLanguage, StringComparison.OrdinalIgnoreCase));
 
+        CultureInfo? culture = null;
         try
         {
-            var culture = CultureInfo.GetCultureInfo(effective);
+            culture = CultureInfo.GetCultureInfo(effective);
             CultureInfo.CurrentUICulture = culture;
             CultureInfo.DefaultThreadCurrentUICulture = culture;
         }
@@ -249,6 +258,10 @@ public sealed class I18nService : INotifyPropertyChanged
         {
             // 插件语言代码不一定是 .NET 认识的文化名；此时只是不修改 .NET 的 CurrentUICulture。
         }
+
+        // 同步 Wpf.Ui.Violeta 控件内置文案（如级联选择框的“请选择...”）的语言；
+        // 插件语言无对应区域性时回退简体中文（#1846 曾固定为简体中文）。
+        I18N.Culture = culture ?? CultureInfo.GetCultureInfo(DefaultLanguage);
     }
 
     /// <summary>

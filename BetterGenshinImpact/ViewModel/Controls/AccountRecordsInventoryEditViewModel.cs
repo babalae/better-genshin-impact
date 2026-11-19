@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.AccountRecords;
 using BetterGenshinImpact.Service.AccountRecords.Model;
+using BetterGenshinImpact.Service.I18n;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -56,7 +57,7 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
     [RelayCommand]
     private void AddExpiration()
     {
-        if (ExpirationRows.Count >= 100) { Message = "到期批次最多 100 条。"; return; }
+        if (ExpirationRows.Count >= 100) { Message = I18nService.Instance.Translate("到期批次最多 100 条。"); return; }
         ExpirationRows.Add(new AccountRecordsExpirationEditRow());
     }
 
@@ -106,16 +107,16 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
     {
         Message = "";
         var name = Name.Trim();
-        if (name.Length is 0 or > 128) { Message = "物品名称不能为空且不能超过 128 字符。"; return; }
+        if (name.Length is 0 or > 128) { Message = I18nService.Instance.Translate("物品名称不能为空且不能超过 128 字符。"); return; }
         if (!long.TryParse(QuantityText, NumberStyles.None, CultureInfo.InvariantCulture, out var quantity) || quantity < 0)
-        { Message = "当前实际库存数量须为不带分隔符的非负整数，且不超过 9223372036854775807。"; return; }
+        { Message = I18nService.Instance.Translate("当前实际库存数量须为不带分隔符的非负整数，且不超过 9223372036854775807。"); return; }
         if (NeedsDefinition && (!AddToDictionary || string.IsNullOrWhiteSpace(Category)))
-        { Message = "物品名称未收录，且尚未填写分类或确认添加到补充字典。"; return; }
+        { Message = I18nService.Instance.Translate("物品名称未收录，且尚未填写分类或确认添加到补充字典。"); return; }
         List<InventoryExpiration>? batches = ShowExpirationEditor ? [] : null;
         foreach (var row in ExpirationRows)
         {
             if (!long.TryParse(row.QuantityText, NumberStyles.None, CultureInfo.InvariantCulture, out var count) || count <= 0)
-            { Message = "每个到期批次的数量必须为正整数。"; return; }
+            { Message = I18nService.Instance.Translate("每个到期批次的数量必须为正整数。"); return; }
             batches!.Add(new InventoryExpiration { Quantity = count, ExpiresAt = row.ExpiresAtText.Trim() });
         }
         // 在任何字典写入前复用服务层校验，避免到期输入无效时分类已部分保存。

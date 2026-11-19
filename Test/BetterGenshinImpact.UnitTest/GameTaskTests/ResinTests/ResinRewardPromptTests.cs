@@ -46,6 +46,19 @@ public sealed class ResinRewardPromptTests
         Assert.Equal(new[] { ResinKind.Original }, ResinRewardPrompt.DetectOffered(rows, 500, new CultureInfo("en-US"), localizer));
     }
 
+    /// <summary>葡萄牙语领奖弹框使用复数形式（“Use 40 Resinas Originais”），真实 pt-BR 资源必须同时匹配单复数。</summary>
+    [Fact]
+    public void Offered_PortugueseResourcesMatchPluralResinNames()
+    {
+        var localizer = new LocalizationFixture().CreateStringLocalizer<AutoDomainTask>();
+        Region[] rows = [Text(100, 100, "Use 40 Resinas Originais para"), Text(800, 100, "Usar"),
+            Text(100, 200, "Use 1 Resina Frágil para resgatar 3 vezes"), Text(800, 200, "Usar"),
+            Text(100, 300, "Usar Gemas Essenciais x50 para obter 3"), Text(800, 300, "Usar")];
+        var offered = ResinRewardPrompt.DetectOffered(rows, 500, new CultureInfo("pt-BR"), localizer);
+        Assert.Equal(new[] { ResinKind.Original, ResinKind.Fragile }, ResinKinds.InOrder.Where(offered.Contains));
+        Assert.False(ResinRewardPrompt.HasShortageHint(rows, new CultureInfo("pt-BR"), localizer));
+    }
+
     /// <summary>原粹点数识别及默认值保持旧逻辑，非原粹的实际个数由选择器记账。</summary>
     [Theory]
     [InlineData("原粹树脂20", ResinKind.Original, 20)]

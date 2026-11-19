@@ -84,10 +84,15 @@
                                 <ComboBox Grid.Column="1"
                                           MinWidth="160"
                                           VerticalAlignment="Center"
-                                          DisplayMemberPath="Name"
                                           ItemsSource="{Binding RepoChannels}"
                                           SelectedItem="{Binding SelectedRepoChannel}"
-                                          IsTextSearchEnabled="False" />
+                                          IsTextSearchEnabled="False">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{i18n:TBinding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                             </Grid>
 
                             <!--  第二行：脚本仓库URL  -->

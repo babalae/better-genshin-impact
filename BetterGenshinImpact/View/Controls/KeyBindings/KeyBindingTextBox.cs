@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Model;
 using Fischless.WindowsInput;
 using System;
@@ -79,7 +80,7 @@ public class KeyBindingTextBox:TextBox
 
     protected override void OnGotFocus(RoutedEventArgs e)
     {
-        Text = "等待按键...";
+        Text = I18nService.Instance.Translate("等待按键...");
         base.OnGotFocus(e);
     }
 

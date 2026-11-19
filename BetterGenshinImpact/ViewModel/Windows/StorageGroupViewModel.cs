@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Infrastructure.Storage;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
@@ -75,12 +76,12 @@ public sealed class StorageGroupViewModel
     /// </summary>
     public static StorageGroupViewModel Create(StorageGroup group) => group switch
     {
-        StorageGroup.Cache => new(group, "缓存", "删除后会在需要时重新下载或生成", "#4F7EDB"),
-        StorageGroup.Download => new(group, "下载", "安装包和未完成的下载", "#E8A33D"),
-        StorageGroup.WebData => new(group, "网页数据", "软件内网页和云原神网页版的数据", "#3BB273"),
-        StorageGroup.Temp => new(group, "临时文件", "程序运行中产生，退出时自动删除", "#9B6BD6"),
-        StorageGroup.Diagnostics => new(group, "日志与诊断", "排查问题用的日志和截图", "#8A8F98"),
-        _ => new(group, "用户数据", "不会被一键清理删除", "#D9644A"),
+        StorageGroup.Cache => new(group, I18nService.Instance.Translate("缓存"), I18nService.Instance.Translate("删除后会在需要时重新下载或生成"), "#4F7EDB"),
+        StorageGroup.Download => new(group, I18nService.Instance.Translate("下载"), I18nService.Instance.Translate("安装包和未完成的下载"), "#E8A33D"),
+        StorageGroup.WebData => new(group, I18nService.Instance.Translate("网页数据"), I18nService.Instance.Translate("软件内网页和云原神网页版的数据"), "#3BB273"),
+        StorageGroup.Temp => new(group, I18nService.Instance.Translate("临时文件"), I18nService.Instance.Translate("程序运行中产生，退出时自动删除"), "#9B6BD6"),
+        StorageGroup.Diagnostics => new(group, I18nService.Instance.Translate("日志与诊断"), I18nService.Instance.Translate("排查问题用的日志和截图"), "#8A8F98"),
+        _ => new(group, I18nService.Instance.Translate("用户数据"), I18nService.Instance.Translate("不会被一键清理删除"), "#D9644A"),
     };
 }
 

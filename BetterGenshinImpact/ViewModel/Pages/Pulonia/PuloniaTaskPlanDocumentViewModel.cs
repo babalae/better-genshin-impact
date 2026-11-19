@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
@@ -76,10 +77,10 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
 
     /// <summary>计划卡片的资源检查摘要与批量更新按钮说明。</summary>
     public string ResourceUpdateSummary => ResourceUpdateCount > 0 && ResourceErrorCount > 0
-        ? $"更新此计划的 {ResourceUpdateCount} 项资源；另有 {ResourceErrorCount} 项检查失败"
-        : ResourceUpdateCount > 0 ? $"更新此计划的 {ResourceUpdateCount} 项任务资源"
-        : ResourceErrorCount > 0 ? $"{ResourceErrorCount} 项资源检查失败，请查看详情"
-        : "任务资源已是本机仓库当前版本";
+        ? string.Format(I18nService.Instance.Translate("更新此计划的 {0} 项资源；另有 {1} 项检查失败"), ResourceUpdateCount, ResourceErrorCount)
+        : ResourceUpdateCount > 0 ? string.Format(I18nService.Instance.Translate("更新此计划的 {0} 项任务资源"), ResourceUpdateCount)
+        : ResourceErrorCount > 0 ? string.Format(I18nService.Instance.Translate("{0} 项资源检查失败，请查看详情"), ResourceErrorCount)
+        : I18nService.Instance.Translate("任务资源已是本机仓库当前版本");
 
     /// <summary>按稳定树顺序枚举节点，供资源检查和卡片批量确认使用。</summary>
     public IEnumerable<PuloniaTaskNodeViewModel> EnumerateNodes() => Flatten(RootNode);
@@ -135,7 +136,15 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// 最近一次保存失败信息；成功保存后清空。
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LastSaveErrorMessage))]
     private string? _lastSaveError;
+
+    /// <summary>
+    /// 保存失败提示正文：说明修改仍保留并附上失败原因；未失败时为空。
+    /// </summary>
+    public string? LastSaveErrorMessage => LastSaveError is null
+        ? null
+        : string.Format(I18nService.Instance.Translate("修改仍保留在当前计划中，下次编辑后会自动重试保存。原因：{0}"), LastSaveError);
 
     /// <summary>
     /// 计划的内部根节点；界面只展示其子节点，空白区域命令以该节点为插入目标。
@@ -610,10 +619,10 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         var resolution = ResolveParameters(task, ancestors);
         sources = resolution.Sources.ToDictionary(item => item.Key, item => item.Value switch
         {
-            PuloniaParameterLayer.Default => "能力默认值",
-            PuloniaParameterLayer.Settings => "共享设置",
-            PuloniaParameterLayer.Node => "本任务",
-            _ => "本次调用覆盖"
+            PuloniaParameterLayer.Default => I18nService.Instance.Translate("能力默认值"),
+            PuloniaParameterLayer.Settings => I18nService.Instance.Translate("共享设置"),
+            PuloniaParameterLayer.Node => I18nService.Instance.Translate("本任务"),
+            _ => I18nService.Instance.Translate("本次调用覆盖")
         }, StringComparer.Ordinal);
         return resolution.Parameters;
     }

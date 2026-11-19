@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,7 +58,7 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     /// <summary>
     /// 当前状态的中文显示文本；主实例下发的运行在连接断开期间显示“连接断开，状态未知”（统筹设计 6.3）。
     /// </summary>
-    public string StatusText => IsDisconnected ? "连接断开，状态未知" : PuloniaTaskHistoryText.Status(Run.Status);
+    public string StatusText => IsDisconnected ? I18nService.Instance.Translate("连接断开，状态未知") : PuloniaTaskHistoryText.Status(Run.Status);
 
     /// <summary>
     /// 状态的语义分类键，供列表与详情按类别着色：running=进行中、success=成功、failed=失败、attention=需关注，其余显示为中性灰。
@@ -114,7 +115,7 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     /// <summary>
     /// 节点列表下方的说明；没有未启用任务时为空。
     /// </summary>
-    public string? DisabledTaskText => DisabledTaskCount > 0 ? $"另有 {DisabledTaskCount} 项任务未启用，未列出。" : null;
+    public string? DisabledTaskText => DisabledTaskCount > 0 ? string.Format(I18nService.Instance.Translate("另有 {0} 项任务未启用，未列出。"), DisabledTaskCount) : null;
 
     /// <summary>
     /// 结果摘要：按每个任务最后一次尝试归类计数，重试不会被重复计为不同任务，例如“成功 5 · 失败 1 · 重试 2 次”。
@@ -130,12 +131,13 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
             var parts = finals
                 .GroupBy(item => PuloniaTaskHistoryText.AttemptStatus(item).Bucket)
                 .OrderBy(group => Array.IndexOf(PuloniaTaskHistoryText.BucketOrder, group.Key) is var index and >= 0 ? index : int.MaxValue)
-                .Select(group => $"{group.Key} {group.Count()}")
+                // 类别是中文 Key，展示时按界面语言翻译
+                .Select(group => $"{I18nService.Instance.Translate(group.Key)} {group.Count()}")
                 .ToList();
             // 只有实际执行过的尝试才算重试；跳过与续跑沿用的结果没有尝试次数
             var retries = counted.Count(item => item.Attempt > 1);
             if (retries > 0)
-                parts.Add($"重试 {retries} 次");
+                parts.Add(string.Format(I18nService.Instance.Translate("重试 {0} 次"), retries));
             return string.Join(" · ", parts);
         }
     }
@@ -150,12 +152,12 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
             var parts = new List<string> { PuloniaTaskHistoryText.Source(Run.Source) };
             if (Run.StartedAt is { } started)
             {
-                parts.Add(PuloniaTaskHistoryText.Time(started) + " 开始");
+                parts.Add(string.Format(I18nService.Instance.Translate("{0} 开始"), PuloniaTaskHistoryText.Time(started)));
                 if (Run.FinishedAt is { } finished)
-                    parts.Add("用时 " + PuloniaTaskHistoryText.Duration(finished - started));
+                    parts.Add(string.Format(I18nService.Instance.Translate("用时 {0}"), PuloniaTaskHistoryText.Duration(finished - started)));
             }
             else
-                parts.Add(PuloniaTaskHistoryText.Time(Run.SubmittedAt) + " 提交");
+                parts.Add(string.Format(I18nService.Instance.Translate("{0} 提交"), PuloniaTaskHistoryText.Time(Run.SubmittedAt)));
             return string.Join(" · ", parts);
         }
     }
@@ -195,26 +197,27 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
         {
             var fields = new List<PuloniaTaskHistoryField>
             {
-                new("触发方式", PuloniaTaskHistoryText.Source(Run.Source)),
-                new("运行账户", DescribeAccount())
+                new(I18nService.Instance.Translate("触发方式"), PuloniaTaskHistoryText.Source(Run.Source)),
+                new(I18nService.Instance.Translate("运行账户"), DescribeAccount())
             };
             // 历史目录由所有实例共用，总是标明执行实例
-            fields.Add(new PuloniaTaskHistoryField("运行实例", InstanceText));
-            fields.Add(new PuloniaTaskHistoryField("执行范围", Run.TargetTaskId is { } target
-                ? "仅“" + (FindTaskName(task => task.TaskId == target || task.SourceTaskId == target) ?? "部分任务") + "”"
-                : "整个计划"));
+            fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("运行实例"), InstanceText));
+            fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("执行范围"), Run.TargetTaskId is { } target
+                ? string.Format(I18nService.Instance.Translate("仅“{0}”"), TranslateName(FindTaskName(task => task.TaskId == target || task.SourceTaskId == target)) ?? I18nService.Instance.Translate("部分任务"))
+                : I18nService.Instance.Translate("整个计划")));
             if (Run.ResumedFromRunId is not null)
-                fields.Add(new PuloniaTaskHistoryField("续跑", Run.ResumeFromTaskAddress is { } from
-                    ? $"沿用之前一次运行的设置，从“{(_snapshotTasks.Value.TryGetValue(from, out var start) ? start.Name : from)}”开始"
-                    : "沿用之前一次运行的设置，继续未完成的任务"));
+                fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("续跑"), Run.ResumeFromTaskAddress is { } from
+                    ? string.Format(I18nService.Instance.Translate("沿用之前一次运行的设置，从“{0}”开始"),
+                        _snapshotTasks.Value.TryGetValue(from, out var start) ? TranslateName(start.Name) : from)
+                    : I18nService.Instance.Translate("沿用之前一次运行的设置，继续未完成的任务")));
             if (Run.OccurrenceUtc is { } occurrence)
-                fields.Add(new PuloniaTaskHistoryField("触发时间", PuloniaTaskHistoryText.Time(occurrence)));
+                fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("触发时间"), PuloniaTaskHistoryText.Time(occurrence)));
             if (Run.DeadlineUtc is { } deadline)
-                fields.Add(new PuloniaTaskHistoryField("最晚开始", PuloniaTaskHistoryText.Time(deadline)));
-            fields.Add(new PuloniaTaskHistoryField("提交时间", PuloniaTaskHistoryText.Time(Run.SubmittedAt)));
-            fields.Add(new PuloniaTaskHistoryField("开始时间", PuloniaTaskHistoryText.Time(Run.StartedAt)));
-            fields.Add(new PuloniaTaskHistoryField("结束时间", PuloniaTaskHistoryText.Time(Run.FinishedAt)));
-            fields.Add(new PuloniaTaskHistoryField("用时", PuloniaTaskHistoryText.Duration(Run.StartedAt, Run.FinishedAt)));
+                fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("最晚开始"), PuloniaTaskHistoryText.Time(deadline)));
+            fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("提交时间"), PuloniaTaskHistoryText.Time(Run.SubmittedAt)));
+            fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("开始时间"), PuloniaTaskHistoryText.Time(Run.StartedAt)));
+            fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("结束时间"), PuloniaTaskHistoryText.Time(Run.FinishedAt)));
+            fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("用时"), PuloniaTaskHistoryText.Duration(Run.StartedAt, Run.FinishedAt)));
             return fields;
         }
     }
@@ -226,17 +229,17 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     {
         get
         {
-            var fields = new List<PuloniaTaskHistoryField> { new("运行 ID", Run.RunId), new("来源", Run.Source) };
+            var fields = new List<PuloniaTaskHistoryField> { new(I18nService.Instance.Translate("运行 ID"), Run.RunId), new(I18nService.Instance.Translate("来源"), Run.Source) };
             if (Run.TriggerId is { } trigger)
-                fields.Add(new PuloniaTaskHistoryField("触发器 ID", trigger));
+                fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("触发器 ID"), trigger));
             if (Run.TargetTaskId is { } target)
-                fields.Add(new PuloniaTaskHistoryField("执行范围节点 ID", target));
+                fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("执行范围节点 ID"), target));
             if (Run.ResumedFromRunId is { } from)
-                fields.Add(new PuloniaTaskHistoryField("续跑来源运行 ID", from));
+                fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("续跑来源运行 ID"), from));
             if (Run.ResumeFromTaskAddress is { } start)
-                fields.Add(new PuloniaTaskHistoryField("续跑起点地址", start));
+                fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("续跑起点地址"), start));
             if (Run.CurrentTaskAddress is { } current)
-                fields.Add(new PuloniaTaskHistoryField("当前或最近结束的节点地址", current));
+                fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("当前或最近结束的节点地址"), current));
             fields.AddRange(RouteCompletionFields);
             return fields;
         }
@@ -268,18 +271,18 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     /// </summary>
     public string StopToolTip => StopAccess switch
     {
-        PuloniaRunStopAccess.Dispatched => $"请求“{InstanceText}”停止这次运行；执行实例结束运行后状态会自动更新",
-        PuloniaRunStopAccess.Disconnected => $"与“{InstanceText}”的连接已断开，无法远程停止，请在该实例的界面停止",
-        PuloniaRunStopAccess.OtherInstance => $"这次运行在“{InstanceText}”执行，请在该实例界面停止",
-        _ => "停止这次运行，并等待当前任务退出"
+        PuloniaRunStopAccess.Dispatched => string.Format(I18nService.Instance.Translate("请求“{0}”停止这次运行；执行实例结束运行后状态会自动更新"), InstanceText),
+        PuloniaRunStopAccess.Disconnected => string.Format(I18nService.Instance.Translate("与“{0}”的连接已断开，无法远程停止，请在该实例的界面停止"), InstanceText),
+        PuloniaRunStopAccess.OtherInstance => string.Format(I18nService.Instance.Translate("这次运行在“{0}”执行，请在该实例界面停止"), InstanceText),
+        _ => I18nService.Instance.Translate("停止这次运行，并等待当前任务退出")
     };
 
     /// <summary>
     /// 列表中账户标签的说明；UID 比对不一致时说明进度仍按运行账户记录。
     /// </summary>
     public string AccountToolTip => HasUidMismatch
-        ? "运行开始时游戏中读到的 UID 与本实例当前账户不一致，本次进度仍按该账户记录。请确认游戏中登录的账户。"
-        : "本次运行的运行账户";
+        ? I18nService.Instance.Translate("运行开始时游戏中读到的 UID 与本实例当前账户不一致，本次进度仍按该账户记录。请确认游戏中登录的账户。")
+        : I18nService.Instance.Translate("本次运行的运行账户");
 
     /// <summary>
     /// 当前条目是否已经写入不可变历史。
@@ -328,21 +331,21 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     private string DescribeAccount()
     {
         if (Run.AccountId is not { } accountId)
-            return Run.Status == PuloniaTaskRunStatus.Queued ? "运行开始时确定" : "未确定（本次运行不含游戏任务或未开始执行）";
+            return Run.Status == PuloniaTaskRunStatus.Queued ? I18nService.Instance.Translate("运行开始时确定") : I18nService.Instance.Translate("未确定（本次运行不含游戏任务或未开始执行）");
         var parts = new List<string> { GetAccountName(accountId) };
         switch (Run.AccountSource)
         {
             case PuloniaTaskAccountSource.Specified:
-                parts.Add("计划指定");
-                parts.Add(Run.VerifiedUid is not null ? "已核验 UID" : "UID 未核验");
+                parts.Add(I18nService.Instance.Translate("计划指定"));
+                parts.Add(Run.VerifiedUid is not null ? I18nService.Instance.Translate("已核验 UID") : I18nService.Instance.Translate("UID 未核验"));
                 break;
             case PuloniaTaskAccountSource.InstanceCurrent:
-                parts.Add("本实例当前账户");
+                parts.Add(I18nService.Instance.Translate("本实例当前账户"));
                 parts.Add(Run.UidCheck switch
                 {
-                    PuloniaTaskUidCheck.Matched => "UID 一致",
+                    PuloniaTaskUidCheck.Matched => I18nService.Instance.Translate("UID 一致"),
                     PuloniaTaskUidCheck.Mismatched => ObservedUidText,
-                    _ => "未比对 UID"
+                    _ => I18nService.Instance.Translate("未比对 UID")
                 });
                 break;
         }
@@ -353,8 +356,8 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     /// UID 比对不一致时游戏中读到的 UID，只显示尾号，如“游戏中读到尾号 2222”；没有记录读到的 UID 时说明不一致。
     /// </summary>
     private string ObservedUidText => Run.ObservedUid is { Length: > 0 } observed
-        ? "游戏中读到尾号 " + PuloniaAccountChoiceViewModel.UidTail(observed)
-        : "游戏中读到的 UID 不一致";
+        ? string.Format(I18nService.Instance.Translate("游戏中读到尾号 {0}"), PuloniaAccountChoiceViewModel.UidTail(observed))
+        : I18nService.Instance.Translate("游戏中读到的 UID 不一致");
 
     /// <summary>
     /// 运行账户的显示名称：优先使用账户目录中的当前名称，其次是快照固定的账户资料，最后显示账户 ID。
@@ -374,7 +377,7 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
         {
             // 账户资料无法读取时显示账户 ID，不影响其他运行信息。
         }
-        return "账户 " + accountId;
+        return string.Format(I18nService.Instance.Translate("账户 {0}"), accountId);
     }
 
     /// <summary>
@@ -382,6 +385,13 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     /// </summary>
     private string? FindTaskName(Func<PuloniaTaskPreparedTask, bool> predicate)
         => _snapshotTasks.Value.Values.FirstOrDefault(predicate)?.Name;
+
+    /// <summary>
+    /// 快照中的任务名称可能是内置独立任务名（已登记的 Key），展示时按界面语言翻译；用户自定义名称没有登记，原样显示。
+    /// </summary>
+    /// <param name="name">快照中的任务名称。</param>
+    /// <returns>展示用名称；输入为空时为空。</returns>
+    private static string? TranslateName(string? name) => name is null ? null : I18nService.Instance.Translate(name);
 
     /// <summary>
     /// 读取当次快照；旧快照或解析失败只影响设置与名称显示，不据当前编辑内容补造历史参数。
@@ -415,7 +425,7 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     private IReadOnlyList<PuloniaTaskNodeResultViewModel> CreateNodeDetails()
         => NodeResults.Where(result => !IsDisabled(result)).Select(result => new PuloniaTaskNodeResultViewModel(result,
             _snapshotTasks.Value.GetValueOrDefault(result.TaskAddress),
-            result.TaskType == "genshin.account.prepare" ? "切换账户" : _typeNames?.GetValueOrDefault(result.TaskType) ?? result.TaskType,
+            result.TaskType == "genshin.account.prepare" ? I18nService.Instance.Translate("切换账户") : _typeNames?.GetValueOrDefault(result.TaskType) ?? result.TaskType,
             Run.RouteCompletions)).ToArray();
 
     /// <summary>

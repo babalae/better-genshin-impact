@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -42,7 +43,7 @@ public partial class AccountRecordsDictionaryViewModel : ObservableObject
     /// <summary>过滤后的项目。</summary>
     public ObservableCollection<AccountRecordsDictionaryEntry> Entries { get; } = [];
     /// <summary>供复制的只读内容。</summary>
-    public string Details => Selected?.Details ?? "请选择条目。";
+    public string Details => Selected?.Details ?? I18nService.Instance.Translate("请选择条目。");
 
     /// <summary>固定文件与权限，避免通过界面修改公共目录。</summary>
     public AccountRecordsDictionaryViewModel(string title, string path, bool canEdit, InventoryCatalog catalog,
@@ -58,14 +59,14 @@ public partial class AccountRecordsDictionaryViewModel : ObservableObject
     private async Task RestorePresetCategories()
     {
         if (!CanEdit || !IsSupplementaryDictionary || !EditingEnabled || _restorePresetCategories == null) return;
-        if (await ThemedMessageBox.ShowAsync("将补回缺失的预置物品，并将它们的分类恢复为默认值。用户新增的其他条目会保留，库存数量不变。\n此字典由所有 UID 共用；原文件将保存为 .bak 备份。是否继续？",
-                "恢复预置分类", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+        if (await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("将补回缺失的预置物品，并将它们的分类恢复为默认值。用户新增的其他条目会保留，库存数量不变。\n此字典由所有 UID 共用；原文件将保存为 .bak 备份。是否继续？"),
+                I18nService.Instance.Translate("恢复预置分类"), MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
         try
         {
             await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _restorePresetCategories());
             await Refresh();
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "恢复预置分类", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), I18nService.Instance.Translate("恢复预置分类"), MessageBoxButton.OK); }
     }
 
     /// <summary>查询变化时更新列表。</summary>
@@ -78,20 +79,20 @@ public partial class AccountRecordsDictionaryViewModel : ObservableObject
         try
         {
             var entries = await Task.Run(() => !CanEdit
-                ? _catalog.Items.Select(pair => new AccountRecordsDictionaryEntry(pair.Key, $"名称：{pair.Key}\n分类：{pair.Value}")).ToArray()
+                ? _catalog.Items.Select(pair => new AccountRecordsDictionaryEntry(pair.Key, string.Format(I18nService.Instance.Translate("名称：{0}\n分类：{1}"), pair.Key, pair.Value))).ToArray()
                 : File.Exists(_path)
                     ? ReadDictionary().Properties().Select(property =>
                         new AccountRecordsDictionaryEntry(property.Name, property.Value.ToString(Formatting.Indented))).ToArray()
                     : []);
             _entries = entries.OrderBy(item => item.Name, StringComparer.CurrentCulture).ToArray();
             Filter();
-            Message = CanEdit && !File.Exists(_path) ? "字典文件尚未生成。" : $"共 {_entries.Length} 项。";
+            Message = CanEdit && !File.Exists(_path) ? I18nService.Instance.Translate("字典文件尚未生成。") : string.Format(I18nService.Instance.Translate("共 {0} 项。"), _entries.Length);
         }
         catch (Exception ex)
         {
             _entries = [];
             Filter();
-            Message = $"读取失败：{AccountRecordsErrorMessages.Describe(ex)}";
+            Message = string.Format(I18nService.Instance.Translate("读取失败：{0}"), AccountRecordsErrorMessages.Describe(ex));
         }
     }
 
@@ -127,6 +128,6 @@ public partial class AccountRecordsDictionaryViewModel : ObservableObject
                 return Task.CompletedTask;
             });
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "打开源文件", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), I18nService.Instance.Translate("打开源文件"), MessageBoxButton.OK); }
     }
 }

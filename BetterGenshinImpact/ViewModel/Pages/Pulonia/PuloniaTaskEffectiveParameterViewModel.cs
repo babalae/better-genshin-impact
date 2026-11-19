@@ -1,3 +1,5 @@
+using BetterGenshinImpact.Service.I18n;
+
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
 /// <summary>
@@ -19,6 +21,11 @@ public sealed class PuloniaTaskEffectiveParameterViewModel
     /// 最后覆盖该参数的位置说明。
     /// </summary>
     public string Source { get; }
+
+    /// <summary>
+    /// 带“来源”标签的来源说明，供界面展示。
+    /// </summary>
+    public string SourceText => string.Format(I18nService.Instance.Translate("来源：{0}"), Source);
 
     /// <summary>
     /// 建立一行有效参数预览。

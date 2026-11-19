@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.Input;
@@ -48,7 +49,7 @@ public partial class PuloniaTaskPlanViewModel
     public string? CooldownAccountNotice
         => SelectedDocument is { } document && Session.GetCooldownAccount(document) is { } shown
            && Session.GetDefaultCooldownAccount(document) is { } planAccount && shown.Id != planAccount.Id
-            ? $"仅改变本页显示，运行仍按“{planAccount.Name}”"
+            ? string.Format(I18nService.Instance.Translate("仅改变本页显示，运行仍按“{0}”"), planAccount.Name)
             : null;
 
     /// <summary>是否显示临时查看的说明。</summary>

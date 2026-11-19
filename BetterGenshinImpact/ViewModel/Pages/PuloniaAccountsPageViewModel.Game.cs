@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using OpenCvSharp;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -43,12 +44,12 @@ public partial class PuloniaAccountsPageViewModel
         get
         {
             if (IsCloudInstance)
-                return "云原神实例不能切换账户。";
+                return I18nService.Instance.Translate("云原神实例不能切换账户。");
             if (SelectedAccount is not { } account)
                 return "";
             if (string.IsNullOrEmpty(account.Saved?.Uid))
-                return "账户没有 UID，不能测试切换。请先填写 UID 并保存。";
-            return "在本实例的游戏中切换到这个账户并核验 UID，成功后本实例当前账户改为这个账户。使用已保存的登录资料，修改后请先保存。";
+                return I18nService.Instance.Translate("账户没有 UID，不能测试切换。请先填写 UID 并保存。");
+            return I18nService.Instance.Translate("在本实例的游戏中切换到这个账户并核验 UID，成功后本实例当前账户改为这个账户。使用已保存的登录资料，修改后请先保存。");
         }
     }
 
@@ -66,15 +67,15 @@ public partial class PuloniaAccountsPageViewModel
     {
         if (SelectedAccount is not { } account)
             return;
-        await RunGameOperationAsync("正在读取游戏中的 UID…", "未能读取 UID：", async (lease, ct) =>
+        await RunGameOperationAsync(I18nService.Instance.Translate("正在读取游戏中的 UID…"), I18nService.Instance.Translate("未能读取 UID："), async (lease, ct) =>
         {
             if (await _switcher.TryReadUidAsync(lease.Runtime, ct) is not { } uid)
             {
-                Message = "没有读到 UID，请让游戏停在主界面后重试。";
+                Message = I18nService.Instance.Translate("没有读到 UID，请让游戏停在主界面后重试。");
                 return;
             }
             account.Uid = uid;
-            Message = $"已读取 UID {uid}，点“保存”后生效。";
+            Message = string.Format(I18nService.Instance.Translate("已读取 UID {0}，点“保存”后生效。"), uid);
         });
     }
 
@@ -84,7 +85,11 @@ public partial class PuloniaAccountsPageViewModel
     {
         if (SelectedAccount is not { } account || IsBusy)
             return;
-        var picker = new OpenFileDialog { Filter = "账户图片|*.png;*.jpg;*.jpeg", Title = "选择 1080p 登录列表中的账户标识裁剪图" };
+        var picker = new OpenFileDialog
+        {
+            Filter = I18nService.Instance.Translate("账户图片") + "|*.png;*.jpg;*.jpeg",
+            Title = I18nService.Instance.Translate("选择 1080p 登录列表中的账户标识裁剪图")
+        };
         if (picker.ShowDialog() != true)
             return;
         IsBusy = true;
@@ -96,9 +101,9 @@ public partial class PuloniaAccountsPageViewModel
                 throw new InvalidOperationException("请选择可解码的 1080p 账户标识裁剪图片，或使用“采集当前账户图片”。");
             // 每次导入都新建 account-images\<账户ID>-<时间>.png，已有运行快照引用的旧图片保持不变。
             account.ImagePath = await _store.CreateAccountImageAsync(account.Id, image.ImEncode(".png"));
-            Message = "图片已导入，点“保存”后生效。";
+            Message = I18nService.Instance.Translate("图片已导入，点“保存”后生效。");
         }
-        catch (Exception ex) { Message = "图片未导入：" + ex.Message; }
+        catch (Exception ex) { Message = I18nService.Instance.Translate("图片未导入：") + ex.Message; }
         finally { IsBusy = false; }
     }
 
@@ -108,15 +113,15 @@ public partial class PuloniaAccountsPageViewModel
     {
         if (SelectedAccount is not { } account)
             return;
-        if (await ThemedMessageBox.ShowAsync("将从当前已登录的账户识别 UID，退出到登录界面采集账户标识，再返回游戏。请确认当前登录的是要保存的账户。",
-                "采集账户图片", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
+        if (await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("将从当前已登录的账户识别 UID，退出到登录界面采集账户标识，再返回游戏。请确认当前登录的是要保存的账户。"),
+                I18nService.Instance.Translate("采集账户图片"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
             return;
-        await RunGameOperationAsync("正在采集账户图片…", "采集未完成：", async (lease, ct) =>
+        await RunGameOperationAsync(I18nService.Instance.Translate("正在采集账户图片…"), I18nService.Instance.Translate("采集未完成："), async (lease, ct) =>
         {
             var result = await _switcher.CaptureCurrentAccountAsync(lease.Runtime, account.Id, ct);
             account.Uid = result.Uid;
             account.ImagePath = result.ImagePath;
-            Message = "采集完成，已返回游戏。点“保存”后生效。";
+            Message = I18nService.Instance.Translate("采集完成，已返回游戏。点“保存”后生效。");
         });
     }
 
@@ -136,7 +141,7 @@ public partial class PuloniaAccountsPageViewModel
         // 1. 切换按已保存的资料进行，草稿有修改时先保存，避免测试的不是界面上看到的资料
         if (account.IsDirty)
         {
-            Message = "这个账户有未保存的修改，请先保存，再测试切换。";
+            Message = I18nService.Instance.Translate("这个账户有未保存的修改，请先保存，再测试切换。");
             return;
         }
         // 2. 切换前检查：其他在线实例正在使用这个账户时，切换会把它挤下线，在确认框中一并说明
@@ -145,9 +150,12 @@ public partial class PuloniaAccountsPageViewModel
         catch (Exception ex) when (ex is not OutOfMemoryException) { displaced = []; System.Diagnostics.Debug.WriteLine(ex); }
         var displacedText = displaced.Count == 0
             ? ""
-            : $"\n\n{string.Join("、", displaced.Select(PuloniaInstanceKey.Describe))}的当前账户是“{saved.Name}”且正在线，切换会把它挤下线。";
-        if (await ThemedMessageBox.ShowAsync($"将在本实例的游戏中切换到账户“{saved.Name}”（UID {saved.Uid}）并核验 UID，当前登录的账户会被登出。{displacedText}\n\n确定继续吗？",
-                "测试切换", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
+            : "\n\n" + string.Format(I18nService.Instance.Translate("{0}的当前账户是“{1}”且正在线，切换会把它挤下线。"),
+                string.Join("、", displaced.Select(PuloniaInstanceKey.Describe)), saved.Name);
+        if (await ThemedMessageBox.ShowAsync(
+                string.Format(I18nService.Instance.Translate("将在本实例的游戏中切换到账户“{0}”（UID {1}）并核验 UID，当前登录的账户会被登出。"), saved.Name, saved.Uid)
+                + displacedText + "\n\n" + I18nService.Instance.Translate("确定继续吗？"),
+                I18nService.Instance.Translate("测试切换"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
             return;
         // 3. 取得目标账户的占用：账户正在任一实例运行时不切换，避免两处同时使用同一账户
         IDisposable? occupancy;
@@ -155,17 +163,18 @@ public partial class PuloniaAccountsPageViewModel
         try { occupancy = _accounts.TryAcquireAccountOccupancy(saved.Id, null, out occupant); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PuloniaTaskValidationException)
         {
-            Message = $"无法取得账户“{saved.Name}”的占用，未切换：{ex.Message}";
+            Message = string.Format(I18nService.Instance.Translate("无法取得账户“{0}”的占用，未切换：{1}"), saved.Name, ex.Message);
             return;
         }
         if (occupancy is null)
         {
-            Message = $"账户“{saved.Name}”正在{(occupant is null ? "另一个实例" : PuloniaAccountService.DescribeOccupant(occupant))}运行，未切换。";
+            Message = string.Format(I18nService.Instance.Translate("账户“{0}”正在{1}运行，未切换。"), saved.Name,
+                occupant is null ? I18nService.Instance.Translate("另一个实例") : PuloniaAccountService.DescribeOccupant(occupant));
             return;
         }
         using var heldOccupancy = occupancy;
         // 4. 切换并核验；已离开主界面去登出或登录后失败时，游戏中登录的账户不再确定
-        await RunGameOperationAsync($"正在切换到“{saved.Name}”…", "测试切换失败：", async (lease, ct) =>
+        await RunGameOperationAsync(string.Format(I18nService.Instance.Translate("正在切换到“{0}”…"), saved.Name), I18nService.Instance.Translate("测试切换失败："), async (lease, ct) =>
         {
             var switchStarted = false;
             string uid;
@@ -176,16 +185,18 @@ public partial class PuloniaAccountsPageViewModel
             catch (Exception ex) when (switchStarted)
             {
                 var undetermined = await TrySetCurrentAccountAsync(null);
-                Message = (ex is OperationCanceledException ? "测试切换已取消。" : "测试切换失败：" + ex.Message)
+                Message = (ex is OperationCanceledException
+                              ? I18nService.Instance.Translate("测试切换已取消。")
+                              : I18nService.Instance.Translate("测试切换失败：") + ex.Message)
                           + (undetermined
-                              ? "切换已经开始，本实例当前账户已改为“未确定”，请确认游戏中登录的账户后在顶部重新选择。"
-                              : "切换已经开始，但未能把本实例当前账户改为“未确定”，请确认游戏中登录的账户后在顶部重新选择。");
+                              ? I18nService.Instance.Translate("切换已经开始，本实例当前账户已改为“未确定”，请确认游戏中登录的账户后在顶部重新选择。")
+                              : I18nService.Instance.Translate("切换已经开始，但未能把本实例当前账户改为“未确定”，请确认游戏中登录的账户后在顶部重新选择。"));
                 return;
             }
             // 5. 核验成功后本实例当前账户就是该账户
             Message = await TrySetCurrentAccountAsync(saved.Id)
-                ? $"已切换到“{saved.Name}”，UID {uid} 核验通过；本实例当前账户已改为“{saved.Name}”。"
-                : $"已切换到“{saved.Name}”，UID {uid} 核验通过，但未能修改本实例当前账户，请在顶部手动选择。";
+                ? string.Format(I18nService.Instance.Translate("已切换到“{0}”，UID {1} 核验通过；本实例当前账户已改为“{0}”。"), saved.Name, uid)
+                : string.Format(I18nService.Instance.Translate("已切换到“{0}”，UID {1} 核验通过，但未能修改本实例当前账户，请在顶部手动选择。"), saved.Name, uid);
         });
     }
 
@@ -236,7 +247,7 @@ public partial class PuloniaAccountsPageViewModel
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
-            Message = "操作已取消。";
+            Message = I18nService.Instance.Translate("操作已取消。");
         }
         catch (Exception ex)
         {

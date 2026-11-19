@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -21,20 +22,21 @@ public partial class QuestVoiceManagementViewModel
         RequireEditable();
             if (string.IsNullOrWhiteSpace(voiceId) || string.IsNullOrWhiteSpace(displayName)) throw new InvalidOperationException("请先填写声音与显示名称。");
             var existing = Profiles.FirstOrDefault(x => x.ProviderId == providerId && x.InstanceId == instanceId && x.ProviderVoiceId == voiceId);
-            if (existing is not null) { EditStatus = "此声音已经是声线：" + existing.Name; return; }
+            if (existing is not null) { EditStatus = string.Format(I18nService.Instance.Translate("此声音已经是声线：{0}"), existing.Name); return; }
             var id = UniqueId("voice", Profiles.SelectMany(x => new[] { x.Id, x.OriginalId }));
             var item = new QuestVoiceManagementProfile(new(id, displayName.Trim(), "", "", "", "", ProviderId: providerId,
                 InstanceId: Optional(instanceId), ProviderVoiceId: voiceId.Trim()));
             AddProfileItem(item); MarkDraftChanged(); NotifyLists();
-            EditStatus = "已添加为声线，可在“角色”页选择。";
+            EditStatus = I18nService.Instance.Translate("已添加为声线，可在“角色”页选择。");
     }
     /// <summary>远程资源只接受服务器路径，浏览入口仅对本机可用。</summary>
     public bool CanBrowseSelectedProfileAssets => SelectedProfile is { } item && item.InstanceId != "remote"
         && !(item.InstanceId == "" && _factory.RoutingServerSidePaths);
     /// <summary>静态资源诊断不发网络请求；不以尚未测试连接冒充服务可用。</summary>
     public string SelectedProfileDiagnostic => SelectedProfile is { } item
-        ? (VoiceChoices.FirstOrDefault(x => x.Id == item.OriginalId)?.DisplayName ?? item.Name) + " · 服务可用性请通过连接测试或试听确认"
-        : "请选择或新建声线；未完成资源保留在草稿中。";
+        ? string.Format(I18nService.Instance.Translate("{0} · 服务可用性请通过连接测试或试听确认"),
+            VoiceChoices.FirstOrDefault(x => x.Id == item.OriginalId)?.DisplayName ?? item.Name)
+        : I18nService.Instance.Translate("请选择或新建声线；未完成资源保留在草稿中。");
     /// <summary>GPT 页面只显示 GPT 资源，其他引擎通过其设置页提供声音。</summary>
     public IEnumerable<QuestVoiceManagementProfile> GptProfiles => Profiles.Where(x => x.ProviderId == "gpt-sovits");
     /// <summary>空声线库只显示紧凑选择框，选中或新建后才展示资源编辑器。</summary>
@@ -50,24 +52,24 @@ public partial class QuestVoiceManagementViewModel
     {
         get
         {
-            var choices = new List<QuestVoiceVoiceChoice> { new("", "未单独指定（使用默认规则）") };
+            var choices = new List<QuestVoiceVoiceChoice> { new("", I18nService.Instance.Translate("未单独指定（使用默认规则）")) };
             foreach (var item in Profiles)
             {
                 var info = TtsProviderRegistry.Providers.FirstOrDefault(x => x.Id == item.ProviderId);
-                var diagnostic = info is null ? " · 引擎不可用" : "";
+                var diagnostic = info is null ? I18nService.Instance.Translate(" · 引擎不可用") : "";
                 if (item.UsesGptAssets && item.InstanceId != "remote" && !(item.InstanceId == "" && _factory.RoutingServerSidePaths))
                 {
                     try
                     {
                         var voice = BuildProfile(item);
-                        if (RoutingVoiceAssets.HasMissingLocalFiles(voice)) diagnostic = " · 资源缺失";
+                        if (RoutingVoiceAssets.HasMissingLocalFiles(voice)) diagnostic = I18nService.Instance.Translate(" · 资源缺失");
                     }
-                    catch { diagnostic = " · 路径待修正"; }
+                    catch { diagnostic = I18nService.Instance.Translate(" · 路径待修正"); }
                 }
                 choices.Add(new(item.OriginalId, $"{item.Name} · {info?.DisplayName ?? item.ProviderId}{diagnostic}"));
             }
             foreach (var id in Speakers.Select(x => x.VoiceId).Concat(new[] { FallbackVoiceId, NarratorVoiceId }).Where(x => !string.IsNullOrEmpty(x)).Distinct())
-                if (!choices.Any(x => Same(x.Id, id))) choices.Add(new(id, $"声线缺失：{id}（绑定保留）"));
+                if (!choices.Any(x => Same(x.Id, id))) choices.Add(new(id, string.Format(I18nService.Instance.Translate("声线缺失：{0}（绑定保留）"), id)));
             return choices;
         }
     }
@@ -107,7 +109,7 @@ public partial class QuestVoiceManagementViewModel
     private void AddGptProfile() => Edit(() =>
     {
         var id = UniqueId("gpt.voice", Profiles.SelectMany(x => new[] { x.Id, x.OriginalId }));
-        var item = new QuestVoiceManagementProfile(new(id, "新声线", "", "", "", "", ProviderId: "gpt-sovits",
+        var item = new QuestVoiceManagementProfile(new(id, I18nService.Instance.Translate("新声线"), "", "", "", "", ProviderId: "gpt-sovits",
             InstanceId: _owner.Config.UseRemoteService ? "remote" : "local"));
         AddProfileItem(item); SelectedProfile = item; MarkDraftChanged(); NotifyLists();
     });
@@ -122,9 +124,9 @@ public partial class QuestVoiceManagementViewModel
                 throw new InvalidOperationException("远程实例请填写服务器已有路径。");
             var (title, filter, current) = kind switch
             {
-                "gpt" => ("选择 GPT 权重文件", "GPT 权重 (*.ckpt)|*.ckpt", item.GptWeightsPath),
-                "sovits" => ("选择 SoVITS 权重文件", "SoVITS 权重 (*.pth)|*.pth", item.SovitsWeightsPath),
-                _ => ("选择参考音频", "参考音频 (*.wav;*.mp3;*.flac;*.ogg)|*.wav;*.mp3;*.flac;*.ogg", item.ReferenceAudioPath)
+                "gpt" => (I18nService.Instance.Translate("选择 GPT 权重文件"), I18nService.Instance.Translate("GPT 权重 (*.ckpt)|*.ckpt"), item.GptWeightsPath),
+                "sovits" => (I18nService.Instance.Translate("选择 SoVITS 权重文件"), I18nService.Instance.Translate("SoVITS 权重 (*.pth)|*.pth"), item.SovitsWeightsPath),
+                _ => (I18nService.Instance.Translate("选择参考音频"), I18nService.Instance.Translate("参考音频 (*.wav;*.mp3;*.flac;*.ogg)|*.wav;*.mp3;*.flac;*.ogg"), item.ReferenceAudioPath)
             };
             // 与设置窗口其他浏览按钮共用同一文件选择逻辑；资源保留完整路径。
             if (QuestVoiceSettingsViewModel.PickFile(title, filter, current, useRelativeIfUnderStartup: false) is not { } selected) return;

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Infrastructure.Storage;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Service;
 
@@ -28,32 +29,32 @@ public sealed class AppStorageAreaProvider : IStorageAreaProvider
         var logDirectory = Global.Absolute("log");
 
         // 运行日志由 Serilog 自动滚动保留，这里只展示占用
-        yield return new StorageArea("diagnostics:log", "运行日志", StorageGroup.Diagnostics, ListLogFiles(logDirectory))
+        yield return new StorageArea("diagnostics:log", I18nService.Key("运行日志"), StorageGroup.Diagnostics, ListLogFiles(logDirectory))
         {
-            Description = "自动保留最近 21 天，排查问题时需要",
+            Description = I18nService.Key("自动保留最近 21 天，排查问题时需要"),
             Timing = StorageCleanupTiming.None,
         };
 
-        yield return new StorageArea("diagnostics:screenshot", "截图", StorageGroup.Diagnostics,
+        yield return new StorageArea("diagnostics:screenshot", I18nService.Key("截图"), StorageGroup.Diagnostics,
             [Global.Absolute(@"log\screenshot")])
         {
-            Description = "通过截图快捷键保存的图片",
-            CleanupEffect = "删除后无法找回",
+            Description = I18nService.Key("通过截图快捷键保存的图片"),
+            CleanupEffect = I18nService.Key("删除后无法找回"),
             RequiresConfirmation = true,
             IncludedInQuickCleanup = false,
         };
 
-        yield return new StorageArea("diagnostics:debug-images", "调试图片", StorageGroup.Diagnostics,
+        yield return new StorageArea("diagnostics:debug-images", I18nService.Key("调试图片"), StorageGroup.Diagnostics,
             DebugImageDirectories.Select(Global.Absolute).ToList())
         {
-            Description = "挖矿、奖励识别、物品数量比对等任务保存的识别截图",
-            CleanupEffect = "只用于排查问题，删除不影响任务运行",
+            Description = I18nService.Key("挖矿、奖励识别、物品数量比对等任务保存的识别截图"),
+            CleanupEffect = I18nService.Key("只用于排查问题，删除不影响任务运行"),
             IncludedInQuickCleanup = false,
         };
 
-        yield return new StorageArea("user:data", "脚本、配置、录制等", StorageGroup.UserData, [Global.Absolute("User")])
+        yield return new StorageArea("user:data", I18nService.Key("脚本、配置、录制等"), StorageGroup.UserData, [Global.Absolute("User")])
         {
-            Description = "你的配置、脚本、地图追踪、键鼠录制和任务数据",
+            Description = I18nService.Key("你的配置、脚本、地图追踪、键鼠录制和任务数据"),
             Timing = StorageCleanupTiming.None,
         };
     }

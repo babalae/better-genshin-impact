@@ -2,6 +2,7 @@ using BetterGenshinImpact.Service.AccountRecords;
 using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.Input;
 using Wpf.Ui;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -32,14 +33,14 @@ public partial class PuloniaAccountsPageViewModel
                 return "";
             // 1. 跳转按已保存的 UID 进行：没有 UID 的账户不出现在狛荷屋
             if (string.IsNullOrEmpty(account.Saved?.Uid))
-                return "这个账户还没有保存 UID，不会出现在狛荷屋。请先在“概况”中填写 UID 并保存。";
+                return I18nService.Instance.Translate("这个账户还没有保存 UID，不会出现在狛荷屋。请先在“概况”中填写 UID 并保存。");
             // 2. UID 草稿与已保存的不同时，狛荷屋仍显示旧 UID，先保存
             if (account.Uid.Trim() != account.Saved.Uid)
-                return "UID 有未保存的修改，请先保存，再打开狛荷屋。";
+                return I18nService.Instance.Translate("UID 有未保存的修改，请先保存，再打开狛荷屋。");
             // 3. 狛荷屋按 UID 命名数据目录，首位为 0 的 UID 不能使用
             if (!InventoryStore.IsValidUid(account.Saved.Uid))
-                return $"UID {account.Saved.Uid} 首位为 0，狛荷屋不支持这个 UID。";
-            return $"打开狛荷屋，查看 UID {account.Saved.Uid} 的库存记录。";
+                return string.Format(I18nService.Instance.Translate("UID {0} 首位为 0，狛荷屋不支持这个 UID。"), account.Saved.Uid);
+            return string.Format(I18nService.Instance.Translate("打开狛荷屋，查看 UID {0} 的库存记录。"), account.Saved.Uid);
         }
     }
 

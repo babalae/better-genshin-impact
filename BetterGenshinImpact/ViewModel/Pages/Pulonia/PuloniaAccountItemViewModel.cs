@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Pulonia.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
@@ -69,6 +70,7 @@ public sealed partial class PuloniaAccountItemViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasInstances))]
     [NotifyPropertyChangedFor(nameof(InstancesDetailText))]
+    [NotifyPropertyChangedFor(nameof(InstancesListText))]
     private string _instancesText = "";
 
     /// <summary>
@@ -106,8 +108,8 @@ public sealed partial class PuloniaAccountItemViewModel : ObservableObject
 
     /// <summary>列表中显示的 UID：尾号四位或“未填写 UID”。</summary>
     public string UidText => Uid.Trim() is { Length: > 0 } uid
-        ? "UID 尾号 " + (uid.Length <= 4 ? uid : uid[^4..])
-        : "未填写 UID";
+        ? string.Format(I18nService.Instance.Translate("UID 尾号 {0}"), uid.Length <= 4 ? uid : uid[^4..])
+        : I18nService.Instance.Translate("未填写 UID");
 
     /// <summary>是否作为某个实例的当前账户。</summary>
     public bool HasInstances => InstancesText.Length > 0;
@@ -116,17 +118,20 @@ public sealed partial class PuloniaAccountItemViewModel : ObservableObject
     public bool IsRunning => RunningText.Length > 0;
 
     /// <summary>概况页显示的“作为哪些实例的当前账户”。</summary>
-    public string InstancesDetailText => HasInstances ? InstancesText : "不是任何实例的当前账户";
+    public string InstancesDetailText => HasInstances ? InstancesText : I18nService.Instance.Translate("不是任何实例的当前账户");
+
+    /// <summary>列表中显示的“是哪些实例的当前账户”，如“是主实例的当前账户”。</summary>
+    public string InstancesListText => string.Format(I18nService.Instance.Translate("是{0}的当前账户"), InstancesText);
 
     /// <summary>是否有登录资料（账户图片、列表文字或密码），有资料时 BetterGI 才能自动切换到这个账户。</summary>
     public bool HasLoginProfile => !string.IsNullOrWhiteSpace(ImagePath) || !string.IsNullOrWhiteSpace(ListText)
                                    || Saved?.CredentialReference is not null || HasCredentialDraft;
 
     /// <summary>列表中显示的登录资料状态。</summary>
-    public string LoginProfileText => HasLoginProfile ? "有登录资料，可自动切换" : "没有登录资料";
+    public string LoginProfileText => HasLoginProfile ? I18nService.Instance.Translate("有登录资料，可自动切换") : I18nService.Instance.Translate("没有登录资料");
 
     /// <summary>账户图片路径的显示文字。</summary>
-    public string ImagePathText => string.IsNullOrWhiteSpace(ImagePath) ? "未设置" : ImagePath;
+    public string ImagePathText => string.IsNullOrWhiteSpace(ImagePath) ? I18nService.Instance.Translate("未设置") : ImagePath;
 
     /// <summary>是否填写了新的登录凭据草稿。</summary>
     public bool HasCredentialDraft => LoginUsername.Length > 0 || LoginPassword.Length > 0;

@@ -1,6 +1,7 @@
 <UserControl x:Class="BetterGenshinImpact.View.Controls.AccountRecordsEmptyState"
              x:Name="Root"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
              HorizontalContentAlignment="Stretch"
@@ -35,7 +36,7 @@
                             <Setter Property="Text" Value="{Binding ViewModel.Message, ElementName=Root, Mode=OneWay}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsLoading, ElementName=Root, Mode=OneWay}" Value="True">
-                                    <Setter Property="Text" Value="加载中…" />
+                                    <Setter Property="Text" Value="{i18n:T 加载中…}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

@@ -10,6 +10,7 @@ using System.Windows.Threading;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service.AccountRecords;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Controls;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -56,10 +57,10 @@ public partial class AccountRecordsPageViewModel : ViewModel
     [RelayCommand]
     private async Task ResetToDefaults()
     {
-        if (await ThemedMessageBox.ShowAsync("将清空所有账户的狛荷屋库存、异常、事件和快照，并把补充字典、来源字典、Warning 规则及狛荷屋设置恢复为预设值。账户目录不受影响。是否继续？",
-                "重置为预设值（1/2）", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning) != MessageBoxResult.Yes) return;
-        if (await ThemedMessageBox.ShowAsync("再次确认：此操作影响所有账户，覆盖全部自定义字典和狛荷屋配置。原数据会保留在 AccountRecords 同级备份目录，但界面不提供撤销。确定执行重置？",
-                "最终确认（2/2）", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning) != MessageBoxResult.Yes) return;
+        if (await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("将清空所有账户的狛荷屋库存、异常、事件和快照，并把补充字典、来源字典、Warning 规则及狛荷屋设置恢复为预设值。账户目录不受影响。是否继续？"),
+                I18nService.Instance.Translate("重置为预设值（1/2）"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning) != MessageBoxResult.Yes) return;
+        if (await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("再次确认：此操作影响所有账户，覆盖全部自定义字典和狛荷屋配置。原数据会保留在 AccountRecords 同级备份目录，但界面不提供撤销。确定执行重置？"),
+                I18nService.Instance.Translate("最终确认（2/2）"), MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning) != MessageBoxResult.Yes) return;
         try
         {
             await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _store.ResetToDefaultsAsync());
@@ -73,9 +74,9 @@ public partial class AccountRecordsPageViewModel : ViewModel
             // 先清空库存显示，Load 随之重新读取偏好并完整读取所选账户
             await Inventory.SelectUidAsync(null);
             await Load();
-            await ThemedMessageBox.ShowAsync("已重置为预设值，所有账户的狛荷屋记录已清空。", "重置完成", MessageBoxButton.OK);
+            await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("已重置为预设值，所有账户的狛荷屋记录已清空。"), I18nService.Instance.Translate("重置完成"), MessageBoxButton.OK);
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "重置失败", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), I18nService.Instance.Translate("重置失败"), MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
     }
 
     /// <summary>注入公共存储、独立的库存分页模型与 Pulonia 账户服务，并订阅账户目录变化。</summary>
@@ -120,13 +121,13 @@ public partial class AccountRecordsPageViewModel : ViewModel
     /// <summary>当前分页名称，用于搜索框提示。</summary>
     public string CurrentTabTitle => SelectedTabIndex switch
     {
-        1 => "材料需求",
-        2 => "活动日历",
-        _ => "库存记录"
+        1 => I18nService.Instance.Translate("材料需求"),
+        2 => I18nService.Instance.Translate("活动日历"),
+        _ => I18nService.Instance.Translate("库存记录")
     };
 
     /// <summary>搜索框提示当前搜索的分页。</summary>
-    public string SearchPlaceholder => $"搜索{CurrentTabTitle}";
+    public string SearchPlaceholder => string.Format(I18nService.Instance.Translate("搜索{0}"), CurrentTabTitle);
 
     /// <summary>当前分页的搜索词，不改变其他分页的输入。</summary>
     public string SearchText
@@ -172,7 +173,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
             if (SelectedUid != target) SelectedUid = target;
             else await Inventory.ResumeAsync(SelectedUid);
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "读取狛荷屋记录", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), I18nService.Instance.Translate("读取狛荷屋记录"), MessageBoxButton.OK); }
     }
 
     /// <summary>
@@ -271,8 +272,8 @@ public partial class AccountRecordsPageViewModel : ViewModel
         var settings = await _accounts.LoadAccountsAsync();
         if (settings.Accounts.Any(account => account.Uid == uid)) return true;
         // 2. 按“账户 尾号 xxxx”命名，确认后新建并保存账户目录
-        var name = UniqueAccountName("账户 尾号 " + uid[^4..], settings.Accounts.Select(account => account.Name.Trim()));
-        if (await ThemedMessageBox.ShowAsync($"UID {uid} 不在账户目录中。\n\n创建账户“{name}”并导入？", "导入库存",
+        var name = UniqueAccountName(string.Format(I18nService.Instance.Translate("账户 尾号 {0}"), uid[^4..]), settings.Accounts.Select(account => account.Name.Trim()));
+        if (await ThemedMessageBox.ShowAsync(string.Format(I18nService.Instance.Translate("UID {0} 不在账户目录中。\n\n创建账户“{1}”并导入？"), uid, name), I18nService.Instance.Translate("导入库存"),
                 MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
             return false;
         settings.Accounts.Add(new PuloniaGenshinAccountProfile
@@ -315,12 +316,12 @@ public partial class AccountRecordsPageViewModel : ViewModel
         var uid = SelectedUid;
         if (uid == null)
         {
-            await ThemedMessageBox.ShowAsync("尚未选择账户。", "导出库存", MessageBoxButton.OK);
+            await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("尚未选择账户。"), I18nService.Instance.Translate("导出库存"), MessageBoxButton.OK);
             return;
         }
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
-            Title = "导出当前库存", Filter = "狛荷屋库存 JSON|*.json", DefaultExt = ".json", AddExtension = true,
+            Title = I18nService.Instance.Translate("导出当前库存"), Filter = I18nService.Instance.Translate("狛荷屋库存 JSON|*.json"), DefaultExt = ".json", AddExtension = true,
             FileName = $"AccountRecords-{uid}-{DateTime.Now:yyyyMMdd-HHmmss}.json"
         };
         if (dialog.ShowDialog() != true) return;
@@ -331,9 +332,9 @@ public partial class AccountRecordsPageViewModel : ViewModel
             temporary = dialog.FileName + "." + Guid.NewGuid().ToString("N") + ".tmp";
             await File.WriteAllTextAsync(temporary, package.ToString(Newtonsoft.Json.Formatting.Indented), new UTF8Encoding(false));
             File.Move(temporary, dialog.FileName, true);
-            await ThemedMessageBox.ShowAsync("当前库存已导出。文件保留原记录时间与来源，不包含异常、快照或图标。", "导出完成", MessageBoxButton.OK);
+            await ThemedMessageBox.ShowAsync(I18nService.Instance.Translate("当前库存已导出。文件保留原记录时间与来源，不包含异常、快照或图标。"), I18nService.Instance.Translate("导出完成"), MessageBoxButton.OK);
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "导出失败", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), I18nService.Instance.Translate("导出失败"), MessageBoxButton.OK); }
         finally { if (temporary != null && File.Exists(temporary)) File.Delete(temporary); }
     }
 
@@ -346,14 +347,14 @@ public partial class AccountRecordsPageViewModel : ViewModel
         var uid = SelectedUid;
         if (uid == null) return;
         var name = UidOptions.FirstOrDefault(option => option.Uid == uid)?.DisplayText ?? uid;
-        if (await ThemedMessageBox.ShowAsync($"确定清空账户“{name}”的库存、异常、事件和库存快照？此操作不可撤销。", "清空库存记录",
+        if (await ThemedMessageBox.ShowAsync(string.Format(I18nService.Instance.Translate("确定清空账户“{0}”的库存、异常、事件和库存快照？此操作不可撤销。"), name), I18nService.Instance.Translate("清空库存记录"),
                 MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning) != MessageBoxResult.Yes) return;
         try
         {
             await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _store.ClearAsync(uid, false, false));
             await Load();
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "清空库存记录失败", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), I18nService.Instance.Translate("清空库存记录失败"), MessageBoxButton.OK); }
     }
 
     /// <summary>页面离开时关闭下拉列表，并停止响应账户目录变化。</summary>

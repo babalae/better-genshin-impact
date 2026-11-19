@@ -4,6 +4,7 @@ using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Pages;
@@ -63,7 +64,7 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
     public bool HasInstances => Instances.Count > 0;
 
     /// <summary>顶部紧凑汇总，不把在线进程数量称为已就绪游戏数量。</summary>
-    public string SummaryText => $"{Instances.Count} 个实例 · {Instances.Count(row => row.IsRunning)} 个运行中";
+    public string SummaryText => string.Format(I18nService.Instance.Translate("{0} 个实例 · {1} 个运行中"), Instances.Count, Instances.Count(row => row.IsRunning));
 
     /// <summary>在列表上方展开新建表单。</summary>
     [ObservableProperty]
@@ -180,7 +181,7 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         {
             AccountOptions.Clear();
             NewInstanceAccountId = null;
-            CreationError = "账户目录读取失败，新实例首次使用时将取账户列表的第一个账户：" + ex.Message;
+            CreationError = I18nService.Instance.Translate("账户目录读取失败，新实例首次使用时将取账户列表的第一个账户：") + ex.Message;
         }
         catch (OperationCanceledException) when (_disposed)
         {
@@ -207,7 +208,7 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            ErrorMessage = $"实例已创建，但未能设置它的当前账户：{ex.Message}。可以稍后在主窗口标题栏的实例菜单中修改。";
+            ErrorMessage = string.Format(I18nService.Instance.Translate("实例已创建，但未能设置它的当前账户：{0}。可以稍后在主窗口标题栏的实例菜单中修改。"), ex.Message);
         }
     }
 
@@ -269,7 +270,7 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         }
 
         ErrorMessage = null;
-        OperationText = $"正在打开「{row.Name}」…";
+        OperationText = string.Format(I18nService.Instance.Translate("正在打开「{0}」…"), row.Name);
         IsOperationPending = true;
         try
         {
@@ -296,7 +297,7 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception or IOException or UnauthorizedAccessException or TimeoutException)
         {
-            ErrorMessage = $"打开实例失败：{ex.Message}";
+            ErrorMessage = string.Format(I18nService.Instance.Translate("打开实例失败：{0}"), ex.Message);
         }
         finally
         {
@@ -317,13 +318,13 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         }
 
         ErrorMessage = null;
-        OperationText = $"正在关闭「{row.Name}」…";
+        OperationText = string.Format(I18nService.Instance.Translate("正在关闭「{0}」…"), row.Name);
         IsOperationPending = true;
         try
         {
             var result = await ThemedMessageBox.QuestionAsync(
-                $"关闭实例「{row.Name}」？\n该实例正在执行的任务也会停止，登录状态会保留。",
-                "关闭云原神实例");
+                string.Format(I18nService.Instance.Translate("关闭实例「{0}」？\n该实例正在执行的任务也会停止，登录状态会保留。"), row.Name),
+                I18nService.Instance.Translate("关闭云原神实例"));
             if (result == MessageBoxResult.Yes && !_disposed)
             {
                 await _instanceService.CloseChildInstanceAsync(endpoint, _lifetimeCancellation.Token);
@@ -335,7 +336,7 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or TimeoutException)
         {
-            ErrorMessage = $"关闭实例失败：{ex.Message}";
+            ErrorMessage = string.Format(I18nService.Instance.Translate("关闭实例失败：{0}"), ex.Message);
         }
         finally
         {
@@ -356,13 +357,13 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         }
 
         ErrorMessage = null;
-        OperationText = $"正在删除「{row.Name}」…";
+        OperationText = string.Format(I18nService.Instance.Translate("正在删除「{0}」…"), row.Name);
         IsOperationPending = true;
         try
         {
             var result = await ThemedMessageBox.QuestionAsync(
-                $"确定删除实例「{row.Name}」吗？\n该实例的登录态等 WebView 数据会一并删除，且无法恢复。",
-                "删除云原神网页版实例");
+                string.Format(I18nService.Instance.Translate("确定删除实例「{0}」吗？\n该实例的登录态等 WebView 数据会一并删除，且无法恢复。"), row.Name),
+                I18nService.Instance.Translate("删除云原神网页版实例"));
             if (result == MessageBoxResult.Yes && !_disposed)
             {
                 _store.Delete(row.Name);
@@ -370,7 +371,7 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
         {
-            ErrorMessage = $"删除实例失败：{ex.Message}";
+            ErrorMessage = string.Format(I18nService.Instance.Translate("删除实例失败：{0}"), ex.Message);
         }
         finally
         {
@@ -391,17 +392,20 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         }
 
         ErrorMessage = null;
-        OperationText = $"正在清理「{row.Name}」的缓存…";
+        OperationText = string.Format(I18nService.Instance.Translate("正在清理「{0}」的缓存…"), row.Name);
         IsOperationPending = true;
         try
         {
             var result = await Task.Run(() => _store.ClearCache(row.Name));
-            var skipped = result.SkippedFiles > 0 ? $"，{result.SkippedFiles} 个文件正在使用，已跳过" : string.Empty;
-            Toast.Success($"已清理「{row.Name}」的缓存，释放 {ByteSizeFormatter.Format(result.FreedBytes)}{skipped}。登录状态已保留");
+            // 有文件被跳过时使用包含跳过数量的完整句子，便于翻译
+            var freed = ByteSizeFormatter.Format(result.FreedBytes);
+            Toast.Success(result.SkippedFiles > 0
+                ? string.Format(I18nService.Instance.Translate("已清理「{0}」的缓存，释放 {1}，{2} 个文件正在使用，已跳过。登录状态已保留"), row.Name, freed, result.SkippedFiles)
+                : string.Format(I18nService.Instance.Translate("已清理「{0}」的缓存，释放 {1}。登录状态已保留"), row.Name, freed));
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
         {
-            ErrorMessage = $"清理缓存失败：{ex.Message}";
+            ErrorMessage = string.Format(I18nService.Instance.Translate("清理缓存失败：{0}"), ex.Message);
         }
         finally
         {
@@ -493,7 +497,7 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            ErrorMessage = $"读取实例列表失败：{ex.Message}";
+            ErrorMessage = string.Format(I18nService.Instance.Translate("读取实例列表失败：{0}"), ex.Message);
         }
     }
 

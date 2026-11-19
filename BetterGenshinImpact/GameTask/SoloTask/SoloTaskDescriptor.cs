@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Service.I18n;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.GameTask.SoloTask;
@@ -39,6 +40,12 @@ public sealed class SoloTaskDescriptor
     /// 显示名。
     /// </summary>
     public string DisplayName { get; }
+
+    /// <summary>
+    /// 按当前界面语言翻译后的显示名，仅用于界面展示；<see cref="DisplayName"/> 保持中文原文作为数据使用。
+    /// Key 登记在 <see cref="SoloTaskI18nKeys"/>。
+    /// </summary>
+    public string LocalizedDisplayName => I18nService.Instance.Translate(DisplayName);
 
     /// <summary>
     /// 用途说明。

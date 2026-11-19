@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -61,16 +62,16 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     [ObservableProperty]
     private ObservableCollection<KeyValuePair<string, string>> _onlyPickEliteDropsSource  = new()
     {
-        new KeyValuePair<string, string>("Closed", "关闭功能"),
-        new KeyValuePair<string, string>("AllowAutoPickupForNonElite", "非精英允许自动拾取"),
-        new KeyValuePair<string, string>("DisableAutoPickupForNonElite", "非精英关闭自动拾取")
+        new KeyValuePair<string, string>("Closed", I18nService.Instance.Translate("关闭功能")),
+        new KeyValuePair<string, string>("AllowAutoPickupForNonElite", I18nService.Instance.Translate("非精英允许自动拾取")),
+        new KeyValuePair<string, string>("DisableAutoPickupForNonElite", I18nService.Instance.Translate("非精英关闭自动拾取"))
     };    
     [ObservableProperty]
     private ObservableCollection<KeyValuePair<RecoverTiming, string>> _recoverTimingSource = new()
     {
-        new KeyValuePair<RecoverTiming, string>(RecoverTiming.AnyWaypoint, "任何路径点"),
-        new KeyValuePair<RecoverTiming, string>(RecoverTiming.OnlyTeleport, "只在传送点"),
-        new KeyValuePair<RecoverTiming, string>(RecoverTiming.Never, "不回复"),
+        new KeyValuePair<RecoverTiming, string>(RecoverTiming.AnyWaypoint, I18nService.Instance.Translate("任何路径点")),
+        new KeyValuePair<RecoverTiming, string>(RecoverTiming.OnlyTeleport, I18nService.Instance.Translate("只在传送点")),
+        new KeyValuePair<RecoverTiming, string>(RecoverTiming.Never, I18nService.Instance.Translate("不回复")),
     };
     public ScriptGroupConfigViewModel(AllConfig config, ScriptGroupConfig scriptGroupConfig)
     {
@@ -135,11 +136,11 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
         var index = _pathingConfig.TaskCycleConfig.GetExecutionOrder();
         if (index == -1)
         {
-            Toast.Error("计算失败，请检查参数！");
+            Toast.Error(I18nService.Instance.Translate("计算失败，请检查参数！"));
         }
         else
         {
-            Toast.Success("当前执行序号为："+index);
+            Toast.Success(I18nService.Instance.Translate("当前执行序号为：")+index);
         }
     }
 

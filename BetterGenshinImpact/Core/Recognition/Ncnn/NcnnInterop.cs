@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 
@@ -244,6 +245,6 @@ public sealed record NcnnDeviceDetails(
         if (packed) parts.Add("packed");
         if (storage) parts.Add("storage");
         if (arithmetic) parts.Add("arithmetic");
-        return parts.Count == 0 ? "不支持" : string.Join(" / ", parts);
+        return parts.Count == 0 ? I18nService.Instance.Translate("不支持") : string.Join(" / ", parts);
     }
 }

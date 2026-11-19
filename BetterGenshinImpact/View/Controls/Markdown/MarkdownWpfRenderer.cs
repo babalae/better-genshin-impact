@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Highlighting;
 using Markdig.Extensions.Alerts;
@@ -714,13 +715,13 @@ internal sealed class MarkdownWpfRenderer
 
         var copyButton = new Button
         {
-            Content = "复制",
+            Content = I18nService.Instance.Translate("复制"),
             Padding = new Thickness(8, 2, 8, 2),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center,
-            ToolTip = "复制代码"
+            ToolTip = I18nService.Instance.Translate("复制代码")
         };
-        AutomationProperties.SetName(copyButton, "复制代码");
+        AutomationProperties.SetName(copyButton, I18nService.Instance.Translate("复制代码"));
         copyButton.Click += (_, _) =>
         {
             try
@@ -990,9 +991,9 @@ internal sealed class MarkdownWpfRenderer
             Focusable = _owner.IsTaskListInteractive,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 5, 0),
-            ToolTip = taskList.Checked ? "已完成" : "未完成"
+            ToolTip = taskList.Checked ? I18nService.Instance.Translate("已完成") : I18nService.Instance.Translate("未完成")
         };
-        AutomationProperties.SetName(checkBox, taskList.Checked ? "已完成的任务" : "未完成的任务");
+        AutomationProperties.SetName(checkBox, taskList.Checked ? I18nService.Instance.Translate("已完成的任务") : I18nService.Instance.Translate("未完成的任务"));
         checkBox.Click += (_, _) =>
         {
             var request = new MarkdownTaskChangedRequest(checkBox.IsChecked == true);
@@ -1016,7 +1017,7 @@ internal sealed class MarkdownWpfRenderer
         {
             BaselineAlignment = BaselineAlignment.Superscript,
             FontSize = 11,
-            ToolTip = footnoteLink.IsBackLink ? "返回正文" : $"脚注 {label}"
+            ToolTip = footnoteLink.IsBackLink ? I18nService.Instance.Translate("返回正文") : string.Format(I18nService.Instance.Translate("脚注 {0}"), label)
         };
         hyperlink.SetResourceReference(TextElement.ForegroundProperty, "MarkdownLinkBrush");
         return hyperlink;
@@ -1406,11 +1407,11 @@ internal sealed class MarkdownWpfRenderer
     {
         return kind switch
         {
-            "WARNING" => "警告",
-            "CAUTION" => "注意",
-            "TIP" => "提示",
-            "IMPORTANT" => "重要",
-            _ => "说明"
+            "WARNING" => I18nService.Instance.Translate("警告"),
+            "CAUTION" => I18nService.Instance.Translate("注意"),
+            "TIP" => I18nService.Instance.Translate("提示"),
+            "IMPORTANT" => I18nService.Instance.Translate("重要"),
+            _ => I18nService.Instance.Translate("说明")
         };
     }
 

@@ -1,6 +1,8 @@
 using System;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -18,13 +20,16 @@ public partial class PuloniaSoloTaskCreationDialogViewModel : ObservableObject
     private readonly PuloniaTaskDefinition _definition;
 
     /// <summary>弹窗标题。</summary>
-    public string WindowTitle => $"添加任务：{DisplayName}";
+    public string WindowTitle => string.Format(I18nService.Instance.Translate("添加任务：{0}"), DisplayName);
 
-    /// <summary>任务显示名称。</summary>
-    public string DisplayName => _definition.DisplayName;
+    /// <summary>任务显示名称（按当前语言翻译，仅用于展示）。</summary>
+    public string DisplayName => I18nService.Instance.Translate(_definition.DisplayName);
 
-    /// <summary>任务说明。</summary>
-    public string Description => _definition.Description;
+    /// <summary>任务说明；默认说明按翻译后的格式和任务名重新组合，其余说明按原文翻译。</summary>
+    public string Description => _definition.Description
+                                 == string.Format(PuloniaSoloTaskExecutor.FallbackDescriptionFormat, _definition.DisplayName)
+        ? string.Format(I18nService.Instance.Translate("执行独立任务“{0}”。"), DisplayName)
+        : I18nService.Instance.Translate(_definition.Description);
 
     /// <summary>是否允许自定义节点名称；一条龙中的独立任务保持内置名称。</summary>
     public bool CanEditName { get; }
@@ -68,10 +73,10 @@ public partial class PuloniaSoloTaskCreationDialogViewModel : ObservableObject
     [RelayCommand]
     private void Confirm()
     {
-        var name = CanEditName ? TaskName.Trim() : DisplayName;
+        var name = CanEditName ? TaskName.Trim() : _definition.DisplayName;
         if (string.IsNullOrWhiteSpace(name))
         {
-            StatusMessage = "任务名称不能为空。";
+            StatusMessage = I18nService.Instance.Translate("任务名称不能为空。");
             return;
         }
         try

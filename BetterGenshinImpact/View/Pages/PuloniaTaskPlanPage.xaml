@@ -1,5 +1,6 @@
 <UserControl x:Class="BetterGenshinImpact.View.Pages.PuloniaTaskPlanPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
@@ -123,39 +124,39 @@
             x:Shared=False 让每个按钮各持一份菜单实例，避免同一菜单挂到两个按钮上。
         -->
         <ContextMenu x:Key="AddTaskFlyout" x:Shared="False">
-            <ui:MenuItem Header="分组…"
+            <ui:MenuItem Header="{i18n:T 分组…}"
                          Command="{Binding Data.ViewModel.AddGroupCommand, Source={StaticResource PageBindingProxy}}"
                          CommandParameter="{Binding Data.ViewModel.InsertTargetNode, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                          Icon="{ui:SymbolIcon Folder24}" />
             <!-- Tag 记录目标节点，子菜单项从父菜单项读取它作为命令参数的第一项。 -->
-            <ui:MenuItem Header="独立任务"
+            <ui:MenuItem Header="{i18n:T 独立任务}"
                          Icon="{ui:SymbolIcon Apps24}"
                          ItemContainerStyle="{StaticResource SoloTaskMenuItemStyle}"
                          ItemsSource="{Binding Data.ViewModel.SoloTaskMenu, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                          Tag="{Binding Data.ViewModel.InsertTargetNode, Source={StaticResource PageBindingProxy}, Mode=OneWay}" />
             <Separator />
-            <ui:MenuItem Header="地图追踪任务…"
+            <ui:MenuItem Header="{i18n:T 地图追踪任务…}"
                          Command="{Binding Data.ViewModel.AddPathingTaskCommand, Source={StaticResource PageBindingProxy}}"
                          CommandParameter="{Binding Data.ViewModel.InsertTargetNode, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                          Icon="{ui:SymbolIcon Map24}" />
-            <ui:MenuItem Header="JS 脚本任务…"
+            <ui:MenuItem Header="{i18n:T JS 脚本任务…}"
                          Command="{Binding Data.ViewModel.AddJavascriptTaskCommand, Source={StaticResource PageBindingProxy}}"
                          CommandParameter="{Binding Data.ViewModel.InsertTargetNode, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                          Icon="{ui:SymbolIcon Code24}" />
-            <ui:MenuItem Header="录制回放任务…"
+            <ui:MenuItem Header="{i18n:T 录制回放任务…}"
                          Command="{Binding Data.ViewModel.AddKeyMouseTaskCommand, Source={StaticResource PageBindingProxy}}"
                          CommandParameter="{Binding Data.ViewModel.InsertTargetNode, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                          Icon="{ui:SymbolIcon Record24}" />
-            <ui:MenuItem Header="Shell 任务…"
+            <ui:MenuItem Header="{i18n:T Shell 任务…}"
                          Command="{Binding Data.ViewModel.AddShellTaskCommand, Source={StaticResource PageBindingProxy}}"
                          CommandParameter="{Binding Data.ViewModel.InsertTargetNode, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                          Icon="{ui:SymbolIcon WindowConsole20}" />
-            <ui:MenuItem Header="进程内 C# 任务…"
+            <ui:MenuItem Header="{i18n:T 进程内 C# 任务…}"
                          Command="{Binding Data.ViewModel.AddCSharpTaskCommand, Source={StaticResource PageBindingProxy}}"
                          CommandParameter="{Binding Data.ViewModel.InsertTargetNode, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                          Icon="{ui:SymbolIcon CodeBlock24}" />
             <Separator />
-            <ui:MenuItem Header="引用已有任务计划…"
+            <ui:MenuItem Header="{i18n:T 引用已有任务计划…}"
                          Command="{Binding Data.ViewModel.AddPlanReferenceCommand, Source={StaticResource PageBindingProxy}}"
                          CommandParameter="{Binding Data.ViewModel.InsertTargetNode, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                          Icon="{ui:SymbolIcon Link24}" />
@@ -366,76 +367,76 @@
                     CornerRadius="4">
                 <Border.ContextMenu>
                     <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                        <ui:MenuItem Header="编辑配置…"
+                        <ui:MenuItem Header="{i18n:T 编辑配置…}"
                                      Command="{Binding Data.ViewModel.EditNodeConfigurationCommand, Source={StaticResource PageBindingProxy}}"
                                      CommandParameter="{Binding}"
                                      Icon="{ui:SymbolIcon Edit24}"
                                      InputGestureText="F2" />
-                        <ui:MenuItem Header="共享设置…"
+                        <ui:MenuItem Header="{i18n:T 共享设置…}"
                                      Command="{Binding Data.ViewModel.EditNodeSharedSettingsCommand, Source={StaticResource PageBindingProxy}}"
                                      CommandParameter="{Binding}"
                                      Icon="{ui:SymbolIcon Settings24}" />
                         <Separator />
-                        <ui:MenuItem Header="添加分组"
+                        <ui:MenuItem Header="{i18n:T 添加分组}"
                                      Command="{Binding Data.ViewModel.AddGroupCommand, Source={StaticResource PageBindingProxy}}"
                                      CommandParameter="{Binding}"
                                      Icon="{ui:SymbolIcon Folder24}" />
                         <!-- Tag 记录目标节点，子菜单项从父菜单项读取它作为命令参数的第一项。 -->
-                        <ui:MenuItem Header="添加独立任务"
+                        <ui:MenuItem Header="{i18n:T 添加独立任务}"
                                      Icon="{ui:SymbolIcon Apps24}"
                                      ItemContainerStyle="{StaticResource SoloTaskMenuItemStyle}"
                                      ItemsSource="{Binding Data.ViewModel.SoloTaskMenu, Source={StaticResource PageBindingProxy}}"
                                      Tag="{Binding}" />
-                        <ui:MenuItem Header="添加地图追踪任务"
+                        <ui:MenuItem Header="{i18n:T 添加地图追踪任务}"
                                      Command="{Binding Data.ViewModel.AddPathingTaskCommand, Source={StaticResource PageBindingProxy}}"
                                      CommandParameter="{Binding}"
                                      Icon="{ui:SymbolIcon Map24}" />
-                        <ui:MenuItem Header="添加 JS 脚本任务"
+                        <ui:MenuItem Header="{i18n:T 添加 JS 脚本任务}"
                                      Command="{Binding Data.ViewModel.AddJavascriptTaskCommand, Source={StaticResource PageBindingProxy}}"
                                      CommandParameter="{Binding}"
                                      Icon="{ui:SymbolIcon Code24}" />
-                        <ui:MenuItem Header="添加录制回放任务"
+                        <ui:MenuItem Header="{i18n:T 添加录制回放任务}"
                                      Command="{Binding Data.ViewModel.AddKeyMouseTaskCommand, Source={StaticResource PageBindingProxy}}"
                                      CommandParameter="{Binding}"
                                      Icon="{ui:SymbolIcon Record24}" />
-                        <ui:MenuItem Header="添加 Shell 任务"
+                        <ui:MenuItem Header="{i18n:T 添加 Shell 任务}"
                                      Command="{Binding Data.ViewModel.AddShellTaskCommand, Source={StaticResource PageBindingProxy}}"
                                      CommandParameter="{Binding}"
                                      Icon="{ui:SymbolIcon WindowConsole20}" />
-                        <ui:MenuItem Header="添加进程内 C# 任务"
+                        <ui:MenuItem Header="{i18n:T 添加进程内 C# 任务}"
                                      Command="{Binding Data.ViewModel.AddCSharpTaskCommand, Source={StaticResource PageBindingProxy}}"
                                      CommandParameter="{Binding}"
                                      Icon="{ui:SymbolIcon CodeBlock24}" />
-                        <ui:MenuItem Header="引用已有任务计划…"
+                        <ui:MenuItem Header="{i18n:T 引用已有任务计划…}"
                                      Command="{Binding Data.ViewModel.AddPlanReferenceCommand, Source={StaticResource PageBindingProxy}}"
                                      CommandParameter="{Binding}"
                                      Icon="{ui:SymbolIcon Link24}" />
                         <Separator />
-                        <ui:MenuItem Header="复制子树"
+                        <ui:MenuItem Header="{i18n:T 复制子树}"
                                      Command="{Binding CopyCommand}"
                                      Icon="{ui:SymbolIcon Copy24}"
                                      InputGestureText="Ctrl+C" />
-                        <ui:MenuItem Header="粘贴"
+                        <ui:MenuItem Header="{i18n:T 粘贴}"
                                      Command="{Binding Data.ViewModel.PasteCommand, Source={StaticResource PageBindingProxy}}"
                                      CommandParameter="{Binding}"
                                      Icon="{ui:SymbolIcon ClipboardPaste24}"
                                      InputGestureText="Ctrl+V"
                                      IsEnabled="{Binding Data.ViewModel.CanPaste, Source={StaticResource PageBindingProxy}}" />
-                        <ui:MenuItem Header="删除"
+                        <ui:MenuItem Header="{i18n:T 删除}"
                                      Command="{Binding DeleteCommand}"
                                      Icon="{ui:SymbolIcon Delete24}"
                                      InputGestureText="Delete"
                                      IsEnabled="{Binding IsRoot, Converter={StaticResource InverseBooleanConverter}}" />
                         <Separator />
-                        <ui:MenuItem Header="撤销上次编辑"
+                        <ui:MenuItem Header="{i18n:T 撤销上次编辑}"
                                      Command="{Binding Data.ViewModel.SelectedDocument.UndoCommand, Source={StaticResource PageBindingProxy}}"
                                      Icon="{ui:SymbolIcon ArrowUndo24}"
                                      InputGestureText="Ctrl+Z" />
-                        <ui:MenuItem Header="启用全部子任务"
+                        <ui:MenuItem Header="{i18n:T 启用全部子任务}"
                                      Command="{Binding EnableAllChildrenCommand}"
                                      Icon="{ui:SymbolIcon CheckmarkCircle24}"
                                      IsEnabled="{Binding HasChildren}" />
-                        <ui:MenuItem Header="更新此任务资源…"
+                        <ui:MenuItem Header="{i18n:T 更新此任务资源…}"
                                      Command="{Binding Data.ViewModel.Session.UpdateResourceVersionCommand, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                                      CommandParameter="{Binding}"
                                      Icon="{ui:SymbolIcon ArrowDownload24}"
@@ -468,13 +469,13 @@
                         <TextBlock x:Name="NodeNameText"
                                    Grid.Column="1"
                                    VerticalAlignment="Center"
-                                   Text="{Binding Name, Mode=OneWay}"
+                                   Text="{i18n:TBinding Name}"
                                    TextTrimming="CharacterEllipsis"
-                                   ToolTip="{Binding Name, Mode=OneWay}" />
+                                   ToolTip="{i18n:TBinding Name}" />
                         <!-- 分组执行多次时显示次数，执行一次时隐藏。 -->
                         <Border Grid.Column="2"
                                 Style="{StaticResource TreeBadgeStyle}"
-                                ToolTip="分组整体重复执行的次数"
+                                ToolTip="{i18n:T 分组整体重复执行的次数}"
                                 Visibility="{Binding HasRepeatBadge, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -556,7 +557,7 @@
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center"
                                      IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                     ToolTip="关闭父组不会改写子任务的选择" />
+                                     ToolTip="{i18n:T 关闭父组不会改写子任务的选择}" />
                 </Grid>
             </Border>
             <HierarchicalDataTemplate.Triggers>
@@ -569,7 +570,7 @@
                     <Setter TargetName="NodeRow" Property="Opacity" Value="0.52" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsDisabledByParent}" Value="True">
-                    <Setter TargetName="NodeRow" Property="ToolTip" Value="父组已关闭；该节点自身的启用选择仍保留" />
+                    <Setter TargetName="NodeRow" Property="ToolTip" Value="{i18n:T 父组已关闭；该节点自身的启用选择仍保留}" />
                 </DataTrigger>
             </HierarchicalDataTemplate.Triggers>
         </HierarchicalDataTemplate>
@@ -602,7 +603,7 @@
                             <ui:Button Style="{StaticResource ToolbarIconButtonStyle}"
                                        Icon="{ui:SymbolIcon Add24}"
                                        Command="{Binding ViewModel.NewPlanCommand, Mode=OneWay}"
-                                       ToolTip="新建任务计划"
+                                       ToolTip="{i18n:T 新建任务计划}"
                                        AutomationProperties.Name="新建任务计划" />
                             <!-- 三项资源操作收进带文字的菜单，避免多个相似箭头图标难以区分。 -->
                             <ui:DropDownButton Height="32"
@@ -613,28 +614,28 @@
                                                Appearance="Transparent"
                                                BorderThickness="0"
                                                Icon="{ui:SymbolIcon ArrowSync24}"
-                                               ToolTip="任务资源同步与更新"
+                                               ToolTip="{i18n:T 任务资源同步与更新}"
                                                AutomationProperties.Name="任务资源同步与更新">
                                 <ui:DropDownButton.Flyout>
                                     <ContextMenu>
-                                        <ui:MenuItem Header="一键同步并更新"
+                                        <ui:MenuItem Header="{i18n:T 一键同步并更新}"
                                                      Command="{Binding Data.ViewModel.Session.SyncAndUpdateResourcesCommand, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                                                      Icon="{ui:SymbolIcon ArrowSync24}"
-                                                     ToolTip="同步全部计划引用的仓库，并更新所有可用任务资源" />
-                                        <ui:MenuItem Header="使用本机仓库更新所有计划"
+                                                     ToolTip="{i18n:T 同步全部计划引用的仓库，并更新所有可用任务资源}" />
+                                        <ui:MenuItem Header="{i18n:T 使用本机仓库更新所有计划}"
                                                      Command="{Binding Data.ViewModel.Session.UpdateAllResourceVersionsCommand, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                                                      Icon="{ui:SymbolIcon ArrowDownload24}"
-                                                     ToolTip="使用本机仓库内容更新所有任务计划" />
-                                        <ui:MenuItem Header="检查任务资源更新"
+                                                     ToolTip="{i18n:T 使用本机仓库内容更新所有任务计划}" />
+                                        <ui:MenuItem Header="{i18n:T 检查任务资源更新}"
                                                      Command="{Binding Data.ViewModel.Session.RefreshResourceVersionsCommand, Source={StaticResource PageBindingProxy}, Mode=OneWay}"
                                                      Icon="{ui:SymbolIcon ArrowClockwise24}"
-                                                     ToolTip="只检查本机仓库与任务使用版本，不访问远端" />
+                                                     ToolTip="{i18n:T 只检查本机仓库与任务使用版本，不访问远端}" />
                                     </ContextMenu>
                                 </ui:DropDownButton.Flyout>
                             </ui:DropDownButton>
                         </StackPanel>
                         <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-                            <TextBlock FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Text="计划" />
+                            <TextBlock FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Text="{i18n:T 计划}" />
                             <TextBlock Margin="6,1,0,0"
                                        VerticalAlignment="Center"
                                        FontSize="12"
@@ -664,37 +665,37 @@
                         </ListBox.InputBindings>
                         <ListBox.ContextMenu>
                             <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                <ui:MenuItem Header="新建计划"
+                                <ui:MenuItem Header="{i18n:T 新建计划}"
                                              Icon="{ui:SymbolIcon Add24}"
                                              Command="{Binding Data.ViewModel.NewPlanCommand, Source={StaticResource PageBindingProxy}}" />
-                                <ui:MenuItem Header="重命名"
+                                <ui:MenuItem Header="{i18n:T 重命名}"
                                              Icon="{ui:SymbolIcon Rename24}"
                                              InputGestureText="F2"
                                              Command="{Binding Data.ViewModel.RenamePlanCommand, Source={StaticResource PageBindingProxy}}"
                                              CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
-                                <ui:MenuItem Header="复制"
+                                <ui:MenuItem Header="{i18n:T 复制}"
                                              Icon="{ui:SymbolIcon DocumentCopy24}"
                                              Command="{Binding Data.ViewModel.CopyPlanCommand, Source={StaticResource PageBindingProxy}}"
                                              CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
-                                <ui:MenuItem Header="删除"
+                                <ui:MenuItem Header="{i18n:T 删除}"
                                              Icon="{ui:SymbolIcon Delete24}"
                                              Command="{Binding Data.ViewModel.DeletePlanCommand, Source={StaticResource PageBindingProxy}}"
                                              CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
                                 <Separator />
-                                <ui:MenuItem Header="预览本次执行…"
+                                <ui:MenuItem Header="{i18n:T 预览本次执行…}"
                                              Icon="{ui:SymbolIcon Eye24}"
                                              Command="{Binding Data.ViewModel.PreviewRunCommand, Source={StaticResource PageBindingProxy}}"
                                              CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
                                 <Separator />
-                                <ui:MenuItem Header="计划共享设置…"
+                                <ui:MenuItem Header="{i18n:T 计划共享设置…}"
                                              Icon="{ui:SymbolIcon Settings24}"
                                              Command="{Binding Data.ViewModel.EditPlanSharedSettingsCommand, Source={StaticResource PageBindingProxy}}"
                                              CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
-                                <ui:MenuItem Header="设置方案…"
+                                <ui:MenuItem Header="{i18n:T 设置方案…}"
                                              Icon="{ui:SymbolIcon Options24}"
                                              Command="{Binding Data.ViewModel.ManageSettingsProfilesCommand, Source={StaticResource PageBindingProxy}}" />
                                 <Separator />
-                                <ui:MenuItem Header="重新加载"
+                                <ui:MenuItem Header="{i18n:T 重新加载}"
                                              Icon="{ui:SymbolIcon ArrowClockwise24}"
                                              Command="{Binding Data.ViewModel.ReloadCommand, Source={StaticResource PageBindingProxy}}" />
                             </ContextMenu>
@@ -720,7 +721,7 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name, Mode=OneWay}" />
+                                                <TextBlock FontWeight="SemiBold" Text="{i18n:TBinding Name}" TextTrimming="CharacterEllipsis" ToolTip="{i18n:TBinding Name}" />
                                                 <!-- 自动保存失败时在卡片上常驻提示，悬停查看原因。 -->
                                                 <ui:SymbolIcon Grid.Column="1"
                                                                Margin="4,0,0,0"
@@ -773,7 +774,7 @@
                                         <ui:Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3"
                                                    Appearance="Transparent" Icon="{ui:SymbolIcon Play24}"
                                                    Command="{Binding Data.ViewModel.RunPlanCommand, Source={StaticResource PageBindingProxy}}"
-                                                   CommandParameter="{Binding}" ToolTip="新执行此计划（默认不限时，不续跑历史）"
+                                                   CommandParameter="{Binding}" ToolTip="{i18n:T 新执行此计划（默认不限时，不续跑历史）}"
                                                    AutomationProperties.Name="新执行此计划">
                                             <ui:Button.Style>
                                                 <Style BasedOn="{StaticResource {x:Type ui:Button}}" TargetType="ui:Button">
@@ -799,7 +800,7 @@
                                Margin="4,8,4,0"
                                FontSize="11"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                               Text="拖动排序 · 双击重命名 · 右键更多操作"
+                               Text="{i18n:T 拖动排序 · 双击重命名 · 右键更多操作}"
                                TextTrimming="CharacterEllipsis"
                                TextWrapping="NoWrap" />
                 </Grid>
@@ -854,16 +855,16 @@
                                 <TextBlock VerticalAlignment="Center"
                                            FontSize="20"
                                            FontWeight="SemiBold"
-                                           Text="{Binding ViewModel.SelectedDocument.Name, Mode=OneWay}"
+                                           Text="{i18n:TBinding ViewModel.SelectedDocument.Name}"
                                            TextTrimming="CharacterEllipsis"
-                                           ToolTip="{Binding ViewModel.SelectedDocument.Name, Mode=OneWay}" />
+                                           ToolTip="{i18n:TBinding ViewModel.SelectedDocument.Name}" />
                                 <ui:Button Grid.Column="1"
                                            Margin="4,0,0,0"
                                            Style="{StaticResource ToolbarIconButtonStyle}"
                                            Command="{Binding ViewModel.RenamePlanCommand, Mode=OneWay}"
                                            CommandParameter="{Binding ViewModel.SelectedDocument, Mode=OneWay}"
                                            Icon="{ui:SymbolIcon Rename24}"
-                                           ToolTip="重命名计划"
+                                           ToolTip="{i18n:T 重命名计划}"
                                            AutomationProperties.Name="重命名计划" />
                             </Grid>
                             <WrapPanel Margin="0,2,0,0">
@@ -913,7 +914,7 @@
                                                VerticalAlignment="Center"
                                                FontSize="12"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Text="运行账户" />
+                                               Text="{i18n:T 运行账户}" />
                                     <ComboBox MinWidth="170"
                                               MaxWidth="280"
                                               VerticalAlignment="Center"
@@ -922,7 +923,7 @@
                                               SelectedValuePath="Key"
                                               ItemsSource="{Binding ViewModel.RunAccountOptions, Mode=OneWay}"
                                               SelectedValue="{Binding ViewModel.SelectedRunAccountId, Mode=TwoWay}"
-                                              ToolTip="跟随当前账户：不切换，为本实例当前账户执行。指定账户：运行前切换到该账户并核验 UID，只能选择填写了 UID 的账户。"
+                                              ToolTip="{i18n:T 跟随当前账户：不切换，为本实例当前账户执行。指定账户：运行前切换到该账户并核验 UID，只能选择填写了 UID 的账户。}"
                                               AutomationProperties.Name="运行账户" />
                                     <TextBlock MaxWidth="320"
                                                Margin="8,0,0,0"
@@ -950,7 +951,7 @@
                                                VerticalAlignment="Center"
                                                FontSize="12"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Text="CD 按账户" />
+                                               Text="{i18n:T CD 按账户}" />
                                     <ComboBox MinWidth="120"
                                               MaxWidth="220"
                                               VerticalAlignment="Center"
@@ -959,7 +960,7 @@
                                               SelectedValuePath="Key"
                                               ItemsSource="{Binding ViewModel.CooldownAccountOptions, Mode=OneWay}"
                                               SelectedValue="{Binding ViewModel.SelectedCooldownAccountId, Mode=TwoWay}"
-                                              ToolTip="任务树的路线 CD 标记、计划摘要和路线 CD 表单按这个账户的完成记录显示。默认按计划的运行账户：指定账户的计划为该账户，跟随当前账户的计划为本实例当前账户。临时改选只影响本页显示，不修改计划和实例设置，切换计划后恢复。"
+                                              ToolTip="{i18n:T 任务树的路线 CD 标记、计划摘要和路线 CD 表单按这个账户的完成记录显示。默认按计划的运行账户：指定账户的计划为该账户，跟随当前账户的计划为本实例当前账户。临时改选只影响本页显示，不修改计划和实例设置，切换计划后恢复。}"
                                               AutomationProperties.Name="CD 按账户" />
                                     <TextBlock Margin="8,0,0,0"
                                                VerticalAlignment="Center"
@@ -991,7 +992,7 @@
                                        Appearance="Caution"
                                        Command="{Binding ViewModel.Session.ConfirmResourceUpdatesCommand, Mode=OneWay}"
                                        CommandParameter="{Binding ViewModel.SelectedDocument, Mode=OneWay}"
-                                       Content="更新资源"
+                                       Content="{i18n:T 更新资源}"
                                        Icon="{ui:SymbolIcon ArrowDownload24}"
                                        ToolTip="{Binding ViewModel.SelectedDocument.ResourceUpdateSummary, Mode=OneWay}"
                                        ToolTipService.ShowOnDisabled="True"
@@ -999,15 +1000,15 @@
                             <!-- 查看路线 CD：跳到账户页的“路线 CD”，选中“CD 按账户”显示的账户，并按当前计划筛选。 -->
                             <ui:Button Margin="0,0,8,0"
                                        Command="{Binding ViewModel.ShowRouteCooldownsCommand, Mode=OneWay}"
-                                       Content="查看路线 CD"
+                                       Content="{i18n:T 查看路线 CD}"
                                        Icon="{ui:SymbolIcon Timer24}"
-                                       ToolTip="到账户页查看当前显示账户的路线 CD 记录（按本计划筛选），可在那里清除记录" />
+                                       ToolTip="{i18n:T 到账户页查看当前显示账户的路线 CD 记录（按本计划筛选），可在那里清除记录}" />
                             <ui:Button Margin="0,0,8,0"
                                        Command="{Binding ViewModel.PreviewRunCommand, Mode=OneWay}"
                                        CommandParameter="{Binding ViewModel.SelectedDocument, Mode=OneWay}"
-                                       Content="预览"
+                                       Content="{i18n:T 预览}"
                                        Icon="{ui:SymbolIcon Eye24}"
-                                       ToolTip="按当前配置逐项查看本次会执行还是因路线 CD 跳过，可在预览中清除记录后开始执行" />
+                                       ToolTip="{i18n:T 按当前配置逐项查看本次会执行还是因路线 CD 跳过，可在预览中清除记录后开始执行}" />
                             <!--
                                 运行于：主实例且有在线子实例时显示，与新一条龙页共用；跟随当前账户的计划可多选，每个实例各运行一次，
                                 指定账户的计划只能选一个。子实例不显示，运行提交到本实例。
@@ -1020,9 +1021,9 @@
                             <ui:Button Appearance="Primary"
                                        Command="{Binding ViewModel.RunPlanCommand, Mode=OneWay}"
                                        CommandParameter="{Binding ViewModel.SelectedDocument, Mode=OneWay}"
-                                       Content="开始执行"
+                                       Content="{i18n:T 开始执行}"
                                        Icon="{ui:SymbolIcon Play24}"
-                                       ToolTip="新执行此计划（默认不限时，不续跑历史）" />
+                                       ToolTip="{i18n:T 新执行此计划（默认不限时，不续跑历史）}" />
                         </StackPanel>
                     </Grid>
                     <TabControl Grid.Row="1" BorderThickness="0" SelectedIndex="{Binding ViewModel.SelectedPlanTabIndex}">
@@ -1030,7 +1031,7 @@
                             <TabItem.Header>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon Margin="0,0,6,0" FontSize="16" Symbol="TaskListLtr24" />
-                                    <TextBlock VerticalAlignment="Center" Text="任务" />
+                                    <TextBlock VerticalAlignment="Center" Text="{i18n:T 任务}" />
                                 </StackPanel>
                             </TabItem.Header>
                             <Grid Margin="8">
@@ -1050,64 +1051,64 @@
                                                 <ui:DropDownButton Height="32"
                                                                    MinHeight="0"
                                                                    Padding="10,0"
-                                                                   Content="添加"
+                                                                   Content="{i18n:T 添加}"
                                                                    Flyout="{StaticResource AddTaskFlyout}"
                                                                    Icon="{ui:SymbolIcon Add24}"
-                                                                   ToolTip="选中分组时添加到组内，选中任务时添加到其后，未选中时添加到计划末尾；点击空白处可取消选中"
+                                                                   ToolTip="{i18n:T 选中分组时添加到组内，选中任务时添加到其后，未选中时添加到计划末尾；点击空白处可取消选中}"
                                                                    AutomationProperties.Name="添加任务" />
                                                 <Border Style="{StaticResource ToolbarDividerStyle}" />
                                                 <ui:Button Style="{StaticResource ToolbarTextButtonStyle}"
                                                            Margin="0"
                                                            Command="{Binding ViewModel.EditNodeConfigurationCommand, Mode=OneWay}"
                                                            CommandParameter="{Binding ViewModel.SelectedTaskNode, Mode=OneWay}"
-                                                           Content="编辑"
+                                                           Content="{i18n:T 编辑}"
                                                            Icon="{ui:SymbolIcon Edit24}"
                                                            IsEnabled="{Binding ViewModel.HasSelectedTaskNode, Mode=OneWay}"
-                                                           ToolTip="编辑选中任务的配置（F2 或双击）" />
+                                                           ToolTip="{i18n:T 编辑选中任务的配置（F2 或双击）}" />
                                                 <ui:Button Style="{StaticResource ToolbarTextButtonStyle}"
                                                            Command="{Binding ViewModel.EditNodeSharedSettingsCommand, Mode=OneWay}"
                                                            CommandParameter="{Binding ViewModel.SelectedTaskNode, Mode=OneWay}"
-                                                           Content="共享设置"
+                                                           Content="{i18n:T 共享设置}"
                                                            Icon="{ui:SymbolIcon Settings24}"
                                                            IsEnabled="{Binding ViewModel.SelectedTaskNode.UsesSharedSettings, Mode=OneWay, FallbackValue=False}"
-                                                           ToolTip="修改选中分组或任务的共享设置；分组的修改会传给其下全部任务" />
+                                                           ToolTip="{i18n:T 修改选中分组或任务的共享设置；分组的修改会传给其下全部任务}" />
                                                 <Border Style="{StaticResource ToolbarDividerStyle}" />
                                                 <ui:Button Style="{StaticResource ToolbarIconButtonStyle}"
                                                            Command="{Binding ViewModel.SelectedTaskNode.CopyCommand, Mode=OneWay}"
                                                            Icon="{ui:SymbolIcon Copy24}"
                                                            IsEnabled="{Binding ViewModel.HasSelectedTaskNode, Mode=OneWay}"
-                                                           ToolTip="复制选中任务及其子任务（Ctrl+C）"
+                                                           ToolTip="{i18n:T 复制选中任务及其子任务（Ctrl+C）}"
                                                            AutomationProperties.Name="复制" />
                                                 <ui:Button Style="{StaticResource ToolbarIconButtonStyle}"
                                                            Command="{Binding ViewModel.PasteCommand, Mode=OneWay}"
                                                            CommandParameter="{Binding ViewModel.InsertTargetNode, Mode=OneWay}"
                                                            Icon="{ui:SymbolIcon ClipboardPaste24}"
                                                            IsEnabled="{Binding ViewModel.CanPaste, Mode=OneWay}"
-                                                           ToolTip="粘贴到选中位置（Ctrl+V）"
+                                                           ToolTip="{i18n:T 粘贴到选中位置（Ctrl+V）}"
                                                            AutomationProperties.Name="粘贴" />
                                                 <ui:Button Style="{StaticResource ToolbarIconButtonStyle}"
                                                            Command="{Binding ViewModel.SelectedTaskNode.DeleteCommand, Mode=OneWay}"
                                                            Icon="{ui:SymbolIcon Delete24}"
                                                            IsEnabled="{Binding ViewModel.HasSelectedTaskNode, Mode=OneWay}"
-                                                           ToolTip="删除选中任务（Delete）"
+                                                           ToolTip="{i18n:T 删除选中任务（Delete）}"
                                                            AutomationProperties.Name="删除" />
                                                 <Border Style="{StaticResource ToolbarDividerStyle}" />
                                                 <ui:Button Style="{StaticResource ToolbarIconButtonStyle}"
                                                            Command="{Binding ViewModel.SelectedDocument.UndoCommand, Mode=OneWay}"
                                                            Icon="{ui:SymbolIcon ArrowUndo24}"
-                                                           ToolTip="撤销上次编辑（Ctrl+Z）"
+                                                           ToolTip="{i18n:T 撤销上次编辑（Ctrl+Z）}"
                                                            AutomationProperties.Name="撤销" />
                                             </StackPanel>
                                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                                 <ui:Button Style="{StaticResource ToolbarIconButtonStyle}"
                                                            Command="{Binding ViewModel.ExpandAllNodesCommand, Mode=OneWay}"
                                                            Icon="{ui:SymbolIcon ArrowExpandAll24}"
-                                                           ToolTip="展开全部分组"
+                                                           ToolTip="{i18n:T 展开全部分组}"
                                                            AutomationProperties.Name="展开全部分组" />
                                                 <ui:Button Style="{StaticResource ToolbarIconButtonStyle}"
                                                            Command="{Binding ViewModel.CollapseAllNodesCommand, Mode=OneWay}"
                                                            Icon="{ui:SymbolIcon ArrowCollapseAll24}"
-                                                           ToolTip="折叠全部分组"
+                                                           ToolTip="{i18n:T 折叠全部分组}"
                                                            AutomationProperties.Name="折叠全部分组" />
                                             </StackPanel>
                                         </DockPanel>
@@ -1122,9 +1123,9 @@
                                                     <ColumnDefinition Width="105" />
                                                     <ColumnDefinition Width="70" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="名称" />
-                                                <TextBlock Grid.Column="1" Margin="8,0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="类型" />
-                                                <TextBlock Grid.Column="2" HorizontalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="启用" />
+                                                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{i18n:T 名称}" />
+                                                <TextBlock Grid.Column="1" Margin="8,0" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{i18n:T 类型}" />
+                                                <TextBlock Grid.Column="2" HorizontalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{i18n:T 启用}" />
                                             </Grid>
                                         </Border>
                                         <TreeView x:Name="TaskTree"
@@ -1145,61 +1146,61 @@
                                             <!-- 计划根节点属于内部结构；在树空白处打开的菜单始终向根级任务集合操作。 -->
                                             <TreeView.ContextMenu>
                                                 <ContextMenu>
-                                                    <ui:MenuItem Header="添加分组"
+                                                    <ui:MenuItem Header="{i18n:T 添加分组}"
                                                                  Icon="{ui:SymbolIcon Folder24}"
                                                                  Command="{Binding Data.ViewModel.AddGroupCommand, Source={StaticResource PageBindingProxy}}"
                                                                  CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
                                                     <!-- 空白处菜单的目标节点固定为当前计划的根节点。 -->
-                                                    <ui:MenuItem Header="添加独立任务"
+                                                    <ui:MenuItem Header="{i18n:T 添加独立任务}"
                                                                  Icon="{ui:SymbolIcon Apps24}"
                                                                  ItemContainerStyle="{StaticResource SoloTaskMenuItemStyle}"
                                                                  ItemsSource="{Binding Data.ViewModel.SoloTaskMenu, Source={StaticResource PageBindingProxy}}"
                                                                  Tag="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
-                                                    <ui:MenuItem Header="添加地图追踪任务"
+                                                    <ui:MenuItem Header="{i18n:T 添加地图追踪任务}"
                                                                  Icon="{ui:SymbolIcon Map24}"
                                                                  Command="{Binding Data.ViewModel.AddPathingTaskCommand, Source={StaticResource PageBindingProxy}}"
                                                                  CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
-                                                    <ui:MenuItem Header="添加 JS 脚本任务"
+                                                    <ui:MenuItem Header="{i18n:T 添加 JS 脚本任务}"
                                                                  Icon="{ui:SymbolIcon Code24}"
                                                                  Command="{Binding Data.ViewModel.AddJavascriptTaskCommand, Source={StaticResource PageBindingProxy}}"
                                                                  CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
-                                                    <ui:MenuItem Header="添加录制回放任务"
+                                                    <ui:MenuItem Header="{i18n:T 添加录制回放任务}"
                                                                  Icon="{ui:SymbolIcon Record24}"
                                                                  Command="{Binding Data.ViewModel.AddKeyMouseTaskCommand, Source={StaticResource PageBindingProxy}}"
                                                                  CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
-                                                    <ui:MenuItem Header="添加 Shell 任务"
+                                                    <ui:MenuItem Header="{i18n:T 添加 Shell 任务}"
                                                                  Icon="{ui:SymbolIcon WindowConsole20}"
                                                                  Command="{Binding Data.ViewModel.AddShellTaskCommand, Source={StaticResource PageBindingProxy}}"
                                                                  CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
-                                                    <ui:MenuItem Header="添加进程内 C# 任务"
+                                                    <ui:MenuItem Header="{i18n:T 添加进程内 C# 任务}"
                                                                  Icon="{ui:SymbolIcon CodeBlock24}"
                                                                  Command="{Binding Data.ViewModel.AddCSharpTaskCommand, Source={StaticResource PageBindingProxy}}"
                                                                  CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
-                                                    <ui:MenuItem Header="引用已有任务计划…"
+                                                    <ui:MenuItem Header="{i18n:T 引用已有任务计划…}"
                                                                  Icon="{ui:SymbolIcon Link24}"
                                                                  Command="{Binding Data.ViewModel.AddPlanReferenceCommand, Source={StaticResource PageBindingProxy}}"
                                                                  CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
                                                     <Separator />
-                                                    <ui:MenuItem Header="计划共享设置…"
+                                                    <ui:MenuItem Header="{i18n:T 计划共享设置…}"
                                                                  Icon="{ui:SymbolIcon Settings24}"
                                                                  Command="{Binding Data.ViewModel.EditNodeSharedSettingsCommand, Source={StaticResource PageBindingProxy}}"
                                                                  CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
-                                                    <ui:MenuItem Header="设置方案…"
+                                                    <ui:MenuItem Header="{i18n:T 设置方案…}"
                                                                  Icon="{ui:SymbolIcon Options24}"
                                                                  Command="{Binding Data.ViewModel.ManageSettingsProfilesCommand, Source={StaticResource PageBindingProxy}}" />
                                                     <Separator />
-                                                    <ui:MenuItem Header="粘贴到计划末尾"
+                                                    <ui:MenuItem Header="{i18n:T 粘贴到计划末尾}"
                                                                  Icon="{ui:SymbolIcon ClipboardPaste24}"
                                                                  Command="{Binding Data.ViewModel.PasteCommand, Source={StaticResource PageBindingProxy}}"
                                                                  CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}"
                                                                  InputGestureText="Ctrl+V"
                                                                  IsEnabled="{Binding Data.ViewModel.CanPaste, Source={StaticResource PageBindingProxy}}" />
                                                     <Separator />
-                                                    <ui:MenuItem Header="撤销上次编辑"
+                                                    <ui:MenuItem Header="{i18n:T 撤销上次编辑}"
                                                                  Icon="{ui:SymbolIcon ArrowUndo24}"
                                                                  Command="{Binding Data.ViewModel.SelectedDocument.UndoCommand, Source={StaticResource PageBindingProxy}}"
                                                                  InputGestureText="Ctrl+Z" />
-                                                    <ui:MenuItem Header="启用全部任务"
+                                                    <ui:MenuItem Header="{i18n:T 启用全部任务}"
                                                                  Icon="{ui:SymbolIcon CheckmarkCircle24}"
                                                                  Command="{Binding Data.ViewModel.SelectedDocument.RootNode.EnableAllChildrenCommand, Source={StaticResource PageBindingProxy}}"
                                                                  IsEnabled="{Binding Data.ViewModel.SelectedDocument.RootNode.HasChildren, Source={StaticResource PageBindingProxy}}" />
@@ -1252,15 +1253,15 @@
                                                        FontSize="15"
                                                        FontWeight="SemiBold"
                                                        IsHitTestVisible="False"
-                                                       Text="这个计划还没有任务" />
+                                                       Text="{i18n:T 这个计划还没有任务}" />
                                             <TextBlock Margin="0,4,0,14"
                                                        HorizontalAlignment="Center"
                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                        IsHitTestVisible="False"
-                                                       Text="添加分组、独立任务或脚本任务，也可以在空白处右键添加" />
+                                                       Text="{i18n:T 添加分组、独立任务或脚本任务，也可以在空白处右键添加}" />
                                             <ui:DropDownButton HorizontalAlignment="Center"
                                                                Appearance="Primary"
-                                                               Content="添加任务"
+                                                               Content="{i18n:T 添加任务}"
                                                                Flyout="{StaticResource AddTaskFlyout}"
                                                                Icon="{ui:SymbolIcon Add24}"
                                                                AutomationProperties.Name="添加任务" />
@@ -1284,7 +1285,7 @@
                             <TabItem.Header>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon Margin="0,0,6,0" FontSize="16" Symbol="History24" />
-                                    <TextBlock VerticalAlignment="Center" Text="执行记录" />
+                                    <TextBlock VerticalAlignment="Center" Text="{i18n:T 执行记录}" />
                                 </StackPanel>
                             </TabItem.Header>
                             <controls:PuloniaTaskHistoryView Margin="12" DataContext="{Binding ViewModel.History}" />
@@ -1293,7 +1294,7 @@
                             <TabItem.Header>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon Margin="0,0,6,0" FontSize="16" Symbol="CalendarClock24" />
-                                    <TextBlock VerticalAlignment="Center" Text="触发方式" />
+                                    <TextBlock VerticalAlignment="Center" Text="{i18n:T 触发方式}" />
                                 </StackPanel>
                             </TabItem.Header>
                             <controls:PuloniaTaskTriggerView DataContext="{Binding ViewModel.TriggerSettings, Mode=OneWay}" />
@@ -1330,16 +1331,16 @@
                     <StackPanel Grid.Column="2" Margin="12,0,0,0" Orientation="Horizontal">
                         <ui:Button Margin="0,0,6,0"
                                    Command="{Binding ViewModel.ToggleMoveSettingsDetailsCommand, Mode=OneWay}"
-                                   Content="查看"
-                                   ToolTip="展开或收起各任务的设置变化" />
+                                   Content="{i18n:T 查看}"
+                                   ToolTip="{i18n:T 展开或收起各任务的设置变化}" />
                         <ui:Button Margin="0,0,6,0"
                                    Appearance="Primary"
                                    Command="{Binding ViewModel.KeepMovedSettingsCommand, Mode=OneWay}"
-                                   Content="保留原值"
-                                   ToolTip="把移动前的设置写到被移动的项目上，可与移动一起撤销" />
+                                   Content="{i18n:T 保留原值}"
+                                   ToolTip="{i18n:T 把移动前的设置写到被移动的项目上，可与移动一起撤销}" />
                         <ui:Button Command="{Binding ViewModel.DismissMoveSettingsNoticeCommand, Mode=OneWay}"
-                                   Content="忽略"
-                                   ToolTip="接受新位置继承的设置" />
+                                   Content="{i18n:T 忽略}"
+                                   ToolTip="{i18n:T 接受新位置继承的设置}" />
                     </StackPanel>
                 </Grid>
                 <ScrollViewer MaxHeight="160"

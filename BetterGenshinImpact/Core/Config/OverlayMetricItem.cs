@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -58,16 +59,16 @@ public static class OverlayMetricItemDefaults
     {
         return item switch
         {
-            OverlayMetricItem.GameFps => "游戏帧率",
-            OverlayMetricItem.ProcessingCost => "处理耗时",
-            OverlayMetricItem.PeakProcessingCost => "峰值耗时",
-            OverlayMetricItem.CaptureCost => "截图耗时",
-            OverlayMetricItem.TriggerCost => "触发器耗时",
-            OverlayMetricItem.SkippedTicks => "跳过次数",
-            OverlayMetricItem.CpuUsage => "CPU占用",
-            OverlayMetricItem.GpuUsage => "显卡占用",
-            OverlayMetricItem.MemoryUsage => "内存占用",
-            OverlayMetricItem.BgiMemoryUsage => "BGI内存",
+            OverlayMetricItem.GameFps => I18nService.Key("游戏帧率"),
+            OverlayMetricItem.ProcessingCost => I18nService.Key("处理耗时"),
+            OverlayMetricItem.PeakProcessingCost => I18nService.Key("峰值耗时"),
+            OverlayMetricItem.CaptureCost => I18nService.Key("截图耗时"),
+            OverlayMetricItem.TriggerCost => I18nService.Key("触发器耗时"),
+            OverlayMetricItem.SkippedTicks => I18nService.Key("跳过次数"),
+            OverlayMetricItem.CpuUsage => I18nService.Key("CPU占用"),
+            OverlayMetricItem.GpuUsage => I18nService.Key("显卡占用"),
+            OverlayMetricItem.MemoryUsage => I18nService.Key("内存占用"),
+            OverlayMetricItem.BgiMemoryUsage => I18nService.Key("BGI内存"),
             OverlayMetricItem.BgiCpuUsage => "BGI CPU",
             _ => item.ToString()
         };
@@ -77,17 +78,17 @@ public static class OverlayMetricItemDefaults
     {
         return item switch
         {
-            OverlayMetricItem.GameFps => "游戏当前渲染帧率。",
-            OverlayMetricItem.ProcessingCost => "BetterGI 每轮截图、识别和触发器处理的总耗时。",
-            OverlayMetricItem.PeakProcessingCost => "最近 5 秒内 BetterGI 单轮处理耗时的峰值。",
-            OverlayMetricItem.CaptureCost => "单次获取游戏画面的耗时。",
-            OverlayMetricItem.TriggerCost => "本轮实际执行触发器的总耗时。",
-            OverlayMetricItem.SkippedTicks => "上一轮未结束导致本秒跳过的调度次数。",
-            OverlayMetricItem.CpuUsage => "CPU 总占用率，读取不到时自动隐藏。",
-            OverlayMetricItem.GpuUsage => "原神当前使用显卡的整体占用率，按最繁忙 GPU 引擎计算；不可用时自动隐藏。",
-            OverlayMetricItem.MemoryUsage => "系统内存占用率，读取不到时自动隐藏。",
-            OverlayMetricItem.BgiMemoryUsage => "BetterGI 进程自身占用的私有内存。",
-            OverlayMetricItem.BgiCpuUsage => "BetterGI 进程自身占用的 CPU 使用率。",
+            OverlayMetricItem.GameFps => I18nService.Key("游戏当前渲染帧率。"),
+            OverlayMetricItem.ProcessingCost => I18nService.Key("BetterGI 每轮截图、识别和触发器处理的总耗时。"),
+            OverlayMetricItem.PeakProcessingCost => I18nService.Key("最近 5 秒内 BetterGI 单轮处理耗时的峰值。"),
+            OverlayMetricItem.CaptureCost => I18nService.Key("单次获取游戏画面的耗时。"),
+            OverlayMetricItem.TriggerCost => I18nService.Key("本轮实际执行触发器的总耗时。"),
+            OverlayMetricItem.SkippedTicks => I18nService.Key("上一轮未结束导致本秒跳过的调度次数。"),
+            OverlayMetricItem.CpuUsage => I18nService.Key("CPU 总占用率，读取不到时自动隐藏。"),
+            OverlayMetricItem.GpuUsage => I18nService.Key("原神当前使用显卡的整体占用率，按最繁忙 GPU 引擎计算；不可用时自动隐藏。"),
+            OverlayMetricItem.MemoryUsage => I18nService.Key("系统内存占用率，读取不到时自动隐藏。"),
+            OverlayMetricItem.BgiMemoryUsage => I18nService.Key("BetterGI 进程自身占用的私有内存。"),
+            OverlayMetricItem.BgiCpuUsage => I18nService.Key("BetterGI 进程自身占用的 CPU 使用率。"),
             _ => string.Empty
         };
     }

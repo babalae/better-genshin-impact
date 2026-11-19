@@ -125,12 +125,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="自动跳过剧情"
+                                      Text="{i18n:T 自动跳过剧情}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="行走途中意外进入剧情时自动脱离"
+                                      Text="{i18n:T 行走途中意外进入剧情时自动脱离}"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -175,12 +175,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="跳过队伍切换"
+                                      Text="{i18n:T 跳过队伍切换}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="开启后不切换队伍，直接使用当前队伍执行"
+                                      Text="{i18n:T 开启后不切换队伍，直接使用当前队伍执行}"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -2134,7 +2134,7 @@
                                     <Setter Property="Text" Value="{i18n:T 最长等待命令返回的时间，单位秒。如果时间小于等于0则不等待，直接返回。}" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsPulonia}" Value="True">
-                                            <Setter Property="Text" Value="等待进程退出的最长秒数；超时会结束进程。小于等于 0 时不设额外时限，仍等待进程结束。节点执行策略的超时限制也会生效。" />
+                                            <Setter Property="Text" Value="{i18n:T 等待进程退出的最长秒数；超时会结束进程。小于等于 0 时不设额外时限，仍等待进程结束。节点执行策略的超时限制也会生效。}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>

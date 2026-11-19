@@ -1,6 +1,7 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaTaskNodeSettingsDialog"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
                  xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
@@ -54,9 +55,9 @@
                     Margin="24,8,24,0"
                     IsClosable="False"
                     IsOpen="True"
-                    Message="{Binding Document.LastSaveError, Mode=OneWay, StringFormat='修改仍保留在当前计划中，下次编辑后会自动重试保存。原因：{0}'}"
+                    Message="{Binding Document.LastSaveErrorMessage, Mode=OneWay}"
                     Severity="Error"
-                    Title="任务计划保存失败">
+                    Title="{i18n:T 任务计划保存失败}">
             <ui:InfoBar.Style>
                 <Style TargetType="ui:InfoBar" BasedOn="{StaticResource {x:Type ui:InfoBar}}">
                     <!--  没有保存错误时整体折叠，连同外边距一起不占位  -->
@@ -94,7 +95,7 @@
                                 Margin="14,0,12,0"
                                 VerticalAlignment="Center">
                         <ui:TextBlock FontTypography="Subtitle"
-                                      Text="{Binding Node.Name}"
+                                      Text="{i18n:TBinding Node.Name}"
                                       TextTrimming="CharacterEllipsis" />
                         <ui:TextBlock Margin="0,2,0,0"
                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -103,19 +104,19 @@
                     <ui:ToggleSwitch Grid.Column="2"
                                      VerticalAlignment="Center"
                                      IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                     OffContent="已停用"
-                                     OnContent="已启用"
-                                     ToolTip="停用后运行计划时跳过此任务" />
+                                     OffContent="{i18n:T 已停用}"
+                                     OnContent="{i18n:T 已启用}"
+                                     ToolTip="{i18n:T 停用后运行计划时跳过此任务}" />
                 </Grid>
 
                 <!--  基本  -->
-                <ui:TextBlock Style="{StaticResource SectionTitle}" Text="基本" />
+                <ui:TextBlock Style="{StaticResource SectionTitle}" Text="{i18n:T 基本}" />
                 <ui:CardControl Margin="0,0,0,8" Icon="{ui:SymbolIcon Rename24}">
                     <ui:CardControl.Header>
                         <StackPanel>
-                            <ui:TextBlock FontTypography="Body" Text="任务名称" />
+                            <ui:TextBlock FontTypography="Body" Text="{i18n:T 任务名称}" />
                             <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                          Text="显示在任务计划中的名称"
+                                          Text="{i18n:T 显示在任务计划中的名称}"
                                           TextWrapping="Wrap" />
                         </StackPanel>
                     </ui:CardControl.Header>
@@ -128,9 +129,9 @@
                                 Visibility="{Binding CanConfigureRepeat, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:CardControl.Header>
                         <StackPanel>
-                            <ui:TextBlock FontTypography="Body" Text="执行次数" />
+                            <ui:TextBlock FontTypography="Body" Text="{i18n:T 执行次数}" />
                             <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                          Text="按顺序完整执行组内全部任务的轮数"
+                                          Text="{i18n:T 按顺序完整执行组内全部任务的轮数}"
                                           TextWrapping="Wrap" />
                         </StackPanel>
                     </ui:CardControl.Header>
@@ -155,9 +156,9 @@
                                 Visibility="{Binding CanEditPath, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:CardControl.Header>
                         <StackPanel>
-                            <ui:TextBlock FontTypography="Body" Text="资源路径" />
+                            <ui:TextBlock FontTypography="Body" Text="{i18n:T 资源路径}" />
                             <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                          Text="本地路线、脚本或录制文件的位置"
+                                          Text="{i18n:T 本地路线、脚本或录制文件的位置}"
                                           TextWrapping="Wrap" />
                         </StackPanel>
                     </ui:CardControl.Header>
@@ -170,36 +171,36 @@
                                 Visibility="{Binding CanUpdateResourceVersion, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:CardControl.Header>
                         <StackPanel>
-                            <ui:TextBlock FontTypography="Body" Text="资源版本" />
+                            <ui:TextBlock FontTypography="Body" Text="{i18n:T 资源版本}" />
                             <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                          Text="{Binding Node.ResourceVersionText, StringFormat=当前使用：{0}}"
+                                          Text="{Binding Node.CurrentResourceVersionText, Mode=OneWay}"
                                           TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                     </ui:CardControl.Header>
                     <ui:Button Margin="0,0,36,0"
                                Command="{Binding Session.UpdateResourceVersionCommand, Mode=OneWay}"
                                CommandParameter="{Binding Node}"
-                               Content="更新资源"
-                               ToolTip="读取本机仓库的最新内容，确认后立即生效" />
+                               Content="{i18n:T 更新资源}"
+                               ToolTip="{i18n:T 读取本机仓库的最新内容，确认后立即生效}" />
                 </ui:CardControl>
 
                 <!--  独立任务设置：优先使用独立任务的专属设置界面  -->
                 <StackPanel Visibility="{Binding HasSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <ui:TextBlock Style="{StaticResource SectionTitle}" Text="任务设置" />
+                    <ui:TextBlock Style="{StaticResource SectionTitle}" Text="{i18n:T 任务设置}" />
                     <ui:TextBlock Margin="0,-4,0,10"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                  Text="仅对这个任务生效；未修改的项沿用任务默认值。"
+                                  Text="{i18n:T 仅对这个任务生效；未修改的项沿用任务默认值。}"
                                   TextWrapping="Wrap" />
                     <controls:PuloniaTaskSettingsEditorView DataContext="{Binding Settings}" />
                 </StackPanel>
 
                 <!--  JS 脚本自定义设置：按项目 settings_ui 在独立窗口中编辑，确认后立即生效  -->
                 <StackPanel Visibility="{Binding HasTaskTools, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <ui:TextBlock Style="{StaticResource SectionTitle}" Text="任务设置" />
+                    <ui:TextBlock Style="{StaticResource SectionTitle}" Text="{i18n:T 任务设置}" />
                     <ui:CardControl Margin="0,0,0,8" Icon="{ui:SymbolIcon Code24}">
                         <ui:CardControl.Header>
                             <StackPanel>
-                                <ui:TextBlock FontTypography="Body" Text="脚本自定义设置" />
+                                <ui:TextBlock FontTypography="Body" Text="{i18n:T 脚本自定义设置}" />
                                 <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                               Text="{Binding Advanced.ScriptSettingsSummary, Mode=OneWay}"
                                               TextWrapping="Wrap" />
@@ -207,17 +208,17 @@
                         </ui:CardControl.Header>
                         <ui:Button Margin="0,0,36,0"
                                    Command="{Binding Advanced.EditScriptSettingsCommand, Mode=OneWay}"
-                                   Content="配置" />
+                                   Content="{i18n:T 配置}" />
                     </ui:CardControl>
                 </StackPanel>
 
                 <!--  共享设置：队伍、战斗、拾取、行走、路线 CD 与 Shell，在独立窗口中逐项修改，立即生效并向下传播  -->
                 <StackPanel Visibility="{Binding Advanced.CanEditSharedSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <ui:TextBlock Style="{StaticResource SectionTitle}" Text="共享设置" />
+                    <ui:TextBlock Style="{StaticResource SectionTitle}" Text="{i18n:T 共享设置}" />
                     <ui:CardControl Margin="0,0,0,8" Icon="{ui:SymbolIcon Settings24}">
                         <ui:CardControl.Header>
                             <StackPanel>
-                                <ui:TextBlock FontTypography="Body" Text="队伍、战斗、拾取与行走等" />
+                                <ui:TextBlock FontTypography="Body" Text="{i18n:T 队伍、战斗、拾取与行走等}" />
                                 <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                               Text="{Binding Advanced.SharedSettingsSummary, Mode=OneWay}"
                                               TextWrapping="Wrap" />
@@ -225,7 +226,7 @@
                         </ui:CardControl.Header>
                         <ui:Button Margin="0,0,36,0"
                                    Command="{Binding Advanced.EditSharedSettingsCommand, Mode=OneWay}"
-                                   Content="配置" />
+                                   Content="{i18n:T 配置}" />
                     </ui:CardControl>
                 </StackPanel>
 
@@ -235,9 +236,9 @@
                                  Icon="{ui:SymbolIcon Code24}">
                     <ui:CardExpander.Header>
                         <StackPanel>
-                            <ui:TextBlock FontTypography="Body" Text="高级设置" />
+                            <ui:TextBlock FontTypography="Body" Text="{i18n:T 高级设置}" />
                             <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                          Text="原始任务参数、共享设置与执行策略，点击“应用”后立即生效"
+                                          Text="{i18n:T 原始任务参数、共享设置与执行策略，点击“应用”后立即生效}"
                                           TextWrapping="Wrap" />
                         </StackPanel>
                     </ui:CardExpander.Header>
@@ -252,52 +253,52 @@
                                         Orientation="Horizontal">
                                 <ui:Button Margin="0,0,8,0"
                                            Command="{Binding Advanced.RestoreParameterInheritanceCommand, Mode=OneWay}"
-                                           Content="清空本任务参数"
-                                           ToolTip="删除本任务单独设置的任务参数，恢复使用能力默认值；共享设置不受影响" />
-                                <ui:Button Command="{Binding Advanced.ApplyParametersCommand, Mode=OneWay}" Content="应用参数" />
+                                           Content="{i18n:T 清空本任务参数}"
+                                           ToolTip="{i18n:T 删除本任务单独设置的任务参数，恢复使用能力默认值；共享设置不受影响}" />
+                                <ui:Button Command="{Binding Advanced.ApplyParametersCommand, Mode=OneWay}" Content="{i18n:T 应用参数}" />
                             </StackPanel>
                         </StackPanel>
 
                         <!--  原始共享设置  -->
                         <ui:TextBlock Margin="0,16,0,0"
                                       FontTypography="BodyStrong"
-                                      Text="共享设置（JSON 对象，设置项 ID 到值）" />
+                                      Text="{i18n:T '共享设置（JSON 对象，设置项 ID 到值）'}" />
                         <TextBox Style="{StaticResource JsonEditor}"
                                  Text="{Binding Advanced.SettingsJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <ui:Button Margin="0,6,0,0"
                                    HorizontalAlignment="Right"
                                    Command="{Binding Advanced.ApplySettingsCommand, Mode=OneWay}"
-                                   Content="应用共享设置" />
+                                   Content="{i18n:T 应用共享设置}" />
 
                         <!--  执行策略  -->
                         <ui:TextBlock Margin="0,16,0,0"
                                       FontTypography="BodyStrong"
-                                      Text="执行策略" />
+                                      Text="{i18n:T 执行策略}" />
                         <TextBox Style="{StaticResource JsonEditor}"
                                  Text="{Binding Advanced.PolicyJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <ui:Button Margin="0,6,0,0"
                                    HorizontalAlignment="Right"
                                    Command="{Binding Advanced.ApplyPolicyCommand, Mode=OneWay}"
-                                   Content="应用策略" />
+                                   Content="{i18n:T 应用策略}" />
 
                         <!--  引用来源（仅计划或目录引用）  -->
                         <StackPanel Visibility="{Binding Advanced.HasSource, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ui:TextBlock Margin="0,16,0,0"
                                           FontTypography="BodyStrong"
-                                          Text="引用来源" />
+                                          Text="{i18n:T 引用来源}" />
                             <TextBox Style="{StaticResource JsonEditor}"
                                      Text="{Binding Advanced.SourceJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             <ui:Button Margin="0,6,0,0"
                                        HorizontalAlignment="Right"
                                        Command="{Binding Advanced.ApplySourceCommand, Mode=OneWay}"
-                                       Content="应用来源" />
+                                       Content="{i18n:T 应用来源}" />
                         </StackPanel>
 
                         <!--  最终生效的参数及其来源  -->
                         <StackPanel Visibility="{Binding Node.IsLeaf, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ui:TextBlock Margin="0,16,0,6"
                                           FontTypography="BodyStrong"
-                                          Text="最终生效的参数" />
+                                          Text="{i18n:T 最终生效的参数}" />
                             <ItemsControl ItemsSource="{Binding Advanced.EffectiveParameters, Mode=OneWay}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -308,7 +309,7 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="{Binding Name}"
                                                        TextTrimming="CharacterEllipsis"
-                                                       ToolTip="{Binding Source, StringFormat=来源：{0}}" />
+                                                       ToolTip="{Binding SourceText, Mode=OneWay}" />
                                             <TextBlock Grid.Column="1"
                                                        FontFamily="Consolas"
                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -351,10 +352,10 @@
                                Margin="0,0,8,0"
                                Appearance="Primary"
                                Command="{Binding SaveCommand}"
-                               Content="保存" />
+                               Content="{i18n:T 保存}" />
                     <ui:Button MinWidth="96"
                                Command="{Binding CancelCommand}"
-                               Content="取消"
+                               Content="{i18n:T 取消}"
                                IsCancel="True" />
                 </StackPanel>
             </Grid>

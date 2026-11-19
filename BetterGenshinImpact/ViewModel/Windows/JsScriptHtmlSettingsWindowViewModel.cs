@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -27,8 +28,8 @@ public partial class JsScriptHtmlSettingsWindowViewModel(string scriptName, stri
     /// <summary>
     /// 窗口标题。WebView2 是原生窗口，WPF 内容不能叠在页面上，保存时间显示在标题中，作者没做保存提示时用户也能确认。
     /// </summary>
-    public string Title => $"脚本设置：{scriptName} {scriptVersion} · 页面由脚本作者提供"
-                           + (LastSavedTime is { } time ? $" · 已保存 {time:HH:mm:ss}" : string.Empty);
+    public string Title => string.Format(I18nService.Instance.Translate("脚本设置：{0} {1} · 页面由脚本作者提供"), scriptName, scriptVersion)
+                           + (LastSavedTime is { } time ? " · " + string.Format(I18nService.Instance.Translate("已保存 {0}"), time.ToString("HH:mm:ss")) : string.Empty);
 
     /// <summary>
     /// 是否显示错误提示条。

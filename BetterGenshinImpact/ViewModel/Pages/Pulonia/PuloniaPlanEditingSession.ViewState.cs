@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
@@ -62,7 +63,7 @@ public partial class PuloniaPlanEditingSession
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PuloniaTaskValidationException)
         {
-            ReportStatus("任务的展开状态未能保存，下次打开时可能全部展开：" + ex.Message);
+            ReportStatus(I18nService.Instance.Translate("任务的展开状态未能保存，下次打开时可能全部展开：") + ex.Message);
         }
         finally
         {

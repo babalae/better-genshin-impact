@@ -116,7 +116,7 @@
                 </ui:NavigationViewItem>
 
                 <!-- 新一条龙只是 Pulonia 任务计划的独立界面包装；验收前保留全部旧入口。 -->
-                <ui:NavigationViewItem Content="新一条龙"
+                <ui:NavigationViewItem Content="{i18n:T 新一条龙}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:PuloniaOneDragonPage}">
                     <ui:NavigationViewItem.Icon>
@@ -133,7 +133,7 @@
                 </ui:NavigationViewItem>
 
                 <!-- Pulonia 账户页：所有实例都显示。 -->
-                <ui:NavigationViewItem Content="账户"
+                <ui:NavigationViewItem Content="{i18n:T 账户}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:PuloniaAccountsPage}">
                     <ui:NavigationViewItem.Icon>
@@ -141,8 +141,8 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
-                <!-- 账号记录页面暂用「狛荷屋」展示名，待定案后再接入翻译。 -->
-                <ui:NavigationViewItem Content="狛荷屋(test)"
+                <!-- 账号记录页面暂用「狛荷屋」展示名，已接入翻译；定案后同步修改 Key。 -->
+                <ui:NavigationViewItem Content="{i18n:T 狛荷屋(test)}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:AccountRecordsPage}">
                     <ui:NavigationViewItem.Icon>
@@ -361,7 +361,7 @@
                                 <TextBlock FontSize="13"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                           Text="游戏中的 UID 与当前账户不一致" />
+                                           Text="{i18n:T 游戏中的 UID 与当前账户不一致}" />
                                 <TextBlock Margin="0,4,0,0"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
@@ -372,7 +372,7 @@
                                            Command="{Binding ApplyAccountSuggestionCommand, Mode=OneWay}"
                                            Content="{Binding AccountSuggestionButtonText, Mode=OneWay}"
                                            Icon="{ui:SymbolIcon PersonSwap24}"
-                                           ToolTip="把本实例当前账户改为游戏中读到的 UID 对应的账户，下一次运行开始时生效"
+                                           ToolTip="{i18n:T 把本实例当前账户改为游戏中读到的 UID 对应的账户，下一次运行开始时生效}"
                                            Visibility="{Binding HasAccountSuggestion, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             </StackPanel>
                             <ui:Button Grid.Column="1"
@@ -385,7 +385,7 @@
                                        BorderBrush="Transparent"
                                        Command="{Binding DismissUidMismatchNoticeCommand, Mode=OneWay}"
                                        Icon="{ui:SymbolIcon Dismiss16}"
-                                       ToolTip="关闭"
+                                       ToolTip="{i18n:T 关闭}"
                                        AutomationProperties.Name="关闭 UID 不一致提示" />
                         </Grid>
                     </Border>
@@ -491,7 +491,7 @@
                                 <TextBlock Margin="8,0,0,4"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="本实例当前账户" />
+                                           Text="{i18n:T 本实例当前账户}" />
                                 <ItemsControl ItemsSource="{Binding BadgeAccounts, Mode=OneWay}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -520,7 +520,7 @@
                                            Appearance="Transparent"
                                            BorderThickness="0"
                                            Command="{Binding ManageAccountsCommand, Mode=OneWay}"
-                                           Content="管理账户"
+                                           Content="{i18n:T 管理账户}"
                                            Icon="{ui:SymbolIcon Settings24}" />
                             </StackPanel>
                         </ui:Flyout>

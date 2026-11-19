@@ -324,11 +324,23 @@
                                   Margin="0,0,8,0"
                                   ItemsSource="{Binding ViewModel.FormatFilters}"
                                   SelectedItem="{Binding ViewModel.SelectedFormatFilter}"
-                                  ToolTip="{i18n:T 按格式筛选}" />
+                                  ToolTip="{i18n:T 按格式筛选}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{i18n:TBinding}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                         <ComboBox Grid.Column="4"
                                   ItemsSource="{Binding ViewModel.InstrumentFilters}"
                                   SelectedItem="{Binding ViewModel.SelectedInstrumentFilter}"
-                                  ToolTip="{i18n:T 按乐器筛选}" />
+                                  ToolTip="{i18n:T 按乐器筛选}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{i18n:TBinding}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                         <ui:Button Grid.Column="5"
                                    Width="44"
                                    Height="34"

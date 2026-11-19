@@ -111,6 +111,14 @@ public sealed partial class SoloTaskRegistry
         => TryGet(taskId, out var descriptor) ? descriptor.DisplayName : taskId ?? string.Empty;
 
     /// <summary>
+    /// 返回按当前界面语言翻译后的任务显示名，仅用于界面展示；未注册时返回标识本身。
+    /// </summary>
+    /// <param name="taskId">任务标识。</param>
+    /// <returns>翻译后的显示名。</returns>
+    public string GetLocalizedDisplayName(string? taskId)
+        => TryGet(taskId, out var descriptor) ? descriptor.LocalizedDisplayName : taskId ?? string.Empty;
+
+    /// <summary>
     /// 返回指定入口可用的任务。
     /// </summary>
     /// <param name="scope">运行入口。</param>

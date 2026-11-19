@@ -14,6 +14,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Text;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Microsoft.Extensions.Localization;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.GameLoading;
@@ -71,6 +74,11 @@ public class GameLoadingTrigger : ITaskTrigger
     private List<Region> _latestLoadingOcrRegions = [];
 
     /// <summary>
+    /// 非中文游戏语言下“点击进入”的 OCR 匹配规则；中文时为 null，只用图片模板
+    /// </summary>
+    private readonly Regex? _enterGameTextPattern;
+
+    /// <summary>
     /// 创建自动开门触发器
     /// </summary>
     /// <param name="runtime">本次截图会话绑定的运行环境</param>
@@ -79,6 +87,25 @@ public class GameLoadingTrigger : ITaskTrigger
     {
         _runtime = runtime;
         _config = config.GenshinStartConfig;
+        _enterGameTextPattern = CreateEnterGameTextPattern(config.OtherConfig.GameCultureInfoName);
+    }
+
+    /// <summary>
+    /// 按游戏语言创建“点击进入”的 OCR 匹配规则，失败时只用图片模板
+    /// </summary>
+    /// <param name="gameCultureName">游戏语言</param>
+    private static Regex? CreateEnterGameTextPattern(string gameCultureName)
+    {
+        try
+        {
+            var localizer = App.GetService<IStringLocalizer<GameLoadingTrigger>>();
+            return localizer == null ? null : EnterGameText.CreatePattern(localizer, new CultureInfo(gameCultureName));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "创建“点击进入”文字识别规则失败");
+            return null;
+        }
     }
 
     public void OnCapture(CaptureContent content)
@@ -174,6 +201,21 @@ public class GameLoadingTrigger : ITaskTrigger
             InputHub.Background.Mouse.LeftButtonClick();
             biliLoginClicked = true;
             return;
+        }
+
+        // 非中文游戏语言：图片模板是中文文字无法匹配，改用 OCR 找“点击进入”（如“Pressione para entrar”）并点击
+        if (_enterGameTextPattern != null)
+        {
+            var enterText = EnterGameText.Find(_latestLoadingOcrRegions, content.CaptureRectArea.Width, content.CaptureRectArea.Height, _enterGameTextPattern);
+            if (enterText != null)
+            {
+                enterText.Click();
+                // 点击后界面会变化，丢弃本次 OCR 结果，避免下次重复点击旧位置
+                _latestLoadingOcrRegions = [];
+                biliLoginClicked = true;
+                _logger.LogDebug("识别到“{Text}”，点击进入游戏", enterText.Text);
+                return;
+            }
         }
 
         // 只有在"进入游戏"按钮未出现时，才进行B服登录处理

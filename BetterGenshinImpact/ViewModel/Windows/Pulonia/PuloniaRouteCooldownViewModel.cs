@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
@@ -42,18 +43,20 @@ public partial class PuloniaRouteCooldownViewModel : ObservableObject
     /// <summary>三种选择及中文名称。</summary>
     public IReadOnlyDictionary<string, string> Choices { get; } = new Dictionary<string, string>
     {
-        [AutoChoice] = "按材料自动识别（推荐）", [DisabledChoice] = "不检查 CD", [CustomChoice] = "自定义周期"
+        [AutoChoice] = I18nService.Instance.Translate("按材料自动识别（推荐）"),
+        [DisabledChoice] = I18nService.Instance.Translate("不检查 CD"),
+        [CustomChoice] = I18nService.Instance.Translate("自定义周期")
     };
 
     /// <summary>自定义周期的具体模式及中文名称。</summary>
     public IReadOnlyDictionary<PuloniaRouteRefreshMode, string> CustomModes { get; } =
         new Dictionary<PuloniaRouteRefreshMode, string>
         {
-            [PuloniaRouteRefreshMode.Rolling] = "成功后每隔 N 小时",
-            [PuloniaRouteRefreshMode.Daily] = "每日固定时刻重置",
-            [PuloniaRouteRefreshMode.Weekly] = "每周固定时刻重置",
-            [PuloniaRouteRefreshMode.CalendarDays] = "成功日期后第 N 天 00:00（午夜估算）",
-            [PuloniaRouteRefreshMode.Once] = "只执行一次"
+            [PuloniaRouteRefreshMode.Rolling] = I18nService.Instance.Translate("成功后每隔 N 小时"),
+            [PuloniaRouteRefreshMode.Daily] = I18nService.Instance.Translate("每日固定时刻重置"),
+            [PuloniaRouteRefreshMode.Weekly] = I18nService.Instance.Translate("每周固定时刻重置"),
+            [PuloniaRouteRefreshMode.CalendarDays] = I18nService.Instance.Translate("成功日期后第 N 天 00:00（午夜估算）"),
+            [PuloniaRouteRefreshMode.Once] = I18nService.Instance.Translate("只执行一次")
         };
 
     /// <summary>服务器重置小时选项。</summary>
@@ -61,7 +64,12 @@ public partial class PuloniaRouteCooldownViewModel : ObservableObject
 
     /// <summary>星期选项，周一为 1，周日为 7。</summary>
     public IReadOnlyDictionary<int, string> Weekdays { get; } = new Dictionary<int, string>
-        { [1] = "周一", [2] = "周二", [3] = "周三", [4] = "周四", [5] = "周五", [6] = "周六", [7] = "周日" };
+        {
+            [1] = I18nService.Instance.Translate("周一"), [2] = I18nService.Instance.Translate("周二"),
+            [3] = I18nService.Instance.Translate("周三"), [4] = I18nService.Instance.Translate("周四"),
+            [5] = I18nService.Instance.Translate("周五"), [6] = I18nService.Instance.Translate("周六"),
+            [7] = I18nService.Instance.Translate("周日")
+        };
 
     /// <summary>当前选择：自动识别、不检查或自定义周期。</summary>
     [ObservableProperty]
@@ -97,7 +105,11 @@ public partial class PuloniaRouteCooldownViewModel : ObservableObject
 
     /// <summary>整个配置对象的继承或覆盖来源。</summary>
     [ObservableProperty]
-    private string _configurationSource = "能力默认值";
+    [NotifyPropertyChangedFor(nameof(ConfigurationSourceText))]
+    private string _configurationSource = I18nService.Instance.Translate("能力默认值");
+
+    /// <summary>配置来源的展示文字，例如“配置来源：能力默认值”。</summary>
+    public string ConfigurationSourceText => string.Format(I18nService.Instance.Translate("配置来源：{0}"), ConfigurationSource);
 
     /// <summary>计划所选账户下这条路线的 CD 状态；只有叶子节点提供。</summary>
     [ObservableProperty]
@@ -159,19 +171,21 @@ public partial class PuloniaRouteCooldownViewModel : ObservableObject
                 var policy = PuloniaRouteCooldown.Resolve(_path, _resource,
                     new JObject { [PuloniaRouteCooldown.ParameterName] = BuildValue() });
                 var recognition = !_hasResource
-                    ? "识别：设置方案不对应具体路线，挂到节点后按各路线的目录识别"
+                    ? I18nService.Instance.Translate("识别：设置方案不对应具体路线，挂到节点后按各路线的目录识别")
                     : policy.MaterialName is { } material
-                        ? $"识别：目录「{material}」"
-                        : "识别：路径中没有已知的材料或类别目录，自动识别时成功后不会跳过，可选择“自定义周期”";
-                return $"{recognition}\n规则：{policy.Description}\n依据：{PuloniaRouteCooldown.CompletionBasis}";
+                        ? string.Format(I18nService.Instance.Translate("识别：目录「{0}」"), material)
+                        : I18nService.Instance.Translate("识别：路径中没有已知的材料或类别目录，自动识别时成功后不会跳过，可选择“自定义周期”");
+                return string.Format(I18nService.Instance.Translate("{0}\n规则：{1}\n依据：{2}"), recognition, policy.DisplayDescription,
+                    // 与 PuloniaRouteCooldown.CompletionBasis 相同；该常量会持久化，此处写成字面量以便同步工具登记 Key。
+                    I18nService.Instance.Translate("按整份文件执行成功估算采集完成"));
             }
             catch (Exception ex) when (ex is FormatException or ArgumentException or OverflowException or PuloniaTaskValidationException)
-            { return "配置无效：" + ex.Message; }
+            { return string.Format(I18nService.Instance.Translate("配置无效：{0}"), ex.Message); }
         }
     }
 
     /// <summary>加载独立配置草稿，不持有任务的可变参数对象。</summary>
-    public void Load(JToken? value, string source = "能力默认值")
+    public void Load(JToken? value, string? source = null)
     {
         var settings = value as JObject ?? PuloniaRouteCooldown.CreateDefaults();
         PuloniaRouteCooldown.TryParseMode(settings.Value<string>("mode"), out var mode);
@@ -186,7 +200,7 @@ public partial class PuloniaRouteCooldownViewModel : ObservableObject
         Days = (settings.Value<int?>("days") ?? 1).ToString(CultureInfo.InvariantCulture);
         ResetHour = settings.Value<int?>("reset_hour") ?? PuloniaServerTime.DayResetHour;
         ResetWeekday = settings.Value<int?>("reset_weekday") ?? 1;
-        ConfigurationSource = source;
+        ConfigurationSource = source ?? I18nService.Instance.Translate("能力默认值");
         OnPropertyChanged(nameof(Preview));
     }
 

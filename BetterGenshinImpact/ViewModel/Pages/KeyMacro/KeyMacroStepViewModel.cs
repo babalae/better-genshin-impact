@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.KeyMacro.Script;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
@@ -13,21 +14,21 @@ namespace BetterGenshinImpact.ViewModel.Pages.KeyMacro;
 public partial class KeyMacroStepViewModel : ObservableObject
 {
     /// <summary>
-    /// 步骤类型选项
+    /// 步骤类型选项（每次读取按当前界面语言生成显示名）
     /// </summary>
-    public static IReadOnlyList<KeyMacroOption<KeyMacroCommandKind>> KindOptions { get; } =
+    public static IReadOnlyList<KeyMacroOption<KeyMacroCommandKind>> KindOptions =>
     [
-        new(KeyMacroCommandKind.KeyPress, "按键"),
-        new(KeyMacroCommandKind.KeyDown, "按下键"),
-        new(KeyMacroCommandKind.KeyUp, "松开键"),
-        new(KeyMacroCommandKind.Click, "鼠标点击"),
-        new(KeyMacroCommandKind.MouseDown, "鼠标按下"),
-        new(KeyMacroCommandKind.MouseUp, "鼠标松开"),
-        new(KeyMacroCommandKind.MoveBy, "相对移动"),
-        new(KeyMacroCommandKind.MoveTo, "绝对移动"),
-        new(KeyMacroCommandKind.Scroll, "滚轮"),
-        new(KeyMacroCommandKind.Wait, "等待"),
-        new(KeyMacroCommandKind.Comment, "注释")
+        new(KeyMacroCommandKind.KeyPress, I18nService.Instance.Translate("按键")),
+        new(KeyMacroCommandKind.KeyDown, I18nService.Instance.Translate("按下键")),
+        new(KeyMacroCommandKind.KeyUp, I18nService.Instance.Translate("松开键")),
+        new(KeyMacroCommandKind.Click, I18nService.Instance.Translate("鼠标点击")),
+        new(KeyMacroCommandKind.MouseDown, I18nService.Instance.Translate("鼠标按下")),
+        new(KeyMacroCommandKind.MouseUp, I18nService.Instance.Translate("鼠标松开")),
+        new(KeyMacroCommandKind.MoveBy, I18nService.Instance.Translate("相对移动")),
+        new(KeyMacroCommandKind.MoveTo, I18nService.Instance.Translate("绝对移动")),
+        new(KeyMacroCommandKind.Scroll, I18nService.Instance.Translate("滚轮")),
+        new(KeyMacroCommandKind.Wait, I18nService.Instance.Translate("等待")),
+        new(KeyMacroCommandKind.Comment, I18nService.Instance.Translate("注释"))
     ];
 
     /// <summary>

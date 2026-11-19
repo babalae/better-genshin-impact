@@ -1,6 +1,7 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaSharedSettingsWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="{Binding Title, Mode=OneWay}"
@@ -44,14 +45,14 @@
                 </Grid.ColumnDefinitions>
                 <ui:TextBlock VerticalAlignment="Center"
                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                              Text="修改立即生效并自动保存；关闭窗口后可在任务计划中撤销。已排队和正在运行的任务不受影响。"
+                              Text="{i18n:T 修改立即生效并自动保存；关闭窗口后可在任务计划中撤销。已排队和正在运行的任务不受影响。}"
                               TextWrapping="Wrap" />
                 <ui:Button Grid.Column="1"
                            MinWidth="96"
                            Margin="12,0,0,0"
                            Appearance="Primary"
                            Click="OnCloseClick"
-                           Content="关闭"
+                           Content="{i18n:T 关闭}"
                            IsCancel="True" />
             </Grid>
         </Border>

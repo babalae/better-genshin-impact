@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Infrastructure.Temp;
 
@@ -17,12 +18,12 @@ public static class TempCategories
     /// <summary>
     /// 脚本仓库 ZIP 导入解压、更换仓库地址时的重新克隆
     /// </summary>
-    public static readonly TempCategory ScriptRepository = new("script-repo", "脚本仓库导入与更新");
+    public static readonly TempCategory ScriptRepository = new("script-repo", I18nService.Key("脚本仓库导入与更新"));
 
     /// <summary>
     /// Windows 通知的配图
     /// </summary>
-    public static readonly TempCategory Notification = new("notification", "通知图片");
+    public static readonly TempCategory Notification = new("notification", I18nService.Key("通知图片"));
 
     /// <summary>
     /// 全部分类，供存储区域登记

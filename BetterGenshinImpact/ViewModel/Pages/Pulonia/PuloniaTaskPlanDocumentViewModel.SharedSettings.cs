@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
@@ -71,12 +72,12 @@ public partial class PuloniaTaskPlanDocumentViewModel
                 // 被引用计划的内容不在本文档中，按全部设置项计入
                 unknown = true;
                 foreach (var category in PuloniaSettingCatalog.Categories)
-                    Count(category.Id, "计划引用");
+                    Count(category.Id, I18nService.Instance.Translate("计划引用"));
                 return;
             }
             if (task.Source is { Kind: "directory", TaskType: { } directoryType })
             {
-                Add(PuloniaParameterResolver.FindDefinition(_definitions, new PuloniaTask { TaskType = directoryType }), "目录引用");
+                Add(PuloniaParameterResolver.FindDefinition(_definitions, new PuloniaTask { TaskType = directoryType }), I18nService.Instance.Translate("目录引用"));
                 return;
             }
             if (task.TaskType == "group")
@@ -86,7 +87,8 @@ public partial class PuloniaTaskPlanDocumentViewModel
                 return;
             }
             var definition = GetDefinition(task);
-            Add(definition, definition?.DisplayName ?? task.TaskType);
+            // 类型名仅用于界面展示，独立任务显示名的 Key 登记在 SoloTaskI18nKeys
+            Add(definition, definition is null ? task.TaskType : I18nService.Instance.Translate(definition.DisplayName));
         }
 
         void Add(PuloniaTaskDefinition? definition, string typeName)
@@ -203,9 +205,10 @@ public partial class PuloniaTaskPlanDocumentViewModel
     /// </summary>
     internal string DescribeSettingSource(PuloniaSettingSource source, PuloniaTaskNodeViewModel viewer) => source.Kind switch
     {
-        PuloniaSettingSourceKind.Default => "默认",
+        PuloniaSettingSourceKind.Default => I18nService.Instance.Translate("默认"),
         PuloniaSettingSourceKind.Node => DescribeLevel(source.Level!.Node, viewer),
-        _ => $"方案「{source.Level!.Profile?.Name ?? source.Level.Node.ProfileId}」（{DescribeLevel(source.Level.Node, viewer)}）"
+        _ => string.Format(I18nService.Instance.Translate("方案「{0}」（{1}）"), source.Level!.Profile?.Name ?? source.Level.Node.ProfileId,
+            DescribeLevel(source.Level.Node, viewer))
     };
 
     /// <summary>
@@ -214,11 +217,12 @@ public partial class PuloniaTaskPlanDocumentViewModel
     internal IReadOnlyList<PuloniaSharedSettingHistoryEntry> GetSettingHistory(PuloniaTaskNodeViewModel node, string key)
     {
         var definition = PuloniaSettingCatalog.Get(key);
-        var entries = new List<(string Location, JToken Value)> { ("默认", definition.DefaultValue) };
+        var entries = new List<(string Location, JToken Value)> { (I18nService.Instance.Translate("默认"), definition.DefaultValue) };
         foreach (var level in CreateNodeChain(node, includeOwnSettings: true))
         {
             if (level.Profile?.Settings.TryGetValue(key, out var profileValue) == true)
-                entries.Add(($"方案「{level.Profile.Name}」（{DescribeLevel(level.Node, node)}）", profileValue));
+                entries.Add((string.Format(I18nService.Instance.Translate("方案「{0}」（{1}）"), level.Profile.Name, DescribeLevel(level.Node, node)),
+                    profileValue));
             if (level.Node.Settings.TryGetValue(key, out var nodeValue))
                 entries.Add((DescribeLevel(level.Node, node), nodeValue));
         }
@@ -337,7 +341,7 @@ public partial class PuloniaTaskPlanDocumentViewModel
             var values = ResolveNodeSettings(node).Values;
             var used = keys.Where(values.ContainsKey).ToDictionary(key => key, key => values[key], StringComparer.Ordinal);
             if (used.Count > 0)
-                result[node.Id] = ($"任务「{node.Name}」", used);
+                result[node.Id] = (string.Format(I18nService.Instance.Translate("任务「{0}」"), I18nService.Instance.Translate(node.Name)), used);
         }
         return result;
     }
@@ -361,9 +365,9 @@ public partial class PuloniaTaskPlanDocumentViewModel
 
     /// <summary>描述设置链中的一个节点。</summary>
     private string DescribeLevel(PuloniaTask task, PuloniaTaskNodeViewModel viewer)
-        => task.Id == viewer.Id ? "本节点"
-            : task.Id == _plan.RootTask.Id ? "计划"
-            : task.Source?.Kind == "plan" ? $"引用「{task.Name}」"
-            : task.TaskType == "group" ? $"分组「{task.Name}」"
-            : $"任务「{task.Name}」";
+        => task.Id == viewer.Id ? I18nService.Instance.Translate("本节点")
+            : task.Id == _plan.RootTask.Id ? I18nService.Instance.Translate("计划")
+            : task.Source?.Kind == "plan" ? string.Format(I18nService.Instance.Translate("引用「{0}」"), I18nService.Instance.Translate(task.Name))
+            : task.TaskType == "group" ? string.Format(I18nService.Instance.Translate("分组「{0}」"), I18nService.Instance.Translate(task.Name))
+            : string.Format(I18nService.Instance.Translate("任务「{0}」"), I18nService.Instance.Translate(task.Name));
 }

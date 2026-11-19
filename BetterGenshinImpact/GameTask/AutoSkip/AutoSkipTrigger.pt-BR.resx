@@ -1,0 +1,330 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="每日" xml:space="preserve">
+    <value>Diári</value>
+  </data>
+  <data name="委托" xml:space="preserve">
+    <value>Missões Diárias</value>
+  </data>
+  <data name="探索" xml:space="preserve">
+    <value>Envie</value>
+  </data>
+  <data name="派遣" xml:space="preserve">
+    <value>Envie</value>
+  </data>
+  <data name="准备好了" xml:space="preserve">
+    <value>pront</value>
+  </data>
+  <data name="卡牌商店" xml:space="preserve">
+    <value>Loja de Cartas</value>
+  </data>
+  <data name="牌手等级" xml:space="preserve">
+    <value>Nível de Jogador</value>
+  </data>
+  <data name="酒馆牌局" xml:space="preserve">
+    <value>Cartas na Taverna</value>
+  </data>
+  <data name="信任等阶" xml:space="preserve">
+    <value>onfian</value>
+  </data>
+  <data name="洞天百宝" xml:space="preserve">
+    <value>Tesouro</value>
+  </data>
+  <data name="每日委托" xml:space="preserve">
+    <value>Diári</value>
+  </data>
+  <data name="探索派遣" xml:space="preserve">
+    <value>Expedi</value>
+  </data>
+  <data name="委托锻造" xml:space="preserve">
+    <value>forjar</value>
+  </data>
+  <data name="冒险挑战" xml:space="preserve">
+    <value>Desafio de Aventura</value>
+  </data>
+  <data name="决斗对局" xml:space="preserve">
+    <value>Duelo</value>
+  </data>
+  <data name="七圣召唤" xml:space="preserve">
+    <value>Chamado Sagrado</value>
+  </data>
+  <data name="合成台" xml:space="preserve">
+    <value>Síntese</value>
+  </data>
+  <data name="有什么在售" xml:space="preserve">
+    <value>vende</value>
+  </data>
+  <data name="关于甜的" xml:space="preserve">
+    <value>coisinhas doces</value>
+  </data>
+  <data name="吃的可以打包吗" xml:space="preserve">
+    <value>para viagem</value>
+  </data>
+  <data name="我想打包带走" xml:space="preserve">
+    <value>para levar</value>
+  </data>
+  <data name="挑选商品" xml:space="preserve">
+    <value>Escolher produtos</value>
+  </data>
+  <data name="我想买些花" xml:space="preserve">
+    <value>comprar algumas flores</value>
+  </data>
+  <data name="我想买些" xml:space="preserve">
+    <value>comprar alg</value>
+  </data>
+  <data name="四方八方之网" xml:space="preserve">
+    <value>Rede Oniub</value>
+  </data>
+  <data name="我需要一些钓鱼用品" xml:space="preserve">
+    <value>pesca</value>
+  </data>
+  <data name="我有想买的东西" xml:space="preserve">
+    <value>fazer compras</value>
+  </data>
+  <data name="看看菜单" xml:space="preserve">
+    <value>cardápio</value>
+  </data>
+  <data name="有什么在卖" xml:space="preserve">
+    <value>a oferecer</value>
+  </data>
+  <data name="都有什么卖的" xml:space="preserve">
+    <value>a oferecer</value>
+  </data>
+  <data name="有什么吃的" xml:space="preserve">
+    <value>para comer</value>
+  </data>
+  <data name="卖些什么" xml:space="preserve">
+    <value>vende</value>
+  </data>
+  <data name="神像的恩泽" xml:space="preserve">
+    <value>Estátua</value>
+  </data>
+  <data name="声望" xml:space="preserve">
+    <value>Reputação</value>
+  </data>
+  <data name="歌裴莉娅的葬送" xml:space="preserve">
+    <value>Coppelia</value>
+  </data>
+  <data name="科培琉司的劫罚" xml:space="preserve">
+    <value>Coppelius</value>
+  </data>
+  <data name="冰风组曲" xml:space="preserve">
+    <value>Criozéfira</value>
+  </data>
+  <data name="请给我来些茶水" xml:space="preserve">
+    <value>pouco de chá</value>
+  </data>
+  <data name="讲述与兰那罗的冒险。" xml:space="preserve">
+    <value>aventuras com Aranara</value>
+  </data>
+  <data name="看看书" xml:space="preserve">
+    <value>livro</value>
+  </data>
+  <data name="现在在卖什么" xml:space="preserve">
+    <value>vendendo agora</value>
+  </data>
+  <data name="来点鱼" xml:space="preserve">
+    <value>Comprar peixe</value>
+  </data>
+  <data name="来点精选货物" xml:space="preserve">
+    <value>produtos selecionados</value>
+  </data>
+  <data name="来点兰那罗特产" xml:space="preserve">
+    <value>especialidades Aranara</value>
+  </data>
+  <data name="来一杯团子牛奶" xml:space="preserve">
+    <value>Leite de Dango</value>
+  </data>
+  <data name="有菜单吗" xml:space="preserve">
+    <value>cardápio</value>
+  </data>
+  <data name="有没有特别商品" xml:space="preserve">
+    <value>mercadoria especial</value>
+  </data>
+  <data name="有什么好东西吗" xml:space="preserve">
+    <value>algo bom</value>
+  </data>
+  <data name="有什么卖的" xml:space="preserve">
+    <value>vendendo</value>
+  </data>
+  <data name="提升经营效率" xml:space="preserve">
+    <value>eficiência de operação</value>
+  </data>
+  <data name="我要购物" xml:space="preserve">
+    <value>Quero comprar</value>
+  </data>
+  <data name="看看商品" xml:space="preserve">
+    <value>mercadorias</value>
+  </data>
+  <data name="我想打包" xml:space="preserve">
+    <value>para levar</value>
+  </data>
+  <data name="想要兑换" xml:space="preserve">
+    <value>fazer uma troca</value>
+  </data>
+  <data name="想研制新配方" xml:space="preserve">
+    <value>nova bebida</value>
+  </data>
+  <data name="想挑些趁手的武器" xml:space="preserve">
+    <value>arma útil</value>
+  </data>
+  <data name="想找些特别的纪念品" xml:space="preserve">
+    <value>lembranças especiais</value>
+  </data>
+  <data name="想买武器" xml:space="preserve">
+    <value>comprar armas</value>
+  </data>
+  <data name="想买些武器" xml:space="preserve">
+    <value>comprar uma arma</value>
+  </data>
+  <data name="这里卖什么" xml:space="preserve">
+    <value>para vender</value>
+  </data>
+  <data name="可以卖一些猎物给我吗" xml:space="preserve">
+    <value>suas caças</value>
+  </data>
+  <data name="可以卖给我一些植物吗" xml:space="preserve">
+    <value>algumas plantas</value>
+  </data>
+  <data name="关于摆设" xml:space="preserve">
+    <value>Decorações</value>
+  </data>
+  <data name="只卖酒吗" xml:space="preserve">
+    <value>licores</value>
+  </data>
+  <data name="你这里除了璞石还卖什么吗" xml:space="preserve">
+    <value>pedras não cortadas</value>
+  </data>
+  <data name="买点东西" xml:space="preserve">
+    <value>Comprar algo</value>
+  </data>
+  <data name="买新鲜的鱼" xml:space="preserve">
+    <value>peixe fresco</value>
+  </data>
+  <data name="我想装饰一下场地" xml:space="preserve">
+    <value>decorar o local</value>
+  </data>
+  <data name="能交换什么呢" xml:space="preserve">
+    <value>trocá-las</value>
+  </data>
+  <data name="助力好友加速制作" xml:space="preserve">
+    <value>acelerar a construção</value>
+  </data>
+</root>

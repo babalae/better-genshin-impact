@@ -12,6 +12,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -63,10 +64,11 @@ public partial class PuloniaTaskCreationDialogViewModel
 
     /// <summary>空状态对应的来源管理说明，预览不会自动触发下载。</summary>
     public string RepositoryGuidance => SelectedRepository is { IsRemote: true } repository && !Directory.Exists(repository.Directory)
-        ? "当前仓库尚未同步，请打开仓库管理同步资源。" : "当前仓库没有可选资源，可打开仓库管理修改或添加来源。";
+        ? I18nService.Instance.Translate("当前仓库尚未同步，请打开仓库管理同步资源。")
+        : I18nService.Instance.Translate("当前仓库没有可选资源，可打开仓库管理修改或添加来源。");
 
     /// <summary>显示当前本地位置，帮助区分同名仓库和开发目录。</summary>
-    public string SelectedRepositoryDirectory => SelectedRepository?.Directory ?? "请选择或添加仓库";
+    public string SelectedRepositoryDirectory => SelectedRepository?.Directory ?? I18nService.Instance.Translate("请选择或添加仓库");
 
     /// <summary>刷新列表并恢复当前或上次选择；只有目录信息，不读取其他仓库的索引。</summary>
     private async Task ReloadRepositoriesAsync(CancellationToken ct)
@@ -152,7 +154,7 @@ public partial class PuloniaTaskCreationDialogViewModel
         }
         catch (Exception ex) when (IsRepositoryOperationError(ex))
         {
-            await ThemedMessageBox.ErrorAsync("无法打开仓库管理：" + ex.Message);
+            await ThemedMessageBox.ErrorAsync(string.Format(I18nService.Instance.Translate("无法打开仓库管理：{0}"), ex.Message));
         }
         finally { IsRepositoryManagerOpen = false; }
         if (!_isClosed) await InitializeAsync(forceRefresh: true);

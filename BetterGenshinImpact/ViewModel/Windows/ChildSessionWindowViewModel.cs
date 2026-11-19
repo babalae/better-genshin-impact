@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using Wpf.Ui.Controls;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
@@ -34,19 +35,19 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private Brush _connectionStatusBrush = Brushes.Red;
 
     [ObservableProperty]
-    private string _connectionStatusToolTip = "桌面分身未启动";
+    private string _connectionStatusToolTip = I18nService.Instance.Translate("桌面分身未启动");
 
     [ObservableProperty]
-    private string _connectionStatusTitle = "桌面分身尚未启动";
+    private string _connectionStatusTitle = I18nService.Instance.Translate("桌面分身尚未启动");
 
     [ObservableProperty]
-    private string _connectionStatusDescription = "点击“启动并连接”，BetterGI 将创建独立桌面并建立 RDP 连接。";
+    private string _connectionStatusDescription = I18nService.Instance.Translate("点击“启动并连接”，BetterGI 将创建独立桌面并建立 RDP 连接。");
 
     [ObservableProperty]
-    private string _rdpStatusText = "RDP 未连接";
+    private string _rdpStatusText = I18nService.Instance.Translate("RDP 未连接");
 
     [ObservableProperty]
-    private string _childSessionStatusText = "桌面分身会话未创建";
+    private string _childSessionStatusText = I18nService.Instance.Translate("桌面分身会话未创建");
 
     [ObservableProperty]
     private bool _isRdpConnected;
@@ -124,30 +125,30 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
     public bool IsDefaultResolutionSelected => true;
 
-    public string TopmostButtonToolTip => IsTopmost ? "取消置顶" : "置顶";
+    public string TopmostButtonToolTip => IsTopmost ? I18nService.Instance.Translate("取消置顶") : I18nService.Instance.Translate("置顶");
 
     public string GameMouseModeButtonText =>
-        IsGameMouseModeEnabled ? "游戏鼠标" : "普通鼠标";
+        IsGameMouseModeEnabled ? I18nService.Instance.Translate("游戏鼠标") : I18nService.Instance.Translate("普通鼠标");
 
     public string GameMouseModeButtonToolTip => IsGameMouseModeEnabled
-        ? "桌面分身内的 BetterGI 打开时生效；当前窗口处于焦点时，鼠标将会被锁定在窗口内；按住 Alt 可临时释放鼠标。"
-        : "切换至游戏鼠标模式。桌面分身内的 BetterGI 打开时生效；当前窗口处于前台时，鼠标将会被锁定在窗口内；按住 Alt 可临时释放鼠标。";
+        ? I18nService.Instance.Translate("桌面分身内的 BetterGI 打开时生效；当前窗口处于焦点时，鼠标将会被锁定在窗口内；按住 Alt 可临时释放鼠标。")
+        : I18nService.Instance.Translate("切换至游戏鼠标模式。桌面分身内的 BetterGI 打开时生效；当前窗口处于前台时，鼠标将会被锁定在窗口内；按住 Alt 可临时释放鼠标。");
 
     public string AudioButtonToolTip => IsAudioMuted
-        ? "开启桌面分身声音，不影响主桌面的其他程序；切换时会自动重新连接 RDP"
-        : "关闭桌面分身声音，不影响主桌面的其他程序；切换时会自动重新连接 RDP";
+        ? I18nService.Instance.Translate("开启桌面分身声音，不影响主桌面的其他程序；切换时会自动重新连接 RDP")
+        : I18nService.Instance.Translate("关闭桌面分身声音，不影响主桌面的其他程序；切换时会自动重新连接 RDP");
 
-    public string WindowSizeModeMenuHeader => IsSmallWindowMode ? "还原窗口" : "小窗模式";
+    public string WindowSizeModeMenuHeader => IsSmallWindowMode ? I18nService.Instance.Translate("还原窗口") : I18nService.Instance.Translate("小窗模式");
 
     public string WindowSizeModeMenuToolTip => IsSmallWindowMode
-        ? "将桌面分身窗口还原至默认大小"
-        : "将桌面分身窗口缩放至宽 750，并按 16:9 比例同步缩小高度";
+        ? I18nService.Instance.Translate("将桌面分身窗口还原至默认大小")
+        : I18nService.Instance.Translate("将桌面分身窗口缩放至宽 750，并按 16:9 比例同步缩小高度");
 
-    public string WatchModeMenuHeader => IsWatchModeEnabled ? "控制模式" : "观看模式";
+    public string WatchModeMenuHeader => IsWatchModeEnabled ? I18nService.Instance.Translate("控制模式") : I18nService.Instance.Translate("观看模式");
 
     public string WatchModeMenuToolTip => IsWatchModeEnabled
-        ? "退出观看模式"
-        : "桌面分身画面仅可观看，键鼠不会生效";
+        ? I18nService.Instance.Translate("退出观看模式")
+        : I18nService.Instance.Translate("桌面分身画面仅可观看，键鼠不会生效");
 
     public double WindowResizeTargetWidth => IsSmallWindowMode
         ? SmallWindowWidth
@@ -330,10 +331,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
             UpdateConnectionStatus();
 
             ShowNotification(
-                reconnectStarted ? "正在应用设置" : "设置已保存",
+                reconnectStarted ? I18nService.Instance.Translate("正在应用设置") : I18nService.Instance.Translate("设置已保存"),
                 reconnectStarted
-                    ? "RDP 正在自动重新连接，连接完成后系统组合键设置生效。"
-                    : "当前没有桌面分身会话，系统组合键设置将在下次连接时生效。",
+                    ? I18nService.Instance.Translate("RDP 正在自动重新连接，连接完成后系统组合键设置生效。")
+                    : I18nService.Instance.Translate("当前没有桌面分身会话，系统组合键设置将在下次连接时生效。"),
                 InfoBarSeverity.Informational);
         }
         catch (Exception exception)
@@ -341,7 +342,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
             IsSystemShortcutsReconnectPending = false;
             SendSystemShortcutsToRemote = _childSessionService.SendSystemShortcutsToRemote;
             ShowNotification(
-                "设置切换失败",
+                I18nService.Instance.Translate("设置切换失败"),
                 exception.GetBaseException().Message,
                 InfoBarSeverity.Error,
                 TimeSpan.FromSeconds(8));
@@ -366,10 +367,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
         IsGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
         ShowNotification(
-            enabled ? "游戏鼠标已开启" : "普通鼠标已开启",
+            enabled ? I18nService.Instance.Translate("游戏鼠标已开启") : I18nService.Instance.Translate("普通鼠标已开启"),
             enabled
-                ? "桌面分身内的 BetterGI 打开时生效。当前窗口处于焦点时，鼠标将会被锁定在窗口内，按住 Alt 临时释放鼠标。"
-                : "BetterGI 不再向桌面分身转发相对鼠标信息。",
+                ? I18nService.Instance.Translate("桌面分身内的 BetterGI 打开时生效。当前窗口处于焦点时，鼠标将会被锁定在窗口内，按住 Alt 临时释放鼠标。")
+                : I18nService.Instance.Translate("BetterGI 不再向桌面分身转发相对鼠标信息。"),
             enabled ? InfoBarSeverity.Informational : InfoBarSeverity.Success);
     }
 
@@ -385,10 +386,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
         IsWatchModeEnabled = _childSessionService.WatchModeEnabled;
         ShowNotification(
-            enabled ? "观看模式已开启" : "观看模式已关闭",
+            enabled ? I18nService.Instance.Translate("观看模式已开启") : I18nService.Instance.Translate("观看模式已关闭"),
             enabled
-                ? "本机键鼠不会对分身生效，但控制中心的组合键仍然生效。"
-                : "本机键鼠恢复操作桌面分身。",
+                ? I18nService.Instance.Translate("本机键鼠不会对分身生效，但控制中心的组合键仍然生效。")
+                : I18nService.Instance.Translate("本机键鼠恢复操作桌面分身。"),
             enabled ? InfoBarSeverity.Informational : InfoBarSeverity.Success);
     }
 
@@ -403,12 +404,12 @@ public partial class ChildSessionWindowViewModel : ViewModel
             UpdateConnectionStatus();
 
             ShowNotification(
-                reconnectStarted ? "正在应用音频设置" : "音频设置已保存",
+                reconnectStarted ? I18nService.Instance.Translate("正在应用音频设置") : I18nService.Instance.Translate("音频设置已保存"),
                 reconnectStarted
-                    ? "RDP 正在自动重新连接，连接完成后音频设置生效。"
+                    ? I18nService.Instance.Translate("RDP 正在自动重新连接，连接完成后音频设置生效。")
                     : IsAudioMuted
-                        ? "桌面分身将在下次连接时保持静音。"
-                        : "桌面分身将在下次连接时播放声音。",
+                        ? I18nService.Instance.Translate("桌面分身将在下次连接时保持静音。")
+                        : I18nService.Instance.Translate("桌面分身将在下次连接时播放声音。"),
                 InfoBarSeverity.Informational);
         }
         catch (Exception exception)
@@ -416,7 +417,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
             IsAudioReconnectPending = false;
             IsAudioMuted = _childSessionService.AudioMuted;
             ShowNotification(
-                "音频设置切换失败",
+                I18nService.Instance.Translate("音频设置切换失败"),
                 exception.GetBaseException().Message,
                 InfoBarSeverity.Error,
                 TimeSpan.FromSeconds(8));
@@ -446,8 +447,8 @@ public partial class ChildSessionWindowViewModel : ViewModel
     {
         var fileDialog = new OpenFileDialog
         {
-            Title = "选择要在 BetterGI 桌面分身中以管理员权限启动的程序",
-            Filter = "Windows 程序 (*.exe)|*.exe",
+            Title = I18nService.Instance.Translate("选择要在 BetterGI 桌面分身中以管理员权限启动的程序"),
+            Filter = I18nService.Instance.Translate("Windows 程序 (*.exe)|*.exe"),
             CheckFileExists = true,
             CheckPathExists = true,
             DereferenceLinks = true,
@@ -590,7 +591,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
                 IsAudioReconnectPending = false;
                 UpdateConnectionStatus();
                 ShowNotification(
-                    "RDP 连接失败",
+                    I18nService.Instance.Translate("RDP 连接失败"),
                     e.Message,
                     InfoBarSeverity.Error,
                     TimeSpan.FromSeconds(10));
@@ -610,10 +611,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
                 IsSystemShortcutsReconnectPending = false;
                 UpdateConnectionStatus();
                 ShowNotification(
-                    "设置已生效",
+                    I18nService.Instance.Translate("设置已生效"),
                     SendSystemShortcutsToRemote
-                        ? "系统组合键现在会发送到桌面分身。"
-                        : "系统组合键现在会在本机生效。",
+                        ? I18nService.Instance.Translate("系统组合键现在会发送到桌面分身。")
+                        : I18nService.Instance.Translate("系统组合键现在会在本机生效。"),
                     InfoBarSeverity.Success);
             }));
     }
@@ -628,10 +629,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
                 IsAudioMuted = _childSessionService.AudioMuted;
                 UpdateConnectionStatus();
                 ShowNotification(
-                    IsAudioMuted ? "桌面分身已静音" : "桌面分身声音已开启",
+                    IsAudioMuted ? I18nService.Instance.Translate("桌面分身已静音") : I18nService.Instance.Translate("桌面分身声音已开启"),
                     IsAudioMuted
-                        ? "仅桌面分身的声音已关闭，主桌面其他程序不受影响。"
-                        : "桌面分身的声音已恢复。",
+                        ? I18nService.Instance.Translate("仅桌面分身的声音已关闭，主桌面其他程序不受影响。")
+                        : I18nService.Instance.Translate("桌面分身的声音已恢复。"),
                     InfoBarSeverity.Success);
             }));
     }
@@ -675,13 +676,13 @@ public partial class ChildSessionWindowViewModel : ViewModel
         if (IsSessionClosing)
         {
             ConnectionStatusBrush = Brushes.Orange;
-            ConnectionStatusTitle = "正在关闭桌面分身";
-            ConnectionStatusDescription = "正在断开 RDP 并注销桌面分身会话，此过程可能需要一些时间。";
-            RdpStatusText = connectedState == 0 ? "RDP 已断开" : "正在断开 RDP";
+            ConnectionStatusTitle = I18nService.Instance.Translate("正在关闭桌面分身");
+            ConnectionStatusDescription = I18nService.Instance.Translate("正在断开 RDP 并注销桌面分身会话，此过程可能需要一些时间。");
+            RdpStatusText = connectedState == 0 ? I18nService.Instance.Translate("RDP 已断开") : I18nService.Instance.Translate("正在断开 RDP");
             ChildSessionStatusText = childSessionId is null
-                ? "正在确认桌面分身会话已注销"
-                : $"正在注销桌面分身会话 {childSessionId.Value}";
-            ConnectionStatusToolTip = "关闭期间已暂停桌面分身操作，完成后窗口会自动隐藏。";
+                ? I18nService.Instance.Translate("正在确认桌面分身会话已注销")
+                : string.Format(I18nService.Instance.Translate("正在注销桌面分身会话 {0}"), childSessionId.Value);
+            ConnectionStatusToolTip = I18nService.Instance.Translate("关闭期间已暂停桌面分身操作，完成后窗口会自动隐藏。");
             OnPropertyChanged(nameof(HasChildSession));
             return;
         }
@@ -690,38 +691,38 @@ public partial class ChildSessionWindowViewModel : ViewModel
         {
             IsDiagnosticsSuggested = false;
             ConnectionStatusBrush = Brushes.LimeGreen;
-            ConnectionStatusTitle = "桌面分身已连接";
-            ConnectionStatusDescription = "RDP 连接正常，可以直接在桌面分身中操作。";
+            ConnectionStatusTitle = I18nService.Instance.Translate("桌面分身已连接");
+            ConnectionStatusDescription = I18nService.Instance.Translate("RDP 连接正常，可以直接在桌面分身中操作。");
         }
         else if (connectedState == 2)
         {
             ConnectionStatusBrush = childSessionId is null ? Brushes.Red : Brushes.DodgerBlue;
-            ConnectionStatusTitle = "正在连接桌面分身";
-            ConnectionStatusDescription = "正在创建或恢复 RDP 连接，请稍候。";
+            ConnectionStatusTitle = I18nService.Instance.Translate("正在连接桌面分身");
+            ConnectionStatusDescription = I18nService.Instance.Translate("正在创建或恢复 RDP 连接，请稍候。");
         }
         else if (childSessionId is not null)
         {
             ConnectionStatusBrush = Brushes.DodgerBlue;
-            ConnectionStatusTitle = "桌面分身已启动，等待连接";
-            ConnectionStatusDescription = "桌面分身会话仍在运行，点击“启动并连接”可重新建立 RDP 连接。";
+            ConnectionStatusTitle = I18nService.Instance.Translate("桌面分身已启动，等待连接");
+            ConnectionStatusDescription = I18nService.Instance.Translate("桌面分身会话仍在运行，点击“启动并连接”可重新建立 RDP 连接。");
         }
         else
         {
             ConnectionStatusBrush = Brushes.Red;
-            ConnectionStatusTitle = "桌面分身尚未启动";
-            ConnectionStatusDescription = "点击“启动并连接”，BetterGI 将创建独立桌面并建立 RDP 连接。";
+            ConnectionStatusTitle = I18nService.Instance.Translate("桌面分身尚未启动");
+            ConnectionStatusDescription = I18nService.Instance.Translate("点击“启动并连接”，BetterGI 将创建独立桌面并建立 RDP 连接。");
         }
 
         RdpStatusText = connectedState switch
         {
-            0 => "RDP 未连接",
-            1 => "RDP 已连接",
-            2 => "RDP 正在连接",
-            _ => $"RDP 状态未知（{connectedState}）"
+            0 => I18nService.Instance.Translate("RDP 未连接"),
+            1 => I18nService.Instance.Translate("RDP 已连接"),
+            2 => I18nService.Instance.Translate("RDP 正在连接"),
+            _ => string.Format(I18nService.Instance.Translate("RDP 状态未知（{0}）"), connectedState)
         };
         ChildSessionStatusText = childSessionId is null
-            ? "桌面分身会话未创建"
-            : $"桌面分身会话 {childSessionId.Value}";
+            ? I18nService.Instance.Translate("桌面分身会话未创建")
+            : string.Format(I18nService.Instance.Translate("桌面分身会话 {0}"), childSessionId.Value);
         ConnectionStatusToolTip = _childSessionService.StatusText;
         OnPropertyChanged(nameof(HasChildSession));
     }
@@ -730,11 +731,11 @@ public partial class ChildSessionWindowViewModel : ViewModel
     {
         var actualException = exception.GetBaseException();
         var suggestion = actualException is System.ComponentModel.Win32Exception { NativeErrorCode: 5 }
-            ? "\n\n操作被系统拒绝，请确认 BetterGI 正在以管理员权限运行。"
+            ? I18nService.Instance.Translate("\n\n操作被系统拒绝，请确认 BetterGI 正在以管理员权限运行。")
             : string.Empty;
 
         ThemedMessageBox.Error(
             $"{actualException.Message}{suggestion}",
-            "BetterGI 桌面分身");
+            I18nService.Instance.Translate("BetterGI 桌面分身"));
     }
 }

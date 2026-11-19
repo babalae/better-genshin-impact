@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -28,8 +29,8 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
         TaskType = "shell",
-        DisplayName = "Shell",
-        Description = "启动一个独立进程；命令、参数和工作目录会在创建前完成校验。",
+        DisplayName = I18nService.Key("Shell"),
+        Description = I18nService.Key("启动一个独立进程；命令、参数和工作目录会在创建前完成校验。"),
         DefaultParameters = new(PuloniaTaskCommonSettings.CreateDefaults("shell"))
         {
             ["file_name"] = "cmd.exe",
@@ -64,9 +65,9 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
         BetterGenshinImpact.Core.Config.ShellConfig? shellConfig = PuloniaTaskCommonSettings.FromParameters("shell", parameters).ShellConfig;
         ct.ThrowIfCancellationRequested();
         if (shellConfig?.Disable == true)
-            return new PuloniaTaskOutcome(PuloniaTaskOutcomeKind.Skipped, "Shell 任务已按执行设置跳过。");
+            return new PuloniaTaskOutcome(PuloniaTaskOutcomeKind.Skipped, I18nService.Instance.Translate("Shell 任务已按执行设置跳过。"));
         if (shellConfig?.Timeout > int.MaxValue / 1000)
-            return PuloniaTaskOutcome.Failure("Shell 超时秒数过大。");
+            return PuloniaTaskOutcome.Failure(I18nService.Instance.Translate("Shell 超时秒数过大。"));
 
         // 只在显式启用 Shell 配置时增加时限；外部取消与节点策略仍沿用同一进程清理路径。
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -75,7 +76,7 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
         var executionToken = timeout.Token;
         var fileName = parameters.Value<string>("file_name");
         if (string.IsNullOrWhiteSpace(fileName))
-            return PuloniaTaskOutcome.Failure("Shell file_name 不能为空。");
+            return PuloniaTaskOutcome.Failure(I18nService.Instance.Translate("Shell file_name 不能为空。"));
 
         var startInfo = new ProcessStartInfo
         {
@@ -94,11 +95,11 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
         try
         {
             if (!process.Start())
-                return PuloniaTaskOutcome.Failure($"Shell 进程 {fileName} 未能启动。");
+                return PuloniaTaskOutcome.Failure(string.Format(I18nService.Instance.Translate("Shell 进程 {0} 未能启动。"), fileName));
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or FileNotFoundException)
         {
-            return PuloniaTaskOutcome.Failure($"Shell 进程 {fileName} 启动失败：{ex.Message}");
+            return PuloniaTaskOutcome.Failure(string.Format(I18nService.Instance.Translate("Shell 进程 {0} 启动失败：{1}"), fileName, ex.Message));
         }
 
         // 两路输出必须从进程启动后立即并行排空，避免子进程因管道缓冲区写满而死锁。
@@ -118,7 +119,7 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
                 throw new InvalidOperationException("结束 Shell 进程树失败，但已等待进程自行退出：" + killError.Message, killError);
             ct.ThrowIfCancellationRequested();
             if (shellConfig?.Timeout > 0)
-                return PuloniaTaskOutcome.Failure($"Shell 进程超过时限 {shellConfig.Timeout} 秒，已结束进程。");
+                return PuloniaTaskOutcome.Failure(string.Format(I18nService.Instance.Translate("Shell 进程超过时限 {0} 秒，已结束进程。"), shellConfig.Timeout));
             throw;
         }
 
@@ -136,8 +137,8 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
             ["standard_error_truncated"] = error.Truncated
         };
         return process.ExitCode == 0
-            ? PuloniaTaskOutcome.Success($"Shell 进程正常退出，退出码 {process.ExitCode}。", data)
-            : PuloniaTaskOutcome.Failure($"Shell 进程异常退出，退出码 {process.ExitCode}。", data);
+            ? PuloniaTaskOutcome.Success(string.Format(I18nService.Instance.Translate("Shell 进程正常退出，退出码 {0}。"), process.ExitCode), data)
+            : PuloniaTaskOutcome.Failure(string.Format(I18nService.Instance.Translate("Shell 进程异常退出，退出码 {0}。"), process.ExitCode), data);
     }
 
     /// <summary>

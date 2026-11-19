@@ -1,6 +1,7 @@
 <UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaSharedSettingsEditorView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
              xmlns:pulonia="clr-namespace:BetterGenshinImpact.ViewModel.Windows.Pulonia"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -58,7 +59,7 @@
                                       Visibility="{Binding HasWarning, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         <ui:TextBlock Margin="0,2,0,0"
                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                      Text="与继承值相同，可以恢复继承"
+                                      Text="{i18n:T 与继承值相同，可以恢复继承}"
                                       Visibility="{Binding IsSameAsInherited, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     </StackPanel>
 
@@ -94,7 +95,7 @@
                                           VerticalAlignment="Center"
                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                           Text="{Binding ValueText, Mode=OneWay}" />
-                            <ui:Button Command="{Binding EditRouteCooldownCommand, Mode=OneWay}" Content="配置…" />
+                            <ui:Button Command="{Binding EditRouteCooldownCommand, Mode=OneWay}" Content="{i18n:T 配置…}" />
                         </StackPanel>
                         <ui:TextBlock Margin="6,0,0,0"
                                       VerticalAlignment="Center"
@@ -221,24 +222,24 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <ui:TextBlock Margin="0,0,10,0" VerticalAlignment="Center" Text="设置方案" />
+                <ui:TextBlock Margin="0,0,10,0" VerticalAlignment="Center" Text="{i18n:T 设置方案}" />
                 <ComboBox Grid.Column="1"
                           DisplayMemberPath="DisplayName"
                           IsEnabled="{Binding IsEditable, Mode=OneWay}"
                           ItemsSource="{Binding ProfileOptions, Mode=OneWay}"
                           SelectedItem="{Binding SelectedProfileOption, Mode=TwoWay}"
-                          ToolTip="方案中的设置先于本节点自己的修改生效，可在多个计划中复用" />
+                          ToolTip="{i18n:T 方案中的设置先于本节点自己的修改生效，可在多个计划中复用}" />
                 <StackPanel Grid.Column="2" Margin="8,0,0,0" Orientation="Horizontal">
                     <ui:Button Margin="0,0,6,0"
                                Command="{Binding EditProfileCommand, Mode=OneWay}"
-                               Content="编辑方案"
+                               Content="{i18n:T 编辑方案}"
                                IsEnabled="{Binding CanEditProfile, Mode=OneWay}" />
                     <ui:Button Margin="0,0,6,0"
                                Command="{Binding SaveAsProfileCommand, Mode=OneWay}"
-                               Content="另存为方案…"
+                               Content="{i18n:T 另存为方案…}"
                                IsEnabled="{Binding IsEditable, Mode=OneWay}"
-                               ToolTip="把本节点当前的设置存成方案，用在其他节点或计划上" />
-                    <ui:Button Command="{Binding ManageProfilesCommand, Mode=OneWay}" Content="管理方案…" />
+                               ToolTip="{i18n:T 把本节点当前的设置存成方案，用在其他节点或计划上}" />
+                    <ui:Button Command="{Binding ManageProfilesCommand, Mode=OneWay}" Content="{i18n:T 管理方案…}" />
                 </StackPanel>
             </Grid>
             <ui:TextBlock Margin="0,4,0,0"
@@ -253,7 +254,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <ui:TextBox Icon="{ui:SymbolIcon Search24}"
-                            PlaceholderText="搜索设置，例如“万叶”“赶路”"
+                            PlaceholderText="{i18n:T 搜索设置，例如“万叶”“赶路”}"
                             Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 <CheckBox Grid.Column="1"
                           Margin="12,0,0,0"
@@ -263,7 +264,7 @@
                 <CheckBox Grid.Column="2"
                           Margin="12,0,0,0"
                           VerticalAlignment="Center"
-                          Content="显示高级设置"
+                          Content="{i18n:T 显示高级设置}"
                           IsChecked="{Binding ShowAdvanced, Mode=TwoWay}" />
             </Grid>
         </StackPanel>
@@ -323,7 +324,7 @@
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <ui:Button Margin="0,0,8,0"
                            Command="{Binding RemoveRedundantCommand, Mode=OneWay}"
-                           Content="清除与继承值相同的修改"
+                           Content="{i18n:T 清除与继承值相同的修改}"
                            IsEnabled="{Binding IsEditable, Mode=OneWay}"
                            Visibility="{Binding ShowsInheritance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 <ui:Button Command="{Binding ResetAllCommand, Mode=OneWay}"

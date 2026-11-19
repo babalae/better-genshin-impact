@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -59,7 +60,7 @@ public partial class PuloniaRouteCooldownOverviewViewModel : ObservableObject, I
 
     /// <summary>状态筛选选项。</summary>
     public IReadOnlyList<PuloniaCooldownFilterOption> StateOptions { get; } =
-        [new(SkippedState, "CD 中与已完成"), new(null, "全部记录")];
+        [new(SkippedState, I18nService.Instance.Translate("CD 中与已完成")), new(null, I18nService.Instance.Translate("全部记录"))];
 
     /// <summary>当前账户筛选。</summary>
     [ObservableProperty] private PuloniaCooldownFilterOption? _selectedAccount;
@@ -84,10 +85,10 @@ public partial class PuloniaRouteCooldownOverviewViewModel : ObservableObject, I
 
     /// <summary>空列表的说明。</summary>
     public string EmptyText => _isAccountFixed && _fixedAccountId is null
-        ? "请先选择账户。"
+        ? I18nService.Instance.Translate("请先选择账户。")
         : _all.Count == 0
-            ? "暂无路线 CD 记录。地图追踪路线整份执行成功后，会在这里记录上次成功时间和下次可执行时间。"
-            : "没有符合筛选条件的记录。";
+            ? I18nService.Instance.Translate("暂无路线 CD 记录。地图追踪路线整份执行成功后，会在这里记录上次成功时间和下次可执行时间。")
+            : I18nService.Instance.Translate("没有符合筛选条件的记录。");
 
     /// <summary>建立总览并订阅账户进度变化。</summary>
     /// <param name="session">编辑会话。</param>
@@ -147,10 +148,10 @@ public partial class PuloniaRouteCooldownOverviewViewModel : ObservableObject, I
         var keys = selected?.OfType<PuloniaRouteCooldownEntryViewModel>().Select(entry => entry.Key).Distinct().ToArray() ?? [];
         if (keys.Length == 0)
         {
-            _session.ReportStatus("请先在路线 CD 列表中选择要清除的记录。");
+            _session.ReportStatus(I18nService.Instance.Translate("请先在路线 CD 列表中选择要清除的记录。"));
             return;
         }
-        await _session.ClearCooldownRecordsAsync(keys, "选中路线");
+        await _session.ClearCooldownRecordsAsync(keys, I18nService.Instance.Translate("选中路线"));
     }
 
     /// <summary>清除当前筛选出的全部记录；可先按计划、账户或材料筛选，实现按计划、账户或材料清除。</summary>
@@ -159,7 +160,7 @@ public partial class PuloniaRouteCooldownOverviewViewModel : ObservableObject, I
     {
         var keys = Entries.Select(entry => entry.Key).Distinct().ToArray();
         if (keys.Length == 0) return;
-        await _session.ClearCooldownRecordsAsync(keys, "当前列表中全部路线");
+        await _session.ClearCooldownRecordsAsync(keys, I18nService.Instance.Translate("当前列表中全部路线"));
     }
 
     /// <summary>完成记录重新读取后重建列表。</summary>
@@ -183,7 +184,7 @@ public partial class PuloniaRouteCooldownOverviewViewModel : ObservableObject, I
             // 1. 账户：全部账户 + 账户目录中的各账户（顺序与账户列表一致）
             var accountKey = SelectedAccount?.Key;
             AccountOptions.Clear();
-            AccountOptions.Add(new PuloniaCooldownFilterOption(null, "全部账户"));
+            AccountOptions.Add(new PuloniaCooldownFilterOption(null, I18nService.Instance.Translate("全部账户")));
             foreach (var (account, _) in accounts)
                 AccountOptions.Add(new PuloniaCooldownFilterOption(account.Id, account.Name));
             SelectedAccount = AccountOptions.FirstOrDefault(option => option.Key == accountKey) ?? AccountOptions[0];
@@ -191,11 +192,11 @@ public partial class PuloniaRouteCooldownOverviewViewModel : ObservableObject, I
             // 2. 计划：全部计划 + 普通计划 + 一条龙配置
             var planKey = _requestedPlanId ?? SelectedPlan?.Key;
             PlanOptions.Clear();
-            PlanOptions.Add(new PuloniaCooldownFilterOption(null, "全部计划"));
+            PlanOptions.Add(new PuloniaCooldownFilterOption(null, I18nService.Instance.Translate("全部计划")));
             foreach (var document in _session.Documents)
                 PlanOptions.Add(new PuloniaCooldownFilterOption(document.Id, document.Name));
             foreach (var document in _session.OneDragonDocuments)
-                PlanOptions.Add(new PuloniaCooldownFilterOption(document.Id, "一条龙：" + document.Name));
+                PlanOptions.Add(new PuloniaCooldownFilterOption(document.Id, string.Format(I18nService.Instance.Translate("一条龙：{0}"), document.Name)));
             var plan = PlanOptions.FirstOrDefault(option => option.Key == planKey);
             if (plan is not null) _requestedPlanId = null;
             SelectedPlan = plan ?? PlanOptions[0];
@@ -241,8 +242,9 @@ public partial class PuloniaRouteCooldownOverviewViewModel : ObservableObject, I
             .ThenByDescending(entry => entry.Completion.CompletedAt)
             .ToArray();
         var skipped = filtered.Count(entry => entry.IsSkipped);
-        CountText = $"显示 {Entries.Count} / {_all.Count} 条记录，其中 {skipped} 条本次会跳过。剩余时间按上次成功时的规则和账户的服务器时区计算；"
-                    + "计划中的节点按当前规则判定，以任务树标记为准。";
+        CountText = string.Format(
+            I18nService.Instance.Translate("显示 {0} / {1} 条记录，其中 {2} 条本次会跳过。剩余时间按上次成功时的规则和账户的服务器时区计算；计划中的节点按当前规则判定，以任务树标记为准。"),
+            Entries.Count, _all.Count, skipped);
         OnPropertyChanged(nameof(EmptyText));
     }
 

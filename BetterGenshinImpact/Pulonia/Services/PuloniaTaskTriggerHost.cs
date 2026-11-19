@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Hosting;
@@ -41,7 +42,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
     /// <summary>可供界面读取的最后一次触发器反馈，不暴露服务内部游标。</summary>
     public IReadOnlyList<PuloniaTaskTriggerStatus> Statuses { get; private set; } = [];
     /// <summary>调度与平台入口的可见状态。</summary>
-    public string Status { get; private set; } = "调度器尚未启动。";
+    public string Status { get; private set; } = I18nService.Instance.Translate("调度器尚未启动。");
     /// <summary>平台状态或游标变化通知；订阅者负责切换 UI 线程。</summary>
     public event EventHandler? Changed;
 
@@ -56,7 +57,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
         var dispatcher = _dispatcher;
         if (dispatcher is null)
         {
-            Status = "界面正在关闭，自动触发未启动。";
+            Status = I18nService.Instance.Translate("界面正在关闭，自动触发未启动。");
             return;
         }
         // 关闭守卫只在这里挂接：界面开始关闭时由 ShutdownStarted 在所属线程释放热键并取消生命周期。
@@ -65,7 +66,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
         if (dispatcher.HasShutdownStarted)
         {
             _lifetime.Cancel();
-            Status = "界面正在关闭，自动触发未启动。";
+            Status = I18nService.Instance.Translate("界面正在关闭，自动触发未启动。");
             return;
         }
         using var stopping = stoppingToken.Register(_lifetime.Cancel);
@@ -107,7 +108,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
                         unreadablePlanIds = listed.Failures.Select(item => item.Id).OfType<string>().ToArray();
                         var loadError = listed.Failures.Count == 0
                             ? ""
-                            : $" 有 {listed.Failures.Count} 份计划文件无法读取，已跳过其触发器：" + string.Join("；", listed.Failures);
+                            : " " + string.Format(I18nService.Instance.Translate("有 {0} 份计划文件无法读取，已跳过其触发器："), listed.Failures.Count) + string.Join("；", listed.Failures);
                         // 周期重试时只在失败内容变化后记日志，避免同一坏文件反复刷屏。
                         if (loadError != planLoadError)
                             foreach (var failure in listed.Failures)
@@ -121,13 +122,13 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
                     await tasks.CheckTriggersAsync(plans, unreadablePlanIds, token).ConfigureAwait(false);
                     Statuses = tasks.GetTriggerStatuses();
                     Status = (registersHotkeys
-                                 ? "本实例调度运行中：检查本实例负责的定时，并注册计划热键（仅在程序运行时生效）。"
-                                 : "本实例调度运行中：检查执行实例包含本实例的定时；计划热键只在主实例生效。")
+                                 ? I18nService.Instance.Translate("本实例调度运行中：检查本实例负责的定时，并注册计划热键（仅在程序运行时生效）。")
+                                 : I18nService.Instance.Translate("本实例调度运行中：检查执行实例包含本实例的定时；计划热键只在主实例生效。"))
                              + planLoadError + _hotkeyError;
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    Status = "调度检查失败，未继续自动触发：" + ex.Message;
+                    Status = I18nService.Instance.Translate("调度检查失败，未继续自动触发：") + ex.Message;
                     logger.LogError(ex, "Pulonia 调度检查失败");
                     // 下一轮重新读档，不能用读档失败之前的缓存触发。
                     version = -1;
@@ -205,7 +206,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
                 catch (Exception ex)
                 {
                     hotkeyModel?.UnRegisterHotKey();
-                    _hotkeyError += $" 热键“{trigger.DisplayText}”注册失败（可能冲突）：{ex.Message}";
+                    _hotkeyError += " " + string.Format(I18nService.Instance.Translate("热键“{0}”注册失败（可能冲突）：{1}"), trigger.DisplayText, ex.Message);
                 }
             }
             _hotkeyRevision = revision;

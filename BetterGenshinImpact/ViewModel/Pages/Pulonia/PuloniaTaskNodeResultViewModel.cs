@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -86,13 +87,14 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
     /// 详情中的时间摘要：开始、结束与耗时；未执行时说明原因。
     /// </summary>
     public string TimingText => WasExecuted
-        ? $"{PuloniaTaskHistoryText.Time(Result.StartedAt)} → {Result.FinishedAt.ToLocalTime():HH:mm:ss} · 用时 {DurationText}"
-        : "未执行";
+        ? string.Format(I18nService.Instance.Translate("{0} → {1} · 用时 {2}"), PuloniaTaskHistoryText.Time(Result.StartedAt),
+            Result.FinishedAt.ToLocalTime().ToString("HH:mm:ss"), DurationText)
+        : I18nService.Instance.Translate("未执行");
 
     /// <summary>
     /// 重试时的轮次标记，例如“第 2 次尝试”；首次尝试为空。
     /// </summary>
-    public string? AttemptText => Attempt > 1 ? $"第 {Attempt} 次尝试" : null;
+    public string? AttemptText => Attempt > 1 ? string.Format(I18nService.Instance.Translate("第 {0} 次尝试"), Attempt) : null;
 
     /// <summary>
     /// 执行器原始消息或异常原因。
@@ -156,21 +158,22 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
     /// 把一条本次完成的路线展示为完整可复制内容，保留运行、节点与尝试次数以便核对幂等性。
     /// </summary>
     public static PuloniaTaskHistoryField CreateCompletionField(PuloniaRouteCompletion completion)
-        => new($"本次完成的路线 · 第 {completion.Attempt} 次尝试",
-            $"路线：{completion.Route}\n节点：{completion.TaskAddress}\n"
-            + $"执行实例：{PuloniaInstanceKey.DescribeDirectory(completion.Instance.Replace(':', '-'))}\n"
-            + $"完成时间：{PuloniaTaskHistoryText.Time(completion.CompletedAt)}\n"
-            + $"记录时规则：{completion.Rule.ToRefreshRule(completion.Route).Description}");
+        => new(string.Format(I18nService.Instance.Translate("本次完成的路线 · 第 {0} 次尝试"), completion.Attempt),
+            string.Format(I18nService.Instance.Translate("路线：{0}\n节点：{1}\n执行实例：{2}\n完成时间：{3}\n记录时规则：{4}"),
+                completion.Route, completion.TaskAddress,
+                PuloniaInstanceKey.DescribeDirectory(completion.Instance.Replace(':', '-')),
+                PuloniaTaskHistoryText.Time(completion.CompletedAt),
+                completion.Rule.ToRefreshRule(completion.Route).DisplayDescription));
 
     /// <summary>
     /// 把一项结果解释转换为展示文本；缺失的关键结果明确说明，不把缺失 bool 或退出码显示为 false 或 0。
     /// </summary>
     private static string FormatEntry(PuloniaTaskResultEntry entry) => entry.Kind switch
     {
-        PuloniaTaskResultEntryKind.NotReturned => "未返回（可能在结果产生前失败或取消）",
-        PuloniaTaskResultEntryKind.NotCounted => "未统计",
-        PuloniaTaskResultEntryKind.NoFailure => "无",
-        PuloniaTaskResultEntryKind.FailureNotProvided => "未提供",
+        PuloniaTaskResultEntryKind.NotReturned => I18nService.Instance.Translate("未返回（可能在结果产生前失败或取消）"),
+        PuloniaTaskResultEntryKind.NotCounted => I18nService.Instance.Translate("未统计"),
+        PuloniaTaskResultEntryKind.NoFailure => I18nService.Instance.Translate("无"),
+        PuloniaTaskResultEntryKind.FailureNotProvided => I18nService.Instance.Translate("未提供"),
         PuloniaTaskResultEntryKind.Rewards => FormatRewards((JArray)entry.Value!),
         PuloniaTaskResultEntryKind.CollectedItems => FormatCollectedItems((JObject)entry.Value!),
         _ => FormatValue(entry.Value ?? JValue.CreateNull())
@@ -180,7 +183,7 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
     /// 把奖励数组格式化为逐行的“名称 ×数量”；数量缺失时显示问号。
     /// </summary>
     private static string FormatRewards(JArray items) => items.Count == 0
-        ? "没有识别到奖励。"
+        ? I18nService.Instance.Translate("没有识别到奖励。")
         : string.Join("\n", items.OfType<JObject>().Select(item =>
             $"{item.Value<string>("name")} ×{(item["count"] is { Type: not JTokenType.Null } count ? count.ToString(Formatting.None) : "?")}"));
 
@@ -188,7 +191,7 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
     /// 把路线拾取统计格式化为逐行的“名称 × 数量”。
     /// </summary>
     private static string FormatCollectedItems(JObject items) => items.Count == 0
-        ? "已统计，未拾取物品"
+        ? I18nService.Instance.Translate("已统计，未拾取物品")
         : string.Join("\n", items.Properties().Select(item => $"{item.Name} × {FormatValue(item.Value)}"));
 
     /// <summary>
@@ -197,18 +200,20 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
     private static IReadOnlyList<PuloniaTaskHistoryField> CreateSettingsFields(PuloniaTaskPreparedTask? task)
     {
         if (task is null)
-            return [new PuloniaTaskHistoryField("当次设置", "这条记录的快照中找不到对应任务，无法显示当时的设置。")];
+            return [new PuloniaTaskHistoryField(I18nService.Instance.Translate("当次设置"), I18nService.Instance.Translate("这条记录的快照中找不到对应任务，无法显示当时的设置。"))];
         var fields = new List<PuloniaTaskHistoryField>();
         if (task.Path is not null)
             fields.Add(new PuloniaTaskHistoryField(PuloniaTaskResultInterpreter.GetResourcePathLabel(task.TaskType), task.Path));
         foreach (var parameter in task.Parameters.Properties())
         {
-            var source = task.ParameterSources.TryGetValue(parameter.Name, out var origin) ? $"（{DescribeParameterSource(origin)}）" : "";
-            // 参数中文名与编辑器共用同一份映射，未知扩展键保持原文。
-            fields.Add(new PuloniaTaskHistoryField(PuloniaTaskFieldNames.GetDisplayName(parameter.Name) + source,
-                FormatValue(parameter.Value)));
+            // 参数中文名与编辑器共用同一份映射，未知扩展键保持原文；有来源时以“参数名（来源）”整句翻译。
+            var name = PuloniaTaskFieldNames.GetDisplayName(parameter.Name);
+            var label = task.ParameterSources.TryGetValue(parameter.Name, out var origin)
+                ? string.Format(I18nService.Instance.Translate("{0}（{1}）"), name, DescribeParameterSource(origin))
+                : name;
+            fields.Add(new PuloniaTaskHistoryField(label, FormatValue(parameter.Value)));
         }
-        fields.Add(new PuloniaTaskHistoryField("执行策略", DescribePolicy(task.Policy)));
+        fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("执行策略"), DescribePolicy(task.Policy)));
         return fields;
     }
 
@@ -218,10 +223,10 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
     private static string DescribeParameterSource(string source)
     {
         if (source.StartsWith("default", StringComparison.Ordinal))
-            return "默认值";
+            return I18nService.Instance.Translate("默认值");
         if (source == "settings")
-            return "共享设置";
-        return source.StartsWith("call/", StringComparison.Ordinal) ? "本次运行指定" : "任务自身设置";
+            return I18nService.Instance.Translate("共享设置");
+        return source.StartsWith("call/", StringComparison.Ordinal) ? I18nService.Instance.Translate("本次运行指定") : I18nService.Instance.Translate("任务自身设置");
     }
 
     /// <summary>
@@ -232,14 +237,14 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
         var retries = policy.MaxRetries ?? 0;
         var delay = policy.RetryDelaySeconds ?? 0;
         var retry = retries <= 0
-            ? "不重试"
+            ? I18nService.Instance.Translate("不重试")
             : delay <= 0
-                ? $"失败后立即重试，最多 {retries} 次"
-                : $"失败后等待 {PuloniaTaskHistoryText.Duration(TimeSpan.FromSeconds(delay))} 重试，最多 {retries} 次";
+                ? string.Format(I18nService.Instance.Translate("失败后立即重试，最多 {0} 次"), retries)
+                : string.Format(I18nService.Instance.Translate("失败后等待 {0} 重试，最多 {1} 次"), PuloniaTaskHistoryText.Duration(TimeSpan.FromSeconds(delay)), retries);
         var timeout = policy.TimeoutSeconds is { } seconds
-            ? "时限 " + PuloniaTaskHistoryText.Duration(TimeSpan.FromSeconds(seconds))
-            : "不限时";
-        return $"失败时{PuloniaTaskHistoryText.FailureBehavior(policy.FailureBehavior)}；{retry}；{timeout}";
+            ? string.Format(I18nService.Instance.Translate("时限 {0}"), PuloniaTaskHistoryText.Duration(TimeSpan.FromSeconds(seconds)))
+            : I18nService.Instance.Translate("不限时");
+        return string.Format(I18nService.Instance.Translate("失败时{0}；{1}；{2}"), PuloniaTaskHistoryText.FailureBehavior(policy.FailureBehavior), retry, timeout);
     }
 
     /// <summary>
@@ -250,19 +255,19 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
     {
         var fields = new List<PuloniaTaskHistoryField>
         {
-            new("任务地址", result.TaskAddress),
-            new("任务类型", result.TaskType),
-            new("尝试次数", result.Attempt == 0 ? "未执行" : result.Attempt.ToString())
+            new(I18nService.Instance.Translate("任务地址"), result.TaskAddress),
+            new(I18nService.Instance.Translate("任务类型"), result.TaskType),
+            new(I18nService.Instance.Translate("尝试次数"), result.Attempt == 0 ? I18nService.Instance.Translate("未执行") : result.Attempt.ToString())
         };
         if (!string.IsNullOrWhiteSpace(result.ReasonCode))
-            fields.Add(new PuloniaTaskHistoryField("原因码", result.ReasonCode));
+            fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("原因码"), result.ReasonCode));
         if (task?.ResourceVersion is { } version)
-            fields.Add(new PuloniaTaskHistoryField("固定资源版本（SHA-256）", version));
+            fields.Add(new PuloniaTaskHistoryField(I18nService.Instance.Translate("固定资源版本（SHA-256）"), version));
         // 本次完成的路线与节点结果在同一次写盘中提交（完成记录已先写入账户目录），这里保留完整内容便于核对。
         fields.AddRange(completions.Select(CreateCompletionField));
         fields.AddRange(result.Evidence.Select((item, index) => new PuloniaTaskHistoryField(
-            $"证据 {index + 1} · {item.Kind} · {item.Source}",
-            $"发生时间：{PuloniaTaskHistoryText.Time(item.OccurredAt)}\n{item.Data.ToString(Formatting.Indented)}")));
+            string.Format(I18nService.Instance.Translate("证据 {0} · {1} · {2}"), index + 1, item.Kind, item.Source),
+            string.Format(I18nService.Instance.Translate("发生时间：{0}"), PuloniaTaskHistoryText.Time(item.OccurredAt)) + "\n" + item.Data.ToString(Formatting.Indented))));
         return fields;
     }
 
@@ -271,9 +276,9 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
     /// </summary>
     private static string FormatValue(JToken value) => value.Type switch
     {
-        JTokenType.Boolean => value.Value<bool>() ? "是" : "否",
-        JTokenType.Null => "未设置",
-        JTokenType.String => string.IsNullOrEmpty(value.Value<string>()) ? "（空）" : value.Value<string>()!,
+        JTokenType.Boolean => value.Value<bool>() ? I18nService.Instance.Translate("是") : I18nService.Instance.Translate("否"),
+        JTokenType.Null => I18nService.Instance.Translate("未设置"),
+        JTokenType.String => string.IsNullOrEmpty(value.Value<string>()) ? I18nService.Instance.Translate("（空）") : value.Value<string>()!,
         _ => value.ToString(Formatting.Indented)
     };
 }

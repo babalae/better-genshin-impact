@@ -8,6 +8,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Infrastructure.Storage;
 using System.Threading.Tasks;
 using OpenCvSharp;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.Service.AccountRecords;
 
@@ -113,10 +114,10 @@ public sealed class InventoryIconCache : IStorageAreaProvider
     /// <summary>登记需确认的独立图标区域，不参加一键清理；与图标写入使用同一把锁。</summary>
     public IEnumerable<StorageArea> GetAreas()
     {
-        yield return new StorageArea("account-records:icons", "狛荷屋物品图标", StorageGroup.Cache, [_cacheRoot])
+        yield return new StorageArea("account-records:icons", I18nService.Key("狛荷屋物品图标"), StorageGroup.Cache, [_cacheRoot])
         {
-            Description = "采集或手动上传的物品图标，不自动过期或按容量淘汰",
-            CleanupEffect = "删除后需重新采集或手动上传，库存数量和事件记录不受影响",
+            Description = I18nService.Key("采集或手动上传的物品图标，不自动过期或按容量淘汰"),
+            CleanupEffect = I18nService.Key("删除后需重新采集或手动上传，库存数量和事件记录不受影响"),
             RequiresConfirmation = true,
             IncludedInQuickCleanup = false,
             CleanupAsync = ct => Task.Run(() =>

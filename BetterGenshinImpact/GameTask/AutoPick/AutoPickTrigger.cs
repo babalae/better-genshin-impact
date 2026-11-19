@@ -429,8 +429,11 @@ public partial class AutoPickTrigger : ITaskTrigger
             return;
         }
 
+        // Yap 拾取模型和 ProcessOcrText 的清理规则只适用于中文，其他游戏语言统一使用 Paddle 并按通用规则清理
+        var isChineseGame = _config.OtherConfig.GameCultureInfoName.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+
         string text;
-        if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
+        if (isChineseGame && config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
         {
             using var textMat = new Mat(content.CaptureRectArea.CacheGreyMat, textRect);
             text = TextInferenceFactory.Pick.Value.Inference(textMat);
@@ -474,8 +477,9 @@ public partial class AutoPickTrigger : ITaskTrigger
         speedTimer.Record("文字识别");
         if (!string.IsNullOrEmpty(text))
         {
-            // 处理OCR识别结果，清理无效字符并确保引号配对
-            text = ProcessOcrText(text);
+            // 处理OCR识别结果，清理无效字符并确保引号配对；
+            // 中文规则会删掉所有非汉字的首尾字符，用在英文、葡萄牙文等语言上会得到空字符串，导致完全不拾取
+            text = isChineseGame ? ProcessOcrText(text) : ProcessNonChineseOcrText(text);
 
             if (DoNotPick(text))
             {
@@ -775,5 +779,38 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         return cleanedSpan.ToString();
+    }
+
+    /// <summary>
+    /// 非中文游戏语言（英文、葡萄牙文等）的 OCR 文字清理：
+    /// 1. 连续空白合并为一个空格，保留单词间的空格，使结果能与用户名单中的名称直接比较
+    /// 2. 删除首尾的非字母数字字符（图标边缘等噪点），保留首尾的引号、括号和感叹号
+    /// </summary>
+    /// <param name="text">OCR识别的原始文字</param>
+    /// <returns>处理后的文字</returns>
+    private static string ProcessNonChineseOcrText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        // 1. 合并空白字符
+        var collapsed = string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        // 2. 清理首尾噪点
+        var start = 0;
+        var end = collapsed.Length - 1;
+        while (start <= end && !char.IsLetterOrDigit(collapsed[start]) && "\"“«「([".IndexOf(collapsed[start]) < 0)
+        {
+            start++;
+        }
+
+        while (end >= start && !char.IsLetterOrDigit(collapsed[end]) && "\"”»」)]!".IndexOf(collapsed[end]) < 0)
+        {
+            end--;
+        }
+
+        return start > end ? string.Empty : collapsed[start..(end + 1)];
     }
 }

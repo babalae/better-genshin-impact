@@ -1,0 +1,41 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.HoYoLabLoginWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+                 Title="{i18n:T 登录 HoYoLAB}"
+                 Width="900"
+                 Height="720"
+                 MinWidth="480"
+                 MinHeight="480"
+                 WindowStartupLocation="CenterOwner"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 Background="{DynamicResource ApplicationBackgroundBrush}"
+                 FontFamily="{StaticResource TextThemeFontFamily}"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0"
+                     Title="{i18n:T 登录 HoYoLAB}"
+                     Icon="{ui:SymbolIcon Person24}"
+                     ShowMinimize="False" />
+
+        <!--  登录说明或错误提示；放在页面上方的独立行，避免被原生 WebView 遮住  -->
+        <TextBlock x:Name="StatusText"
+                   Grid.Row="1"
+                   Margin="12,0,12,8"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Text="{i18n:T 请在 HoYoLAB 官方页面登录，登录成功后窗口会自动关闭。BetterGI 不会读取你的密码。}" />
+
+        <!--  HoYoLAB 官方地图页面，未登录时由网页弹出登录框  -->
+        <wv2:WebView2 x:Name="WebView" Grid.Row="2" />
+    </Grid>
+</ui:FluentWindow>

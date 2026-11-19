@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel.Resin;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.Pulonia.Executors;
@@ -73,7 +74,7 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     /// <summary>按统筹设计 5.6 选出的账户（界面显示路线 CD 的账户）；为空时不区分主次，只列出有记录的账户。</summary>
     private string? _progressAccountId;
     /// <summary>展示各账户累计次数，读取错误保留在界面上。</summary>
-    [ObservableProperty] private string _completedRunCountText = "新任务的累计次数为 0。";
+    [ObservableProperty] private string _completedRunCountText = I18nService.Instance.Translate("新任务的累计次数为 0。");
 
     /// <summary>从当前有效参数读取首领讨伐配置。</summary>
     /// <param name="original">当前有效参数快照。</param>
@@ -90,7 +91,7 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     public AutoBossSettingsViewModel(JObject original, PuloniaTaskStore? progressStore = null, IResinSettingsDialogs? dialogs = null) : base(original)
     {
         _originalResin = ResinUsageViewModelSupport.Read(Original["resin_usage"], AutoBossTask.ResinCapability);
-        Resin = new("自动首领讨伐", AutoBossTask.ResinCapability, _originalResin, dialogs);
+        Resin = new(I18nService.Key("自动首领讨伐"), AutoBossTask.ResinCapability, _originalResin, dialogs);
         TrackEdits([Resin]);
         _progressStore = progressStore;
         _totalRunCountLimit = ReadInt(Original, PuloniaSoloTaskExecutor.BossTotalRunCountLimitParameter);
@@ -157,7 +158,7 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     {
         if (_rewardCountResetId != ReadString(Original, PuloniaSoloTaskExecutor.BossRewardCountResetParameter))
         {
-            CompletedRunCountText = "保存设置后清空累计，重新从 0 开始。";
+            CompletedRunCountText = I18nService.Instance.Translate("保存设置后清空累计，重新从 0 开始。");
             return;
         }
         if (_progressStore is null || _progressPlanId is null || _progressTaskId is null) return;
@@ -179,7 +180,7 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Newtonsoft.Json.JsonException
                                        or PuloniaTaskValidationException or InvalidOperationException)
         {
-            CompletedRunCountText = "读取累计失败：" + ex.Message;
+            CompletedRunCountText = I18nService.Instance.Translate("读取累计失败：") + ex.Message;
         }
     }
 
@@ -193,19 +194,19 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     {
         // 1. 只有一个账户：不出现账户名，只显示一行
         if (counts.Count == 1)
-            return $"累计成功领奖：{counts[0].Count} 次。";
+            return string.Format(I18nService.Instance.Translate("累计成功领奖：{0} 次。"), counts[0].Count);
         // 2. 主账户未知：沿用按账户列出有记录的次数
         if (counts.FirstOrDefault(item => item.Id == primaryAccountId) is not { Id: not null } primary)
         {
             var recorded = counts.Where(item => item.Count > 0).ToArray();
-            return recorded.Length == 0 ? "累计成功领奖：0 次。"
-                : string.Join(Environment.NewLine, recorded.Select(item => $"{item.Name}：{item.Count} 次"));
+            return recorded.Length == 0 ? I18nService.Instance.Translate("累计成功领奖：0 次。")
+                : string.Join(Environment.NewLine, recorded.Select(item => string.Format(I18nService.Instance.Translate("{0}：{1} 次"), item.Name, item.Count)));
         }
         // 3. 主账户在第一行，其他有记录的账户合并为第二行
         var others = counts.Where(item => item.Id != primary.Id && item.Count > 0).ToArray();
-        var text = $"{primary.Name}：{primary.Count} 次";
+        var text = string.Format(I18nService.Instance.Translate("{0}：{1} 次"), primary.Name, primary.Count);
         return others.Length == 0 ? text
-            : text + Environment.NewLine + "其他账户：" + string.Join("、", others.Select(item => $"{item.Name} {item.Count} 次"));
+            : text + Environment.NewLine + I18nService.Instance.Translate("其他账户：") + string.Join("、", others.Select(item => string.Format(I18nService.Instance.Translate("{0} {1} 次"), item.Name, item.Count)));
     }
 
     /// <summary>清空全部账户的当前累计，仅改变草稿，取消弹窗不会修改已保存累计。</summary>
@@ -213,6 +214,6 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     private void ResetProgress()
     {
         _rewardCountResetId = Guid.NewGuid().ToString("N");
-        CompletedRunCountText = "保存设置后清空累计，重新从 0 开始。";
+        CompletedRunCountText = I18nService.Instance.Translate("保存设置后清空累计，重新从 0 开始。");
     }
 }

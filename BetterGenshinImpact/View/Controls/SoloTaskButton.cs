@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.ViewModel;
 using System.Windows;
 using System.Windows.Data;
@@ -22,8 +23,8 @@ public sealed class SoloTaskButton : Button
         SetBinding(ContentProperty, new Binding($"{nameof(State)}.{nameof(SoloTaskButtonState.ButtonText)}")
         {
             RelativeSource = RelativeSource.Self,
-            FallbackValue = "启动",
-            TargetNullValue = "启动"
+            FallbackValue = I18nService.Instance.Translate("启动"),
+            TargetNullValue = I18nService.Instance.Translate("启动")
         });
         SetBinding(IsEnabledProperty, new Binding($"{nameof(State)}.{nameof(SoloTaskButtonState.CanInteract)}")
         {

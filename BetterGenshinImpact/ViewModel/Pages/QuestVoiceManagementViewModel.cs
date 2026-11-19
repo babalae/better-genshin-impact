@@ -14,6 +14,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.I18n;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -47,7 +48,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasChanges;
     /// <summary>编辑器最近操作的可读结果。</summary>
-    [ObservableProperty] private string _editStatus = "正在准备角色目录；有效修改自动保存，关闭设置窗口后生效。";
+    [ObservableProperty] private string _editStatus = I18nService.Instance.Translate("正在准备角色目录；有效修改自动保存，关闭设置窗口后生效。");
     /// <summary>角色列表过滤文本，不修改目录。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FilteredSpeakers))]
@@ -93,10 +94,10 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     public IReadOnlyList<TtsProviderInfo> Providers => TtsProviderRegistry.Providers;
     /// <summary>声线的服务实例选项；空表示跟随该引擎当前选择的实例。</summary>
     public IReadOnlyList<KeyValuePair<string, string>> InstanceChoices { get; } =
-        [new("", "跟随当前实例"), new("local", "本地"), new("remote", "远程")];
+        [new("", I18nService.Instance.Translate("跟随当前实例")), new("local", I18nService.Instance.Translate("本地")), new("remote", I18nService.Instance.Translate("远程"))];
     /// <summary>找不到角色声线时的处理方式。</summary>
     public IReadOnlyList<KeyValuePair<MissingVoicePolicy, string>> MissingPolicyChoices { get; } =
-        [new(MissingVoicePolicy.Fallback, "改用默认 NPC 声线"), new(MissingVoicePolicy.Fail, "报错")];
+        [new(MissingVoicePolicy.Fallback, I18nService.Instance.Translate("改用默认 NPC 声线")), new(MissingVoicePolicy.Fail, I18nService.Instance.Translate("报错"))];
     /// <summary>搜索同时匹配身份、正式名称、别名和 OCR 纠错名。</summary>
     public IEnumerable<QuestVoiceManagementSpeaker> FilteredSpeakers => Speakers.Where(x =>
         string.IsNullOrWhiteSpace(SpeakerSearch) || string.Join("\n", x.Id, x.Names, x.Aliases, x.Corrections)
@@ -167,7 +168,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     {
         var started = false;
         try { RequireEditable(false); _owner.CommandError = ""; IsWorking = true; started = true; await _saveGate.WaitAsync(); try { await action(); } finally { _saveGate.Release(); } }
-        catch (OperationCanceledException) { EditStatus = "操作已取消，草稿保留。"; }
+        catch (OperationCanceledException) { EditStatus = I18nService.Instance.Translate("操作已取消，草稿保留。"); }
         catch (Exception exception) { Report(exception); }
         finally { if (started) IsWorking = false; }
     }
@@ -180,7 +181,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
 
     /// <summary>显式破坏性操作使用宿主主题确认；无窗口的组件测试不弹出界面。</summary>
     private static bool ConfirmChange(string message) => Application.Current?.MainWindow is null
-        || ThemedMessageBox.Question(message, "确认配置操作", MessageBoxButton.YesNo, MessageBoxResult.No) == MessageBoxResult.Yes;
+        || ThemedMessageBox.Question(message, I18nService.Instance.Translate("确认配置操作"), MessageBoxButton.YesNo, MessageBoxResult.No) == MessageBoxResult.Yes;
 
     /// <summary>读取当前配置路径，不覆盖已有未保存输入。</summary>
     [RelayCommand(CanExecute = nameof(IsEditingAllowed))]
@@ -189,17 +190,17 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         RequireCleanDraft();
         var snapshot = await _store.LoadAsync(_factory.RoutingCatalogPath, serverSidePaths: _factory.RoutingServerSidePaths);
         Apply(snapshot.Catalog); _loadedPath = snapshot.CatalogPath; _expectedSha256 = snapshot.CatalogSha256;
-        EditStatus = "已加载：" + snapshot.CatalogPath;
+        EditStatus = I18nService.Instance.Translate("已加载：") + snapshot.CatalogPath;
     });
 
     /// <summary>用户明确点击此命令才允许丢弃草稿；读取失败仍保留旧草稿。</summary>
     [RelayCommand(CanExecute = nameof(IsEditingAllowed))]
     private Task DiscardAndReloadAsync() => FileOperation(async () =>
     {
-        if (HasChanges && !ConfirmChange("确定放弃未保存草稿并重新加载吗？")) return;
+        if (HasChanges && !ConfirmChange(I18nService.Instance.Translate("确定放弃未保存草稿并重新加载吗？"))) return;
         var snapshot = await _store.LoadAsync(_factory.RoutingCatalogPath, serverSidePaths: _factory.RoutingServerSidePaths);
         Apply(snapshot.Catalog); _loadedPath = snapshot.CatalogPath; _expectedSha256 = snapshot.CatalogSha256;
-        EditStatus = "已放弃旧草稿并重新加载。";
+        EditStatus = I18nService.Instance.Translate("已放弃旧草稿并重新加载。");
     });
 
     /// <summary>仅允许在目标文件不存在时明确新建，避免绕过文件乐观锁。</summary>
@@ -213,7 +214,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
             if (_store.Exists(path)) throw new InvalidOperationException("目标文件已存在，请先加载，不能直接覆盖新建。");
             Apply(new(2, "genshin", null, Array.Empty<string>(), null, null, MissingVoicePolicy.Fallback,
                 Array.Empty<SpeakerDefinition>(), Array.Empty<RoutingVoice>()));
-            _loadedPath = path; _expectedSha256 = null; MarkDraftChanged(); EditStatus = "已新建空目录草稿，请添加角色和声线后保存。";
+            _loadedPath = path; _expectedSha256 = null; MarkDraftChanged(); EditStatus = I18nService.Instance.Translate("已新建空目录草稿，请添加角色和声线后保存。");
         }
         catch (Exception exception) { Report(exception); }
     }
@@ -223,32 +224,32 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     private Task ImportAsync() => FileOperation(async () =>
     {
         RequireCleanDraft();
-        var dialog = new OpenFileDialog { Title = "导入角色路由草稿", Filter = "JSON 文件 (*.json)|*.json", Multiselect = false };
+        var dialog = new OpenFileDialog { Title = I18nService.Instance.Translate("导入角色路由草稿"), Filter = I18nService.Instance.Translate("JSON 文件 (*.json)|*.json"), Multiselect = false };
         if (dialog.ShowDialog() != true) return;
         var target = _factory.RoutingCatalogPath;
         var targetHash = await _store.ReadSha256Async(target);
         var imported = await _store.LoadAsync(dialog.FileName, serverSidePaths: _factory.RoutingServerSidePaths);
-        if (!ConfirmChange("导入后有效内容将自动保存到当前路由目录并保留备份，确定继续吗？")) return;
+        if (!ConfirmChange(I18nService.Instance.Translate("导入后有效内容将自动保存到当前路由目录并保留备份，确定继续吗？"))) return;
         Apply(imported.Catalog); _loadedPath = target; _expectedSha256 = targetHash; MarkDraftChanged();
-        EditStatus = "已导入草稿；校验通过后自动保存并保留备份。";
+        EditStatus = I18nService.Instance.Translate("已导入草稿；校验通过后自动保存并保留备份。");
     });
 
     /// <summary>导出独立文件，不清除当前目录未保存提示。</summary>
     [RelayCommand(CanExecute = nameof(CanEditDraft))]
     private Task ExportAsync() => FileOperation(async () =>
     {
-        var dialog = new SaveFileDialog { Title = "导出路由草稿", Filter = "JSON 文件 (*.json)|*.json", FileName = "routing.export.json", AddExtension = true };
+        var dialog = new SaveFileDialog { Title = I18nService.Instance.Translate("导出路由草稿"), Filter = I18nService.Instance.Translate("JSON 文件 (*.json)|*.json"), FileName = "routing.export.json", AddExtension = true };
         if (dialog.ShowDialog() != true) return;
         if (string.Equals(Path.GetFullPath(dialog.FileName), Path.GetFullPath(_factory.RoutingCatalogPath), StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("导出目标不能是当前配置文件，请使用保存命令。");
         var hash = await _store.ReadSha256Async(dialog.FileName);
         await _store.SaveAsync(dialog.FileName, BuildCatalog(), hash, serverSidePaths: _factory.RoutingServerSidePaths);
-        EditStatus = "已导出草稿；当前配置的有效修改继续自动保存。";
+        EditStatus = I18nService.Instance.Translate("已导出草稿；当前配置的有效修改继续自动保存。");
     });
 
     /// <summary>校验内存草稿，不读取旧 JSON，不启动服务或发起网络合成。</summary>
     [RelayCommand(CanExecute = nameof(CanEditDraft))]
-    private void ValidateDraft() => Edit(() => { _store.Validate(BuildCatalog()); EditStatus = "草稿结构、Provider 和引用校验通过；实际资产及连接请试听检查。"; });
+    private void ValidateDraft() => Edit(() => { _store.Validate(BuildCatalog()); EditStatus = I18nService.Instance.Translate("草稿结构、Provider 和引用校验通过；实际资产及连接请试听检查。"); });
 
     /// <summary>新增明确的角色草稿，不自动保存。</summary>
     [RelayCommand(CanExecute = nameof(CanEditDraft))]
@@ -266,7 +267,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     {
         if (SelectedSpeaker is not { } item) return;
         if (Same(TravelerId, item.Id) || Same(TravelerId, item.OriginalId)) throw new InvalidOperationException("当前角色是旅行者，请先更改旅行者选择。");
-        if (!ConfirmChange("确定删除角色“" + item.Names + "”吗？")) return;
+        if (!ConfirmChange(string.Format(I18nService.Instance.Translate("确定删除角色“{0}”吗？"), item.Names))) return;
         item.PropertyChanged -= OnSpeakerChanged; Speakers.Remove(item); SelectedSpeaker = null; MarkDraftChanged(); NotifyLists();
     });
 
@@ -280,7 +281,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         if (References(FallbackVoiceId)) references.Add("未知 NPC");
         if (References(NarratorVoiceId)) references.Add("旁白");
         if (references.Count > 0) throw new InvalidOperationException("此声线仍被引用：" + string.Join("、", references) + "。请先解除绑定。");
-        if (!ConfirmChange("确定删除声线“" + item.Name + "”吗？")) return;
+        if (!ConfirmChange(string.Format(I18nService.Instance.Translate("确定删除声线“{0}”吗？"), item.Name))) return;
         item.PropertyChanged -= OnProfileChanged; Profiles.Remove(item); SelectedProfile = null; MarkDraftChanged(); NotifyLists();
     });
 
@@ -293,9 +294,9 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
             RequireEditable(); _owner.CommandError = "";
             if (SelectedProfile is null) throw new InvalidOperationException("请先选择声线。");
             await _service.TestVoiceAsync(PreviewText, BuildProfile(SelectedProfile), token);
-            EditStatus = "选中声线试听结束；有效配置独立自动保存。";
+            EditStatus = I18nService.Instance.Translate("选中声线试听结束；有效配置独立自动保存。");
         }
-        catch (OperationCanceledException) { EditStatus = "试听已取消，草稿保留。"; }
+        catch (OperationCanceledException) { EditStatus = I18nService.Instance.Translate("试听已取消，草稿保留。"); }
         catch (Exception exception) { Report(exception); }
     }
 

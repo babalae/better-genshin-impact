@@ -1,9 +1,10 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaSoloTaskCreationDialog"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="{Binding WindowTitle}"
+                 Title="{Binding WindowTitle, Mode=OneWay}"
                  Width="760"
                  Height="720"
                  MinWidth="560"
@@ -24,7 +25,7 @@
         </Grid.RowDefinitions>
 
         <ui:TitleBar Grid.Row="0"
-                     Title="{Binding WindowTitle}"
+                     Title="{Binding WindowTitle, Mode=OneWay}"
                      Icon="{ui:SymbolIcon Add24}"
                      ShowMaximize="False"
                      ShowMinimize="False" />
@@ -54,11 +55,11 @@
                                 Margin="14,0,0,0"
                                 VerticalAlignment="Center">
                         <ui:TextBlock FontTypography="Subtitle"
-                                      Text="{Binding DisplayName}"
+                                      Text="{Binding DisplayName, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Margin="0,2,0,0"
                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                      Text="{Binding Description}"
+                                      Text="{Binding Description, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                     </StackPanel>
                 </Grid>
@@ -69,9 +70,9 @@
                                 Visibility="{Binding CanEditName, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:CardControl.Header>
                         <StackPanel>
-                            <ui:TextBlock FontTypography="Body" Text="任务名称" />
+                            <ui:TextBlock FontTypography="Body" Text="{i18n:T 任务名称}" />
                             <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                          Text="显示在任务计划中，可用于区分同一任务的多份配置"
+                                          Text="{i18n:T 显示在任务计划中，可用于区分同一任务的多份配置}"
                                           TextWrapping="Wrap" />
                         </StackPanel>
                     </ui:CardControl.Header>
@@ -83,10 +84,10 @@
                 <!--  任务设置：专属设置界面优先，否则为自动生成的设置卡片  -->
                 <ui:TextBlock Margin="0,0,0,4"
                               FontTypography="BodyStrong"
-                              Text="任务设置" />
+                              Text="{i18n:T 任务设置}" />
                 <ui:TextBlock Margin="0,0,0,10"
                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                              Text="仅对这个任务生效；未修改的项沿用默认设置。"
+                              Text="{i18n:T 仅对这个任务生效；未修改的项沿用默认设置。}"
                               TextWrapping="Wrap" />
                 <controls:PuloniaTaskSettingsEditorView DataContext="{Binding Settings}" />
             </StackPanel>
@@ -113,10 +114,10 @@
                                Margin="0,0,8,0"
                                Appearance="Primary"
                                Command="{Binding ConfirmCommand}"
-                               Content="添加任务" />
+                               Content="{i18n:T 添加任务}" />
                     <ui:Button MinWidth="96"
                                Command="{Binding CancelCommand}"
-                               Content="取消"
+                               Content="{i18n:T 取消}"
                                IsCancel="True" />
                 </StackPanel>
             </Grid>

@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using BetterGenshinImpact.Pulonia.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
+using BetterGenshinImpact.Service.I18n;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
@@ -44,7 +45,9 @@ public sealed partial class PuloniaAccountChoiceViewModel : ObservableObject
     /// </summary>
     /// <param name="account">账户资料</param>
     public static string Describe(PuloniaGenshinAccountProfile account)
-        => account.Uid is { Length: > 0 } uid ? $"{account.Name}（UID 尾号 {UidTail(uid)}）" : account.Name;
+        => account.Uid is { Length: > 0 } uid
+            ? string.Format(I18nService.Instance.Translate("{0}（UID 尾号 {1}）"), account.Name, UidTail(uid))
+            : account.Name;
 
     /// <summary>UID 尾号（最后 4 位）。</summary>
     /// <param name="uid">完整 UID</param>

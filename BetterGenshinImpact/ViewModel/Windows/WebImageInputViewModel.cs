@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -22,7 +23,7 @@ public partial class WebImageInputViewModel : ViewModel
     private string _url = "";
 
     [ObservableProperty]
-    private string _buttonText = "确定";
+    private string _buttonText = I18nService.Instance.Translate("确定");
 
     [ObservableProperty]
     private bool _isEnabled = true;
@@ -37,7 +38,7 @@ public partial class WebImageInputViewModel : ViewModel
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "读取网络背景图片地址失败");
-            Toast.Warning($"读取网络背景图片地址失败：{ex.Message}");
+            Toast.Warning(string.Format(I18nService.Instance.Translate("读取网络背景图片地址失败：{0}"), ex.Message));
         }
     }
 
@@ -47,7 +48,7 @@ public partial class WebImageInputViewModel : ViewModel
         var url = Url.Trim();
         if (string.IsNullOrEmpty(url))
         {
-            Toast.Warning("请输入网络图片地址。");
+            Toast.Warning(I18nService.Instance.Translate("请输入网络图片地址。"));
             return;
         }
 
@@ -55,7 +56,7 @@ public partial class WebImageInputViewModel : ViewModel
         var cancellationTokenSource = new CancellationTokenSource();
         _downloadCancellationTokenSource = cancellationTokenSource;
         IsEnabled = false;
-        ButtonText = "下载中...";
+        ButtonText = I18nService.Instance.Translate("下载中...");
 
         try
         {
@@ -84,7 +85,7 @@ public partial class WebImageInputViewModel : ViewModel
         catch (Exception ex)
         {
             _logger.LogError(ex, "下载网络背景图片失败");
-            Toast.Error($"图片下载失败：{ex.Message}");
+            Toast.Error(string.Format(I18nService.Instance.Translate("图片下载失败：{0}"), ex.Message));
         }
         finally
         {
@@ -95,7 +96,7 @@ public partial class WebImageInputViewModel : ViewModel
 
             cancellationTokenSource.Dispose();
             IsEnabled = true;
-            ButtonText = "确定";
+            ButtonText = I18nService.Instance.Translate("确定");
         }
     }
 
