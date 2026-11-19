@@ -55,6 +55,13 @@ public partial class ChildSessionConfig : ObservableObject
     private bool _audioMuted = false;
 
     /// <summary>
+    /// 是否忽略子会话程序产生的鼠标指针位置更新，避免主机鼠标被带跑。
+    /// 映射到 RDP 扩展属性 IgnoreServerGeneratedMouseMoves，仅在下次建立 RDP 连接时生效。
+    /// </summary>
+    [ObservableProperty]
+    private bool _ignoreRemotePointerUpdates = true;
+
+    /// <summary>
     /// 桌面分身是否处于观看模式。开启后键鼠不会在桌面分身内生效，仅显示画面。
     /// </summary>
     [ObservableProperty]

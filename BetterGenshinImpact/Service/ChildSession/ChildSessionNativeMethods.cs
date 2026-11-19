@@ -63,6 +63,21 @@ internal static class ChildSessionNativeMethods
     private static extern IntPtr GetFocus();
 
     [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetGUIThreadInfo(uint threadId, ref GuiThreadInfo info);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr window);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowEnabled(IntPtr window);
+
+    [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool IsWindow(IntPtr window);
 
@@ -192,8 +207,42 @@ internal static class ChildSessionNativeMethods
 
     internal static bool IsRdpInputWindowFocused(IntPtr rdpHostWindow)
     {
+        // GetFocus 只反映线程消息队列内的焦点，窗口切到后台后仍可能保留旧值。
+        // 只有分身确实位于前台时才能捕获主机鼠标；查询焦点不应附加输入队列。
+        var foregroundWindow = GetForegroundWindow();
+        if (rdpHostWindow == IntPtr.Zero
+            || foregroundWindow == IntPtr.Zero
+            || !IsWindowVisible(rdpHostWindow)
+            || (foregroundWindow != rdpHostWindow && !IsChild(foregroundWindow, rdpHostWindow)))
+        {
+            return false;
+        }
+
         var inputWindow = FindRdpInputWindow(rdpHostWindow);
-        return inputWindow != IntPtr.Zero && GetFocus() == inputWindow;
+        var info = new GuiThreadInfo { Size = (uint)Marshal.SizeOf<GuiThreadInfo>() };
+        return inputWindow != IntPtr.Zero
+               && IsWindowVisible(inputWindow)
+               && IsWindowEnabled(inputWindow)
+               && GetGUIThreadInfo(0, ref info)
+               && info.FocusWindow == inputWindow
+               && GetForegroundWindow() == foregroundWindow;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct GuiThreadInfo
+    {
+        public uint Size;
+        public uint Flags;
+        public IntPtr ActiveWindow;
+        public IntPtr FocusWindow;
+        public IntPtr CaptureWindow;
+        public IntPtr MenuOwnerWindow;
+        public IntPtr MoveSizeWindow;
+        public IntPtr CaretWindow;
+        public int CaretLeft;
+        public int CaretTop;
+        public int CaretRight;
+        public int CaretBottom;
     }
 
     /// <summary>

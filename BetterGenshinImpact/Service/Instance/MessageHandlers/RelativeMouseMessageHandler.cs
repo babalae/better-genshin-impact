@@ -507,6 +507,13 @@ internal sealed class RelativeMouseMessageHandler
             return;
         }
 
+        // Raw Input 样本在 UI 队列中等待期间可能已切换前台窗口，不能只依赖上一轮定时器的缓存。
+        if (_serviceProvider.GetService<ChildSessionService>()?.IsRelativeMouseForwardingAvailable() != true)
+        {
+            RefreshCaptureState();
+            return;
+        }
+
         var eventArgs = new RelativeMouseMoveEventArgs(
             sample.DeltaX,
             sample.DeltaY,
