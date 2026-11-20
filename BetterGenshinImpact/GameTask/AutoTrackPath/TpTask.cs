@@ -1163,6 +1163,9 @@ public class TpTask
                 {
                     if (Bv.ClickIfInReviveModal(ra))
                     {
+                        // 点下去就会被送往最近的锚点，所在地图可能已变。
+                        s_lastSuccessfulTeleportMapName = null;
+
                         if (await Bv.WaitForMainUi(ct))
                         {
                             Logger.LogInformation("复苏完成");

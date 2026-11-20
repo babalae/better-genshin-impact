@@ -333,27 +333,18 @@ public partial class PathExecutor
         // 切换队伍前判断是否全队死亡 // 可能队伍切换失败导致的死亡
         if (Bv.ClickIfInReviveModal(ra))
         {
-            // 复苏本身补点 2 次，不占用路线重试次数
-            var revived = await Bv.WaitForMainUi(ct);
-            for (var i = 0; i < 2 && !revived; i++)
+            if (await Bv.WaitForMainUi(ct))
             {
-                using var retryRa = CaptureToRectArea();
-                Bv.ClickIfInReviveModal(retryRa);
-                revived = await Bv.WaitForMainUi(ct);
-            }
-
-            if (!revived)
-            {
-                // 不中断：后续流程会再次检测到死亡并重试
-                Logger.LogWarning("复苏未生效，界面未回到主界面");
+                Logger.LogInformation("复苏完成");
             }
             else
             {
-                Logger.LogInformation("复苏完成");
-                await Delay(4000, ct);
-                // 血量肯定不满，直接去七天神像回血
-                await TpStatueOfTheSeven();
+                Logger.LogWarning("复苏未生效，界面未回到主界面");
             }
+
+            await Delay(4000, ct);
+            // 血量肯定不满，直接去七天神像回血
+            await TpStatueOfTheSeven();
         }
 
         if (PartyConfig.SkipPartySwitch)
@@ -666,21 +657,15 @@ public partial class PathExecutor
         }
         else if (Bv.ClickIfInReviveModal(region))
         {
-            // 同 SwitchPartyBefore：复苏补点 2 次，不占用路线重试次数
-            var revived = await Bv.WaitForMainUi(ct);
-            for (var i = 0; i < 2 && !revived; i++)
+            if (await Bv.WaitForMainUi(ct))
             {
-                using var retryRa = CaptureToRectArea();
-                Bv.ClickIfInReviveModal(retryRa);
-                revived = await Bv.WaitForMainUi(ct);
+                Logger.LogInformation("复苏完成");
+            }
+            else
+            {
+                Logger.LogWarning("复苏未生效，界面未回到主界面");
             }
 
-            if (!revived)
-            {
-                throw new RetryException("复苏未生效：界面未回到主界面");
-            }
-
-            Logger.LogInformation("复苏完成");
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
