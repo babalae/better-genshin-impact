@@ -514,6 +514,9 @@ public sealed class ChildSessionService : IDisposable
 
                 _autoLaunchBetterGiPending = false;
                 _initialConnectionRetriesRemaining = 0;
+                // 作废在途的重建重连：它可能在最后两秒才被调度，超时已经判失败，
+                // 不能再让它醒来后把窗口拉起来重连。
+                _connectionAttemptGeneration++;
                 CompleteConnectionFailure(CreateConnectionTimeoutFailure());
                 TryDisconnectRdpHost();
             }

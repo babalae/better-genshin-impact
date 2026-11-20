@@ -664,14 +664,18 @@ internal sealed class RdpActiveXHost : AxHost
         }
 
         // 2 = LOGON_FAILED_OTHER：ActiveX 显示交互式登录界面等用户重新输入，连接还通着。
-        // 不结束「连接中」状态，只上报让服务侧豁免超时、保持界面等用户操作。
+        // 不结束「连接中」状态，直接发事件让服务侧豁免超时。不能走 ReportConnectionFailure：
+        // 那个会置 _connectionFailureReported，之后用户输错密码时真正的终止失败会被去重挡掉。
         if (errorCode == 2)
         {
-            ReportConnectionFailure(
-                message.Replace("RDP 登录阶段：", "RDP 登录：", StringComparison.Ordinal),
-                errorCode,
-                isLogonFailure: false,
-                isInteractiveLogon: true);
+            ConnectionFailed?.Invoke(
+                this,
+                new ChildSessionConnectionFailedEventArgs(
+                    message.Replace("RDP 登录阶段：", "RDP 登录：", StringComparison.Ordinal),
+                    errorCode)
+                {
+                    IsInteractiveLogon = true
+                });
             return;
         }
 
