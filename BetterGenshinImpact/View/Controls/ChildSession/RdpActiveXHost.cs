@@ -663,6 +663,18 @@ internal sealed class RdpActiveXHost : AxHost
             return;
         }
 
+        // 2 = LOGON_FAILED_OTHER：ActiveX 显示交互式登录界面等用户重新输入，连接还通着。
+        // 不结束「连接中」状态，只上报让服务侧豁免超时、保持界面等用户操作。
+        if (errorCode == 2)
+        {
+            ReportConnectionFailure(
+                message.Replace("RDP 登录阶段：", "RDP 登录：", StringComparison.Ordinal),
+                errorCode,
+                isLogonFailure: false,
+                isInteractiveLogon: true);
+            return;
+        }
+
         _connectionAttemptInProgress = false;
         ReportConnectionFailure(
             message.Replace("RDP 登录阶段：", "RDP 登录失败：", StringComparison.Ordinal),
@@ -713,7 +725,8 @@ internal sealed class RdpActiveXHost : AxHost
         int errorCode,
         int? extendedErrorCode = null,
         bool isLogonFailure = false,
-        bool recoverableByRecreatingHost = false)
+        bool recoverableByRecreatingHost = false,
+        bool isInteractiveLogon = false)
     {
         if (_connectionFailureReported)
         {
@@ -729,7 +742,8 @@ internal sealed class RdpActiveXHost : AxHost
                 extendedErrorCode)
             {
                 IsLogonFailure = isLogonFailure,
-                RecoverableByRecreatingHost = recoverableByRecreatingHost
+                RecoverableByRecreatingHost = recoverableByRecreatingHost,
+                IsInteractiveLogon = isInteractiveLogon
             });
     }
 
@@ -788,10 +802,8 @@ internal sealed class RdpActiveXHost : AxHost
 
     private static bool IsNonTerminalLogonEvent(int errorCode)
     {
-        // 这些代码表示登录仍在继续，或 ActiveX 正在显示可交互的登录界面。
-        // 2 = LOGON_FAILED_OTHER：按微软文档会显示一个交互式登录界面让用户操作，
-        // 不能当成终止性失败——否则重建控件会把这个界面直接关掉。
-        return errorCode is -5 or -4 or -2 or 2 or 3;
+        // 这些代码表示登录仍在继续（连接中的瞬态），不应提前判定连接失败。
+        return errorCode is -5 or -4 or -2 or 3;
     }
 
     private object GetRequiredOcx()

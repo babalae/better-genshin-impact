@@ -29,4 +29,12 @@ public sealed class ChildSessionConnectionFailedEventArgs(
     /// 全新的控件就能干净地进入手动输入流程。服务侧收到后不报失败，直接重建重连。
     /// </summary>
     public bool RecoverableByRecreatingHost { get; init; }
+
+    /// <summary>
+    /// ActiveX 显示了一个交互式登录界面在等用户重新输入（LOGON_FAILED_OTHER = 2）。
+    ///
+    /// 这不是连接失败：连接是通的，只是凭据没通过、控件弹了输入界面。服务侧据此
+    /// 豁免连接超时，和「改密界面」一样保持连接等用户操作。
+    /// </summary>
+    public bool IsInteractiveLogon { get; init; }
 }

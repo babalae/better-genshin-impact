@@ -1118,6 +1118,16 @@ public sealed class ChildSessionService : IDisposable
             return;
         }
 
+        // 2 = LOGON_FAILED_OTHER：ActiveX 显示一个交互式登录界面让用户重新输入，
+        // 连接是通的、有个界面在等用户操作，不能按超时断开（与改密同理）。
+        if (e.IsInteractiveLogon)
+        {
+            _awaitingPasswordChange = true;
+            _logger.LogInformation("客户端显示交互式登录界面，保持连接等待用户操作。");
+            RefreshState("等待在会话中完成登录");
+            return;
+        }
+
         if (_pendingRdpSettingChanges != RdpSettingChange.None)
         {
             if (_rdpSettingsReconnectRetryInProgress)
@@ -1151,10 +1161,9 @@ public sealed class ChildSessionService : IDisposable
             _logger.LogWarning(
                 "连接失败且重试已耗尽，重建 RDP 控件后再试一次（错误：{Message}）", e.Message);
 
+            var generation = _connectionAttemptGeneration;
             RecreateDesktopWindow();
-            _autoLaunchBetterGiPending = true;
-            _initialConnectionRetriesRemaining = 1;
-            RetryInitialConnectionAsync(e);
+            RetryHostRecreationAsync(e, generation);
             return;
         }
 
@@ -1355,15 +1364,18 @@ public sealed class ChildSessionService : IDisposable
         ChildSessionConnectionFailedEventArgs failure,
         int expectedGeneration)
     {
+        var expectedLifecycle = _lifecycleGeneration;
         _connectionRetryInProgress = true;
 
         try
         {
             await Task.Delay(HostRecreationDelay, _disposeCancellationTokenSource.Token);
 
-            // 期间用户可能注销并重新启动：新尝试会递增代际。旧重建醒来后必须拒绝，
-            // 否则会拿「新建窗口 + 恢复旧会话号」去动新一轮连接的控件。
-            if (_disposed || expectedGeneration != _connectionAttemptGeneration)
+            // 期间用户可能注销并重新启动：新尝试会递增连接代际，注销会推进生命周期代际。
+            // 两者任一变，旧重建醒来后都必须拒绝，否则会拿旧状态去动新一轮的控件或会话。
+            if (_disposed
+                || expectedGeneration != _connectionAttemptGeneration
+                || expectedLifecycle != _lifecycleGeneration)
             {
                 return;
             }
@@ -1385,11 +1397,24 @@ public sealed class ChildSessionService : IDisposable
         }
         catch (Exception exception) when (IsExpectedChildSessionException(exception))
         {
-            _logger.LogWarning(exception, "RDP 控件重建后的重连失败。");
+            // 新控件在 Connect 之前的 COM 设置阶段就抛了：不能只 log，否则 StartAsync
+            // 会空等 60 秒超时（设置类重连甚至没有等待方）。要走终止失败路径收尾。
+            var actualException = exception.GetBaseException();
+            var errorCode = actualException is COMException comException
+                ? comException.ErrorCode
+                : 0;
+            _logger.LogWarning(exception, "RDP 控件重建后的重连失败，终止本次尝试。");
+            CompleteConnectionFailure(new ChildSessionConnectionFailedEventArgs(
+                $"重建 RDP 控件后重连失败：{actualException.Message}",
+                errorCode));
         }
         finally
         {
-            _connectionRetryInProgress = false;
+            // 只有「自己这一代」才能清标志：过期的重建任务不能把新一轮尝试的在途标记抹掉。
+            if (expectedGeneration == _connectionAttemptGeneration)
+            {
+                _connectionRetryInProgress = false;
+            }
         }
     }
 
