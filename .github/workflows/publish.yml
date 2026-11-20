@@ -336,8 +336,9 @@ jobs:
         uses: robinraju/release-downloader@v1.8
         with:
           repository: "lemutec/MicaSetup"
-          latest: true
-          fileName: "MicaSetup_v*.7z"
+          # v2.5.7 打包自定义许可证时会引用已删除的多语言资源。
+          tag: "v2.5.6"
+          fileName: "MicaSetup_v2.5.6.7z"
       - name: 📦 Pack MicaSetup
         run: |
           $archiveFiles = Get-ChildItem -Path . -Filter "MicaSetup_v*.7z"
