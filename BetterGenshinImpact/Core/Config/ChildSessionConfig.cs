@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -59,6 +60,21 @@ public partial class ChildSessionConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _watchModeEnabled = false;
+
+    /// <summary>
+    /// 连接桌面分身时是否使用已保存的密码自动登录。默认开启：没存密码时只尝试 RDP
+    /// 记住的上一次凭据，失败或没有就退回手动输入。密码存放在 Windows 凭据管理器。
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoLoginEnabled = true;
+
+    /// <summary>
+    /// 全屏时浮层工具栏是否固定显示（不随鼠标离开自动收起）。
+    ///
+    /// 与窗口置顶无关：这是工具栏的显示策略，用户在大屏上可能需要它一直挂着。
+    /// </summary>
+    [ObservableProperty]
+    private bool _fullscreenBarPinned = false;
 }
 
 [Serializable]

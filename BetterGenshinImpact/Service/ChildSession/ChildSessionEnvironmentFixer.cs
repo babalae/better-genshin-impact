@@ -586,7 +586,10 @@ internal static class ChildSessionEnvironmentFixer
         //    进度和结论还给 sfc 自己的控制台，我们既不用解析它的输出，
         //    也不会因为超时去杀它——被杀会把替换登记成「重启后执行」，
         //    用户下次开机被塞进「更新并重启」，比多等几分钟糟得多。
-        var launch = LaunchSfcScannowInConsole();
+        // 用户已经取消（或面板已关闭）就别再起一个几分钟的修复阶段。
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var launch = LaunchSfcScannowInConsole(cancellationToken);
 
         var launchResult = launch switch
             {
@@ -813,7 +816,7 @@ internal static class ChildSessionEnvironmentFixer
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            var outcome = RunSfcScanfile(termsrvPath);
+            var outcome = RunSfcScanfile(termsrvPath, cancellationToken);
             Logger.LogInformation("sfc /scanfile 结果：{Description}", outcome.Description);
 
             if (outcome.Deferred)
@@ -870,12 +873,13 @@ internal static class ChildSessionEnvironmentFixer
     /// 2. <b>绝不起第二个 sfc</b> —— 两个 sfc 同时改同一个文件，CBS 会互相打架。
     ///    所以已有 sfc 在跑、或本次超时仍未结束时，返回 Deferred 让调用方收手。
     /// </summary>
-    private static SfcOutcome RunSfcScanfile(string path)
+    private static SfcOutcome RunSfcScanfile(string path, CancellationToken cancellationToken)
     {
         var gate = ChildSessionEnvironmentCheck.SfcGate;
 
         // 和后台校验共用一把闸：后台 verifyfile 只要几秒，等一会儿比撞车划算。
-        if (!gate.Wait(TimeSpan.FromSeconds(30)))
+        // 用带 token 的重载：用户取消时立刻退出，不必等闸、也不必白停一遍服务。
+        if (!gate.Wait(TimeSpan.FromSeconds(30), cancellationToken))
         {
             return new SfcOutcome(-1, "已有 sfc 在运行，本次修复没有启动", Deferred: true);
         }
@@ -884,6 +888,13 @@ internal static class ChildSessionEnvironmentFixer
         Process? process = null;
         try
         {
+            // 闸只管本进程。用户自己开的 /scannow（或上一次留下的窗口）看不到闸，
+            // 这时候再起一个 /scanfile 就是两个 sfc 抢同一个文件——先查进程。
+            if (IsSfcRunning())
+            {
+                return new SfcOutcome(-1, "已有 sfc 在运行，本次修复没有启动", Deferred: true);
+            }
+
             var sfc = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.System),
                 "sfc.exe");
@@ -1032,18 +1043,39 @@ internal static class ChildSessionEnvironmentFixer
     /// 所以这次扫描多半也是登记 pending、重启后才替换——这是预期行为，
     /// 调用方会把「可能需要重启」写进给用户的话里。
     /// </summary>
-    private static SfcLaunch LaunchSfcScannowInConsole()
+    private static SfcLaunch LaunchSfcScannowInConsole(CancellationToken cancellationToken)
     {
-        // 这里不持 SfcGate：这次扫描要跑几分钟，占着闸会把后台复核全部堵死。
-        // 改成查进程——它同时能挡住「用户自己开的 sfc」和「上一次留下的窗口」。
-        if (IsSfcRunning())
-        {
-            Logger.LogInformation("已有 sfc 进程在运行，跳过兜底扫描。");
-            return SfcLaunch.AlreadyRunning;
-        }
+        // 先确认本进程没有 sfc 在跑（后台 /verifyfile 可能正巧在复核）：
+        // 直接查进程会把「自己的校验」误判成「别人在扫」，从而白白跳过兜底修复。
+        var gate = ChildSessionEnvironmentCheck.SfcGate;
 
+        bool gateHeld;
         try
         {
+            // 用带 token 的重载：用户取消时不必在这里干等 30 秒再起一个几分钟的扫描。
+            gateHeld = gate.Wait(TimeSpan.FromSeconds(30), cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return SfcLaunch.Failed;
+        }
+
+        var handedOver = false;
+        try
+        {
+            if (!gateHeld)
+            {
+                Logger.LogInformation("本进程的 sfc 校验仍在进行，跳过兜底扫描。");
+                return SfcLaunch.AlreadyRunning;
+            }
+
+            // 持着闸还能看到 sfc 进程，那就是外部的（用户自己开的 /scannow 或上一次的窗口）。
+            if (IsSfcRunning())
+            {
+                Logger.LogInformation("已有 sfc 进程在运行，跳过兜底扫描。");
+                return SfcLaunch.AlreadyRunning;
+            }
+
             var sfc = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.System),
                 "sfc.exe");
@@ -1058,19 +1090,31 @@ internal static class ChildSessionEnvironmentFixer
             // 用户能看到 sfc 的输出和最后结论。
             // 不用 CreateNoWindow=false 直接起 cmd：父进程要是本来就有控制台
             // （比如从终端启动的本程序），子进程会附到同一个窗口里，看起来像卡住了。
-            // 命令行里不掺中文：参数经 cmd 的代码页转换容易变乱码，提示放在 UI 文案里。
+            //
+            // 内层必须用绝对路径：cmd 对不带路径的命令是先查当前目录再查 PATH 的，
+            // 而这个进程从可写目录启动时，那里放一个同名 sfc.exe 就会被以管理员权限执行
+            // （CWE-426）。WorkingDirectory 一起钉到 System32 兜底。
+            //
+            // 两个 cmd 都加 /d：否则它们会执行 HKCU 下 Command Processor\AutoRun 里的命令，
+            // 而同用户权限的进程可以写那个键——提权执行的正是别人的命令（CWE-78）。
             using var process = Process.Start(new ProcessStartInfo
             {
                 FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe"),
-                Arguments = "/c start \"\" cmd.exe /k sfc /scannow",
+                Arguments = $"/d /c start \"\" cmd.exe /d /k \"{sfc}\" /scannow",
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                WorkingDirectory = Environment.SystemDirectory
             });
 
             if (process is null)
             {
                 return SfcLaunch.Failed;
             }
+
+            // 闸要跟着这次完整扫描走到结束再放：外层 cmd 立刻退出，真正的 /scannow
+            // 在另一个窗口里跑几分钟，中途放开会让后台 /verifyfile 撞进来。
+            HandOverGateUntilScanCompletes(gate);
+            handedOver = true;
 
             Logger.LogInformation("已在独立命令行窗口启动 sfc /scannow。");
             return SfcLaunch.Launched;
@@ -1082,40 +1126,57 @@ internal static class ChildSessionEnvironmentFixer
             Logger.LogWarning(exception, "启动 sfc /scannow 窗口失败。");
             return SfcLaunch.Failed;
         }
-    }
-
-    /// <summary>
-    /// 是否已经有 sfc 在跑。
-    ///
-    /// 按进程名查而不是查我们的闸：闸只管本进程，而 sfc 是用户也可能自己开的东西。
-    /// 查不到（权限不足等）当作没有——宁可多启动一次，也不能让兜底完全失效。
-    /// </summary>
-    private static bool IsSfcRunning()
-    {
-        Process[] processes;
-        try
-        {
-            processes = Process.GetProcessesByName("sfc");
-        }
-        catch (Exception exception) when (exception is InvalidOperationException
-                                              or System.ComponentModel.Win32Exception)
-        {
-            Logger.LogWarning(exception, "无法枚举 sfc 进程，按「没有在运行」处理。");
-            return false;
-        }
-
-        try
-        {
-            return processes.Length > 0;
-        }
         finally
         {
-            foreach (var process in processes)
+            if (gateHeld && !handedOver)
             {
-                process.Dispose();
+                gate.Release();
             }
         }
     }
+
+    /// <summary>
+    /// 把闸交给后台，等这次完整扫描真正结束再释放。
+    ///
+    /// 外层 <c>cmd /c start</c> 启动后立刻退出，扫描本体在另一个进程里跑几分钟，
+    /// 而且从「cmd 起来」到「sfc.exe 出现在进程表」之间还有一小段间隔。
+    /// 期间放开闸，后台 <c>/verifyfile</c> 就会闯进来和扫描抢同一个文件：
+    /// 两个 sfc 争 CBS 的资源，校验结论也不可信。
+    /// </summary>
+    private static void HandOverGateUntilScanCompletes(SemaphoreSlim gate)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                // 先等扫描进程真正出现，最多 10 秒（sfc 秒退或没起来就没什么可等的）。
+                var appearDeadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+                while (DateTime.UtcNow < appearDeadline && !IsSfcRunning())
+                {
+                    await Task.Delay(200).ConfigureAwait(false);
+                }
+
+                // 再等它退出。给个上限，避免异常情况下把闸永久占住。
+                var exitDeadline = DateTime.UtcNow + TimeSpan.FromMinutes(30);
+                while (DateTime.UtcNow < exitDeadline && IsSfcRunning())
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+    }
+
+    /// <summary>
+    /// 是否已经有 sfc 在跑（含用户自己开的、上次窗口留下的）。
+    ///
+    /// 按进程名查而不是查我们的闸：闸只管本进程。实现放在检查侧，
+    /// 校验路径也要用它，避免两处各写一份判断。
+    /// </summary>
+    private static bool IsSfcRunning() => ChildSessionEnvironmentCheck.IsSfcProcessRunning();
 
     // ---------------- 辅助 ----------------
 

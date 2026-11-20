@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.Service.ChildSession;
+using Microsoft.Extensions.Logging;
 using DrawingSize = System.Drawing.Size;
 
 namespace BetterGenshinImpact.View.Controls.ChildSession;
@@ -25,14 +26,27 @@ internal sealed class RdpActiveXHost : AxHost
     private ConnectionPointCookie? _eventCookie;
     private RdpEventSink? _eventSink;
     private bool _connectionAttemptInProgress;
+    private bool _credentialApplied;
     private bool _connectionFailureReported;
     private ChildSessionConnectionFailedEventArgs? _lastConnectionDiagnostic;
     private bool _disconnectRequested;
     private bool _sendSystemShortcutsToRemote = true;
     private bool _audioMuted;
     private DrawingSize? _pendingReconnectDesktopSize;
+
+    /// <summary>
+    /// 待重连的代际号。断开或开始新一次连接时自增，让已经排上、
+    /// 还在等「会话释放」的那次重连作废——否则它醒来后照样去连，
+    /// 把刚刚发起的断开又接回来。
+    /// </summary>
+    private int _reconnectGeneration;
     private bool _smartSizingEnabled = true;
     private bool _inputBlocked;
+
+    /// <summary>
+    /// 自动登录凭据的来源。为 null 表示不做自动登录，走原来的交互式输入。
+    /// </summary>
+    private Func<RdpCredential?>? _credentialProvider;
 
     internal event EventHandler<ChildSessionConnectionFailedEventArgs>? ConnectionFailed;
 
@@ -68,6 +82,10 @@ internal sealed class RdpActiveXHost : AxHost
         {
             return;
         }
+
+        // 新的一次连接开始：把还没执行的那次重连作废，免得它醒来后再连一遍。
+        _reconnectGeneration++;
+        _pendingReconnectDesktopSize = null;
 
         ChildSessionNativeMethods.ClearRdpInputWindowCache(Handle);
         var client = GetRequiredOcx();
@@ -116,10 +134,20 @@ internal sealed class RdpActiveXHost : AxHost
             extendedSettings.set_Property("ConnectToChildSession", ref connectToChildSession);
         });
 
+        // 先清掉上一次的失败标记再交凭据：交凭据本身可能失败（旧密码清不掉），
+        // 那时要靠 ReportConnectionFailure 把原因报出去，标记还留着就会被吞掉。
         _connectionAttemptInProgress = true;
         _connectionFailureReported = false;
         _lastConnectionDiagnostic = null;
         _disconnectRequested = false;
+
+        // 凭据要在 Connect() 之前交给控件：登录阶段才会用到它们。
+        if (!ApplyCredentials(client))
+        {
+            _connectionAttemptInProgress = false;
+            return;
+        }
+
         try
         {
             RunComStep("调用 RDP Connect()", () => InvokeComMethod(client, "Connect"));
@@ -182,11 +210,23 @@ internal sealed class RdpActiveXHost : AxHost
     }
 
     /// <summary>
+    /// 设置自动登录凭据的来源。每次连接都会重新取一次：
+    /// 用户可能在两次连接之间改了密码。
+    /// </summary>
+    internal void SetCredentialProvider(Func<RdpCredential?> provider)
+    {
+        _credentialProvider = provider;
+    }
+
+    /// <summary>
     /// 屏蔽或恢复本机进入桌面分身的鼠标键盘输入。期望状态会被记住，
     /// 每次连接登录后由 ChildSessionService 重新施加。
     /// </summary>
     internal void SetInputBlocked(bool blocked)
     {
+        // 只有「从阻止切到解除」才需要归还焦点：原本就没阻止时，Windows 的焦点
+        // 可能属于别的窗口，这里抢回来会打断用户。
+        var wasBlocked = _inputBlocked;
         _inputBlocked = blocked;
         if (!IsHandleCreated)
         {
@@ -194,6 +234,41 @@ internal sealed class RdpActiveXHost : AxHost
         }
 
         ChildSessionNativeMethods.SetRdpInputWindowEnabled(Handle, !blocked);
+
+        // 解除阻止后把焦点交还给输入窗口：被禁用期间 Windows 已把焦点移走，
+        // 仅重新启用输入窗口不会让 RDP 自动恢复输入转发，必须让它重新持有焦点，
+        // 否则表现为「按钮已切回控制模式，画面却始终像观看模式一样没反应」。
+        // 窗口不在前台时归还失败是正常现象，不留警告，只在诊断日志里记一笔。
+        if (!blocked
+            && wasBlocked
+            && ConnectedState == 1
+            && !ChildSessionNativeMethods.TryFocusRdpInputWindow(Handle))
+        {
+            ChildSessionDiagnosticsLog.Instance.LogDebug("把焦点归还给桌面分身的输入窗口失败。");
+        }
+    }
+
+    /// <summary>
+    /// 把焦点交给桌面分身的输入窗口。
+    ///
+    /// 用户主动切换输入模式时必须调用：游戏模式的相对鼠标转发依赖输入窗口持有焦点，
+    /// 只是把窗口重新启用并不会自动恢复转发（表现为切了游戏模式、游戏里视角不跟着转）。
+    ///
+    /// 与 <see cref="SetInputBlocked"/> 的分工：那个用于状态同步（登录完成、重连后），
+    /// 只在「确实解除过阻止」时才还焦点，避免抢走别的窗口的焦点；这个是用户显式操作，
+    /// 无条件尝试。
+    /// </summary>
+    internal void EnsureInputFocus()
+    {
+        if (!IsHandleCreated || ConnectedState != 1)
+        {
+            return;
+        }
+
+        if (!ChildSessionNativeMethods.TryFocusRdpInputWindow(Handle))
+        {
+            ChildSessionDiagnosticsLog.Instance.LogDebug("把焦点交给桌面分身的输入窗口失败。");
+        }
     }
 
     internal void ReconnectToChildSession(DrawingSize desktopSize)
@@ -206,6 +281,9 @@ internal sealed class RdpActiveXHost : AxHost
 
         if (ConnectedState == 0)
         {
+            // 直接连也作废在途的那次「等会话释放」重连：
+            // 等这边失败（控件回 0）时它会醒过来，把新发起的一次顶掉。
+            _reconnectGeneration++;
             ConnectToChildSession(desktopSize);
             return;
         }
@@ -228,8 +306,51 @@ internal sealed class RdpActiveXHost : AxHost
 
     internal void DisconnectSession()
     {
+        // 作废在途的重连：它可能正停在「等会话释放」上，等完就会把分身又连回来。
+        _reconnectGeneration++;
         _pendingReconnectDesktopSize = null;
         _ = DisconnectCore();
+    }
+
+    /// <summary>
+    /// 断开连接，但推迟到当前 ActiveX 事件回调结束之后执行。
+    ///
+    /// 登录失败这类回调是控件同步发出来的，在那里面直接调 <c>Disconnect</c> 属于
+    /// 在事件处理里重入控件，容易拿到 COM 错误；排到消息队列末尾更稳。
+    /// </summary>
+    internal void DisconnectSessionDeferred()
+    {
+        // 与 DisconnectSession 一样先作废在途的重连。
+        _reconnectGeneration++;
+        _pendingReconnectDesktopSize = null;
+
+        if (!IsHandleCreated || IsDisposed || Disposing)
+        {
+            _ = DisconnectCore();
+            return;
+        }
+
+        try
+        {
+            BeginInvoke(new Action(DisconnectSafely));
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
+    private void DisconnectSafely()
+    {
+        try
+        {
+            _ = DisconnectCore();
+        }
+        catch (Exception exception) when (exception is COMException
+                                              or TargetInvocationException
+                                              or InvalidOperationException)
+        {
+            ChildSessionDiagnosticsLog.Instance.LogDebug(exception, "断开 RDP 连接失败。");
+        }
     }
 
     private bool DisconnectCore()
@@ -406,16 +527,37 @@ internal sealed class RdpActiveXHost : AxHost
         ReportConnectionFailure(
             message,
             disconnectReason,
-            extendedDisconnectReason);
+            extendedDisconnectReason,
+            isLogonFailure: failedWhileConnecting
+                            && (ChildSessionLogonFailure.IsRejectedDisconnectCode(disconnectReason)
+                                || ChildSessionLogonFailure.IsRejectedExtendedReason(extendedDisconnectReason)));
     }
 
     private async void ConnectPendingReconnect()
     {
+        var generation = _reconnectGeneration;
+
         await Task.Delay(ReconnectDelay);
 
+        // 等待期间可能被断开或被新的一次连接取代，这时不能再连。
+        if (generation != _reconnectGeneration || IsDisposed || Disposing)
+        {
+            return;
+        }
+
+        // 控件回到「已断开」不代表上一轮连接在系统里已经收尾。这时立刻重连，
+        // 服务端会用「访问被拒绝」把新连接顶回来——改设置后「第一次必定失败、再点一次才行」
+        // 就是这么来的。等会话真的不再是 Active 再连。
+        await WaitForChildSessionReleasedAsync(TimeSpan.FromSeconds(10));
+        if (generation != _reconnectGeneration || IsDisposed || Disposing)
+        {
+            return;
+        }
+
+        // 尺寸要等到这时才取：等待期间用户可能又改了一次设置，那次的尺寸会写进同一个字段。
         var desktopSize = _pendingReconnectDesktopSize;
         _pendingReconnectDesktopSize = null;
-        if (!desktopSize.HasValue || IsDisposed || Disposing)
+        if (!desktopSize.HasValue)
         {
             return;
         }
@@ -435,6 +577,38 @@ internal sealed class RdpActiveXHost : AxHost
             ReportConnectionFailure(
                 $"RDP 自动重新连接失败：{actualException.Message}",
                 errorCode);
+        }
+    }
+
+    /// <summary>
+    /// 等分身会话离开 Active 状态。没有会话（已经注销）也算可以连了。
+    /// </summary>
+    private static async Task WaitForChildSessionReleasedAsync(TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+
+        while (DateTime.UtcNow < deadline)
+        {
+            // 只有「查得到」才下结论：查会话号或查状态任一步失败，都说明系统当下
+            // 给不出答案，继续有界轮询。把失败当成「没有会话」会立刻重连，
+            // 正好撞上这段等待要避免的「访问被拒绝」。
+            if (ChildSessionNativeMethods.TryQueryChildSessionId(out var sessionId))
+            {
+                if (sessionId is null)
+                {
+                    // 确实没有会话（已注销），可以直接连。
+                    return;
+                }
+
+                if (ChildSessionNativeMethods.TryQuerySessionActive(sessionId.Value, out var active)
+                    && !active)
+                {
+                    // 查得到且明确不是 Active，算已释放。
+                    return;
+                }
+            }
+
+            await Task.Delay(200);
         }
     }
 
@@ -458,8 +632,17 @@ internal sealed class RdpActiveXHost : AxHost
             return;
         }
 
+        // 密码错误时要说清怎么恢复：自动登录失败后再次连接仍会用同一个旧密码，
+        // 用户不去改就会一直撞同一个错，还会把账户推向锁定阈值。
+        var recoveryHint = errorCode == 0
+            ? "\n\n如果 Windows 登录密码最近改过，请在「自动登录」里更新保存的密码；"
+              + "也可以关闭自动登录后重新连接，改用手动输入。"
+            : string.Empty;
+
         var message =
-            $"RDP 登录阶段：{GetLogonErrorDescription(errorCode)}\n\n错误代码：{FormatErrorCode(errorCode)}";
+            $"RDP 登录阶段：{GetLogonErrorDescription(errorCode)}"
+            + recoveryHint
+            + $"\n\n错误代码：{FormatErrorCode(errorCode)}";
         if (IsNonTerminalLogonEvent(errorCode))
         {
             _lastConnectionDiagnostic =
@@ -470,7 +653,8 @@ internal sealed class RdpActiveXHost : AxHost
         _connectionAttemptInProgress = false;
         ReportConnectionFailure(
             message.Replace("RDP 登录阶段：", "RDP 登录失败：", StringComparison.Ordinal),
-            errorCode);
+            errorCode,
+            isLogonFailure: ChildSessionLogonFailure.IsRejectedLogonCode(errorCode));
     }
 
     private int TryGetExtendedDisconnectReason()
@@ -514,7 +698,9 @@ internal sealed class RdpActiveXHost : AxHost
     private void ReportConnectionFailure(
         string message,
         int errorCode,
-        int? extendedErrorCode = null)
+        int? extendedErrorCode = null,
+        bool isLogonFailure = false,
+        bool recoverableByRecreatingHost = false)
     {
         if (_connectionFailureReported)
         {
@@ -527,7 +713,11 @@ internal sealed class RdpActiveXHost : AxHost
             new ChildSessionConnectionFailedEventArgs(
                 message,
                 errorCode,
-                extendedErrorCode));
+                extendedErrorCode)
+            {
+                IsLogonFailure = isLogonFailure,
+                RecoverableByRecreatingHost = recoverableByRecreatingHost
+            });
     }
 
     private static bool IsNormalDisconnect(
@@ -651,8 +841,149 @@ internal sealed class RdpActiveXHost : AxHost
             CultureInfo.InvariantCulture);
     }
 
+    /// <summary>
+    /// 把自动登录凭据交给 RDP 控件。
+    ///
+    /// 每一步都单独兜住异常：凭据设不上只是退回「让用户自己输」，
+    /// 不该因为一个可选属性不支持就让整次连接失败。
+    /// </summary>
+    /// <returns>false 表示这次连接不能再继续（控件里还留着上一次的密码却清不掉）。</returns>
+    private bool ApplyCredentials(object client)
+    {
+        var credential = _credentialProvider?.Invoke();
+        if (credential is not { } value
+            || string.IsNullOrWhiteSpace(value.UserName)
+            || string.IsNullOrEmpty(value.Password))
+        {
+            // 本次不自动登录（开关关着、没存密码，或用户刚清掉密码）。
+            //
+            // 控件是跨连接复用的：上一次设进去的密码不会自己消失。这里必须主动清掉，
+            // 否则「关掉自动登录再重连」仍会被旧密码静默登进去——用户会以为开关没生效。
+            // 清的是控件内的凭据状态，不是用户保存的密码；保存的密码在设置里原样保留，
+            // 下次打开自动登录还会用它。
+            // ResetPassword 在「已连接」时会失败（E_FAIL），这里是 Connect() 之前调用的。
+            if (!TryClearStoredPassword(client))
+            {
+                // 清不掉就不能连：连上去会被上次的密码直接登进去，「关掉自动登录」就成了摆设。
+                // 但也不必让用户重启程序——换个全新的控件，旧密码跟着一起丢掉。
+                // 标成「可重建恢复」：服务侧会重建控件再重连，不走普通重试。
+                ReportConnectionFailure(
+                    "自动登录已关闭，控件里残留的上一次密码清不掉，正在重建连接控件。",
+                    0,
+                    isLogonFailure: true,
+                    recoverableByRecreatingHost: true);
+                return false;
+            }
+
+            return true;
+        }
+
+        ChildSessionDiagnosticsLog.Instance.LogInformation(
+            "自动登录：本次连接使用已保存的凭据（账户 {UserName}，域 {Domain}）。",
+            value.UserName,
+            string.IsNullOrEmpty(value.Domain) ? "(空)" : value.Domain);
+
+        try
+        {
+            var identityStepsSucceeded = true;
+
+            try
+            {
+                SetComProperty(client, "UserName", value.UserName);
+            }
+            catch (Exception exception) when (IsCredentialStepException(exception))
+            {
+                identityStepsSucceeded = false;
+                ChildSessionDiagnosticsLog.Instance.LogWarning(
+                    exception,
+                    "设置 RDP 登录用户名失败，将退回手动输入。");
+            }
+
+            try
+            {
+                // 域为空也要显式写一次：控件复用，上一次可能是 MicrosoftAccount，
+                // 不清掉会把本地账户套上微软账户的域，登录必然失败。
+                SetComProperty(client, "Domain", value.Domain ?? string.Empty);
+            }
+            catch (Exception exception) when (IsCredentialStepException(exception))
+            {
+                identityStepsSucceeded = false;
+                ChildSessionDiagnosticsLog.Instance.LogWarning(
+                    exception,
+                    "设置 RDP 登录域失败，将退回手动输入。");
+            }
+
+            // 用户名或域没设成功就不能再写密码：控件是跨连接复用的，里面还留着
+            // 上一次的用户名/域，这时只把密码写进去，会让「新密码」配「旧身份」。
+            // 更糟的是旧密码也还在——ResetPassword 之前，控件会沿用上次的密码，
+            // 等于拿「旧身份 + 旧密码」静默提交，连手动输入的机会都没有。
+            // 所以这里必须清掉旧密码，退回干净的手动输入。
+            if (!identityStepsSucceeded)
+            {
+                if (!TryClearStoredPassword(client))
+                {
+                    ReportConnectionFailure(
+                        "设置登录账户失败，控件里残留的上一次密码也清不掉，正在重建连接控件。",
+                        0,
+                        isLogonFailure: true,
+                        recoverableByRecreatingHost: true);
+                    return false;
+                }
+
+                return true;
+            }
+
+            // 密码只经过 RDP 的凭据通道，不写入任何持久化存储。
+            ((IMsRdpClientNonScriptable)client).put_ClearTextPassword(value.Password);
+            _credentialApplied = true;
+        }
+        catch (Exception exception) when (IsCredentialStepException(exception))
+        {
+            // 密码本身已验证正确，这里只是写不进控件、原因未知；不主动清旧密码，
+            // 直接退回手动输入（凭据框由自动登录兜底再填一次）。
+            ChildSessionDiagnosticsLog.Instance.LogWarning(
+                exception,
+                "密码正确，但因未知原因保存失败，将退回手动输入。");
+        }
+
+        // 其余各步失败都只是「退回手动输入」，连接本身还可以继续。
+        return true;
+    }
+
+    /// <summary>
+    /// 清掉控件里上一次设进去的密码。从未设过密码时视为成功。
+    /// </summary>
+    /// <returns>true 表示控件里不再有任何残留密码。</returns>
+    private bool TryClearStoredPassword(object client)
+    {
+        if (!_credentialApplied)
+        {
+            return true;
+        }
+
+        try
+        {
+            ((IMsRdpClientNonScriptable)client).ResetPassword();
+            _credentialApplied = false;
+            return true;
+        }
+        catch (Exception exception) when (IsCredentialStepException(exception))
+        {
+            ChildSessionDiagnosticsLog.Instance.LogDebug(exception, "清除上一次的 RDP 密码失败。");
+            return false;
+        }
+    }
+
+    private static bool IsCredentialStepException(Exception exception) =>
+        exception.GetBaseException() is COMException
+            or InvalidCastException
+            or TargetInvocationException
+            or MissingMemberException
+            or InvalidOperationException;
+
     private static void RunComStep(string stepName, Action action)
     {
+        var startedAt = DateTime.UtcNow;
         try
         {
             action();
@@ -668,6 +999,20 @@ internal sealed class RdpActiveXHost : AxHost
             }
 
             throw;
+        }
+        finally
+        {
+            // 超过 200ms 才记：COM 调用里有几个已知会阻塞的（最典型的是 Connect()，
+            // 某些情况下它会同步等连接建立），不记时长就分不清「黑屏是在等这一步」
+            // 还是「等 RDP 握手/会话初始化」。
+            var elapsedMilliseconds = (DateTime.UtcNow - startedAt).TotalMilliseconds;
+            if (elapsedMilliseconds >= 200)
+            {
+                ChildSessionDiagnosticsLog.Instance.LogInformation(
+                    "RDP 设置步骤「{Step}」耗时 {Milliseconds:0} ms。",
+                    stepName,
+                    elapsedMilliseconds);
+            }
         }
     }
 
