@@ -199,6 +199,11 @@ internal class GoToSereniteaPotTask
     /// <returns>成功进入壶并初始化壶名称返回 true。</returns>
     private async Task<bool> IntoSereniteaPotByBag(CancellationToken ct)
     {
+        // 先回主界面。前一个任务失败或取消时经常停在大地图，这时按 B 打不开背包，
+        // 而 WaitForBagToOpen 检查的关闭按钮在地图界面同样存在，会被误判成背包已打开
+        await new ReturnMainUiTask().Start(ct);
+        await Delay(500, ct);
+
         // 尝试使用背包的壶进入。
         QuickSereniteaPotTask.Done();
         await Delay(5000, ct); // 在点击壶之后的特殊加载页面会有 mainUI
