@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.View.Controls.ChildSession;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
@@ -28,6 +29,9 @@ public sealed class ChildSessionService : IDisposable
     internal static readonly DrawingSize DefaultDesktopSize = new(1920, 1080);
     private static readonly TimeSpan ConnectionTimeout = TimeSpan.FromSeconds(60);
     private const int InitialConnectionRetryCount = 3;
+
+    /// <summary>控件重建后、重新发起连接前的等待。让旧控件的 ActiveX 先彻底退出。</summary>
+    private static readonly TimeSpan HostRecreationDelay = TimeSpan.FromSeconds(2);
 
     /// <summary>
     /// 设置切换后的自动重连次数。
@@ -111,6 +115,14 @@ public sealed class ChildSessionService : IDisposable
     /// 丢掉就会退回「只能等外层超时」的老问题。
     /// </summary>
     private uint? _reconnectingSessionIdAfterRecreate;
+
+    /// <summary>
+    /// 连接尝试的代际。每次 ConnectCore 发起新连接时递增。
+    ///
+    /// 控件重建的重试会经历 Task.Delay，期间用户可能注销并重新启动，新尝试会递增
+    /// 代际。旧重试醒来后据此拒绝——否则会拿旧状态去动新会话的控件。
+    /// </summary>
+    private int _connectionAttemptGeneration;
 
     public event EventHandler? StateChanged;
 
@@ -879,6 +891,7 @@ public sealed class ChildSessionService : IDisposable
 
         if (window.RdpHost.ConnectedState == 0)
         {
+            _connectionAttemptGeneration++;
             _reconnectingSessionId = existingSessionId;
             _autoLaunchBetterGiPending = existingSessionId is null;
             _initialConnectionRetriesRemaining = _autoLaunchBetterGiPending
@@ -1059,10 +1072,12 @@ public sealed class ChildSessionService : IDisposable
                 _controlRecreatedForAttempt = true;
                 _logger.LogInformation("RDP 控件需要重建才能继续（{Message}），重建后重连。", e.Message);
 
+                // 重建重连是独立的恢复路径，不改变「是否新建会话」的意图：
+                // autoLaunch 只在 ConnectCore 新建会话时置 true，这里保留原值，
+                // 否则重新附着已有会话后也会去拉起 BetterGI。
+                var generation = _connectionAttemptGeneration;
                 RecreateDesktopWindow();
-                _autoLaunchBetterGiPending = true;
-                _initialConnectionRetriesRemaining = 1;
-                RetryInitialConnectionAsync(e);
+                RetryHostRecreationAsync(e, generation);
                 return;
             }
 
@@ -1204,6 +1219,14 @@ public sealed class ChildSessionService : IDisposable
         _connectionRetryInProgress = false;
         _connectionAttemptCompletionSource?.TrySetResult(true);
 
+        // WTS 兜底也会走到这里（ActiveX 可能没发 OnLoginComplete）。无论哪种来源，
+        // 都要让 host 侧把「连接中」标记收尾——否则之后一次正常的远端断开，
+        // 仍会被 host 当成「连接失败」，进而触发控件重建、把用户已关掉的会话重连回来。
+        if (sender is not RdpActiveXHost)
+        {
+            _desktopWindow?.RdpHost.CompleteLoginWithoutEvent();
+        }
+
 
         // 输入窗口每次连接都会新建，观看模式需要重新施加到新窗口上。
         _desktopWindow?.RdpHost.SetInputBlocked(WatchModeEnabled);
@@ -1328,6 +1351,48 @@ public sealed class ChildSessionService : IDisposable
         }
     }
 
+    private async void RetryHostRecreationAsync(
+        ChildSessionConnectionFailedEventArgs failure,
+        int expectedGeneration)
+    {
+        _connectionRetryInProgress = true;
+
+        try
+        {
+            await Task.Delay(HostRecreationDelay, _disposeCancellationTokenSource.Token);
+
+            // 期间用户可能注销并重新启动：新尝试会递增代际。旧重建醒来后必须拒绝，
+            // 否则会拿「新建窗口 + 恢复旧会话号」去动新一轮连接的控件。
+            if (_disposed || expectedGeneration != _connectionAttemptGeneration)
+            {
+                return;
+            }
+
+            var window = EnsureDesktopWindow();
+            ShowDesktopWindow(window);
+
+            if (_reconnectingSessionIdAfterRecreate is { } reattaching)
+            {
+                _reconnectingSessionId = reattaching;
+                _reconnectingSessionIdAfterRecreate = null;
+            }
+
+            _logger.LogInformation("RDP 控件重建完成，用新控件重新连接。");
+            window.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+        }
+        catch (Exception exception) when (IsExpectedChildSessionException(exception))
+        {
+            _logger.LogWarning(exception, "RDP 控件重建后的重连失败。");
+        }
+        finally
+        {
+            _connectionRetryInProgress = false;
+        }
+    }
+
     private async void RetryInitialConnectionAsync(ChildSessionConnectionFailedEventArgs firstFailure)
     {
         _connectionRetryInProgress = true;
@@ -1358,19 +1423,7 @@ public sealed class ChildSessionService : IDisposable
 
             RefreshState();
 
-            // 控件重建分支会先丢弃旧窗口再进到这里，此时 _desktopWindow 必然为空。
-            // 不能直接返回——那样重建完什么都不做，启动只能靠外层等待超时收场。
-            // 为空就新建一个（ChildSessionWindow 是 Transient，拿到的就是全新控件）。
             var window = EnsureDesktopWindow();
-            ShowDesktopWindow(window);
-
-            // 重建时被清掉的「正在重新附着的会话号」要接回来：新控件连的还是同一个
-            // 已有会话，登录完成的系统状态兜底靠它才生效。
-            if (_reconnectingSessionIdAfterRecreate is { } reattaching)
-            {
-                _reconnectingSessionId = reattaching;
-                _reconnectingSessionIdAfterRecreate = null;
-            }
 
             RefreshState(
                 $"正在重试桌面分身连接（{retryNumber}/{InitialConnectionRetryCount}）");

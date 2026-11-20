@@ -478,10 +478,23 @@ internal sealed class RdpActiveXHost : AxHost
 
     private void OnLoginComplete()
     {
+        CompleteLoginWithoutEvent();
+        LoginCompleted?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 只清 ActiveX 侧的「连接中」状态，不触发事件。
+    ///
+    /// ActiveX 可能永远不发 OnLoginComplete（例如重新附着已有会话时），服务侧会用
+    /// WTS 状态兜底判定登录已成功。兜底已经在服务侧走完了 OnRdpLoginCompleted，
+    /// 这里只需把 _connectionAttemptInProgress 清掉，否则之后一次正常的远端断开
+    /// 会被误判成「连接失败」。不能重复触发 LoginCompleted——那会让服务侧重入。
+    /// </summary>
+    internal void CompleteLoginWithoutEvent()
+    {
         _connectionAttemptInProgress = false;
         _connectionFailureReported = false;
         _lastConnectionDiagnostic = null;
-        LoginCompleted?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnDisconnected(int disconnectReason)
@@ -775,8 +788,10 @@ internal sealed class RdpActiveXHost : AxHost
 
     private static bool IsNonTerminalLogonEvent(int errorCode)
     {
-        // 这些代码表示登录仍在继续或 ActiveX 正在显示可交互选项，不应提前判定连接失败。
-        return errorCode is -5 or -4 or -2 or 3;
+        // 这些代码表示登录仍在继续，或 ActiveX 正在显示可交互的登录界面。
+        // 2 = LOGON_FAILED_OTHER：按微软文档会显示一个交互式登录界面让用户操作，
+        // 不能当成终止性失败——否则重建控件会把这个界面直接关掉。
+        return errorCode is -5 or -4 or -2 or 2 or 3;
     }
 
     private object GetRequiredOcx()
