@@ -1368,7 +1368,6 @@ public sealed class ChildSessionService : IDisposable
         int expectedGeneration)
     {
         var expectedLifecycle = _lifecycleGeneration;
-        _connectionRetryInProgress = true;
 
         try
         {
@@ -1410,14 +1409,6 @@ public sealed class ChildSessionService : IDisposable
             CompleteConnectionFailure(new ChildSessionConnectionFailedEventArgs(
                 $"重建 RDP 控件后重连失败：{actualException.Message}",
                 errorCode));
-        }
-        finally
-        {
-            // 只有「自己这一代」才能清标志：过期的重建任务不能把新一轮尝试的在途标记抹掉。
-            if (expectedGeneration == _connectionAttemptGeneration)
-            {
-                _connectionRetryInProgress = false;
-            }
         }
     }
 
