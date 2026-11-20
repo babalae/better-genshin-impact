@@ -679,6 +679,22 @@ internal sealed class RdpActiveXHost : AxHost
             return;
         }
 
+        // 1 = LOGON_FAILED_UPDATE_PASSWORD / 0xC0000224：会话内弹出改密界面，等用户操作。
+        // 同样不能走去重——用户改密时输错密码（OnLogonError(0)）是新的终止失败，
+        // 若被 _connectionFailureReported 挡掉，真实错误和恢复提示就都丢了。
+        if (errorCode == 1 || errorCode == unchecked((int)0xC0000224))
+        {
+            ConnectionFailed?.Invoke(
+                this,
+                new ChildSessionConnectionFailedEventArgs(
+                    message.Replace("RDP 登录阶段：", "RDP 登录：", StringComparison.Ordinal),
+                    errorCode)
+                {
+                    IsLogonFailure = true
+                });
+            return;
+        }
+
         _connectionAttemptInProgress = false;
         ReportConnectionFailure(
             message.Replace("RDP 登录阶段：", "RDP 登录失败：", StringComparison.Ordinal),
