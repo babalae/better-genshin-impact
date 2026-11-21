@@ -341,6 +341,22 @@
                             <MenuItem Command="{Binding EditScriptCommonCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="{i18n:T 修改通用配置}" />
+                            <MenuItem Command="{Binding EditShellCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="{i18n:T 修改Shell任务}">
+                                <MenuItem.Style>
+                                    <Style TargetType="MenuItem">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem.Type}"
+                                                Value="Shell">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </MenuItem.Style>
+                            </MenuItem>
                             <MenuItem Command="{Binding EditJsScriptSettingsCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       Header="{i18n:T 修改JS脚本自定义配置}">
