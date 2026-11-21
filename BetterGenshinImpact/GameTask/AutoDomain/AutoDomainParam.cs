@@ -29,6 +29,9 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
     // 需要刷取的副本名称
     public string SundaySelectedValue { get; set; } = string.Empty;
 
+    // 进入秘境时选择的难度（I~VI），留空则使用游戏默认选中的难度
+    public string DomainLevel { get; set; } = string.Empty;
+
     // 结束后是否自动分解圣遗物
     public bool AutoArtifactSalvage { get; set; } = false;
 
@@ -124,6 +127,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         PartyName = config.PartyName;
         DomainName = config.DomainName;
         SundaySelectedValue = config.SundaySelectedValue;
+        DomainLevel = config.DomainLevel;
         AutoArtifactSalvage = config.AutoArtifactSalvage;
         MaxArtifactStar = TaskContext.Instance().Config.AutoArtifactSalvageConfig.MaxArtifactStar;
         ResinPriorityList = new List<string>(config.ResinPriorityList);

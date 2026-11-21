@@ -695,6 +695,15 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             await Delay(300, _ct);
         }
 
+        // 培养指南已自行选择难度，这里只处理手动指定的秘境。
+        if (!_guidePlanning && _taskParam.DomainName != TrainingGuideOption && !string.IsNullOrWhiteSpace(_taskParam.DomainLevel))
+        {
+            var isAllDomainsOpen = serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 }
+                                   || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 }
+                                   || limitedFullyStringRaocrListdone != null;
+            await SelectConfiguredDomainLevel(isAllDomainsOpen);
+        }
+
         // 点击单人挑战确认并等待队伍界面--使用图像模版匹配的方法，也可以使用文字OCR的方法识别“单人挑战”直到消失
         await NewRetry.WaitForElementAppear(
             ElementRecognition.Get("PartyBtnChooseView"),
