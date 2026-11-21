@@ -383,7 +383,8 @@
     "nameEn": "Ningguang",
     "skillCD": 12,
     "weapon": "10",
-    "elementalType": "Geo"
+    "elementalType": "Geo",
+    "normalAttack": true
   },
   {
     "alias": [
@@ -1323,7 +1324,8 @@
     "skillCD": 5,
     "skillHoldCD": 6,
     "weapon": "10",
-    "elementalType": "Dendro"
+    "elementalType": "Dendro",
+    "normalAttack": true
   },
   {
     "alias": [
@@ -1485,7 +1487,8 @@
     "nameEn": "Baizhuer",
     "skillCD": 10,
     "weapon": "10",
-    "elementalType": "Dendro"
+    "elementalType": "Dendro",
+    "normalAttack": true
   },
   {
     "alias": [
@@ -1560,7 +1563,8 @@
     "nameEn": "Wriothesley",
     "skillCD": 16,
     "weapon": "10",
-    "elementalType": "Cryo"
+    "elementalType": "Cryo",
+    "normalAttack": true
   },
   {
     "alias": [
@@ -1603,7 +1607,8 @@
     "skillCD": 12,
     "skillHoldCD": 18,
     "weapon": "10",
-    "elementalType": "Cryo"
+    "elementalType": "Cryo",
+    "normalAttack": true
   },
   {
     "alias": [
@@ -1956,7 +1961,8 @@
     "nameEn": "Citlali",
     "skillCD": 16,
     "weapon": "10",
-    "elementalType": "Cryo"
+    "elementalType": "Cryo",
+    "normalAttack": true
   },
   {
     "alias": [
@@ -2146,7 +2152,8 @@
     "nameEn": "Lauma",
     "skillCD": 12,
     "weapon": "10",
-    "elementalType": "Dendro"
+    "elementalType": "Dendro",
+    "normalAttack": true
   },
   {
     "alias": [
@@ -2188,7 +2195,8 @@
     "nameEn": "Nefer",
     "skillCD": 9,
     "weapon": "10",
-    "elementalType": "Dendro"
+    "elementalType": "Dendro",
+    "normalAttack": true
   },
   {
     "alias": [
@@ -2333,7 +2341,8 @@
     "nameEn": "Prune",
     "skillCD": 15,
     "weapon": "10",
-    "elementalType": "Anemo"
+    "elementalType": "Anemo",
+    "normalAttack": true
   },
   {
     "alias": [
@@ -2431,7 +2440,8 @@
       "米提亚",
       "Mitya"
     ],
-    "elementalType": "Electro"
+    "elementalType": "Electro",
+    "normalAttack": true
   },
   {
     "id": "10000147",
