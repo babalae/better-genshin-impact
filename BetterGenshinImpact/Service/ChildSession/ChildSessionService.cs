@@ -340,19 +340,31 @@ public sealed class ChildSessionService : IDisposable
         }
 
         // 服务启动是异步的：等它真的进入 Running，界面上的状态才不会停在「未启动」。
+        // 查询走 SCM（TryQueryState 是同步调用），SCM 繁忙时并不保证毫秒级返回，
+        // 所以整段等待与前半段的查询/启动一样放工作线程；回来后再在 UI 线程刷缓存。
         const int timeoutSeconds = 5;
-        var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
-        while (DateTime.UtcNow < deadline)
+        var reachedRunning = await Task.Run(async () =>
         {
-            if (ChildSessionServiceNativeMethods.TryQueryState("TermService", out var current)
-                && current == 4)
+            var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+            while (DateTime.UtcNow < deadline)
             {
-                _logger.LogInformation("远程桌面服务已自动启动。");
-                RefreshTermServiceStatusCache();
-                return true;
+                if (ChildSessionServiceNativeMethods.TryQueryState("TermService", out var current)
+                    && current == 4)
+                {
+                    return true;
+                }
+
+                await Task.Delay(200).ConfigureAwait(false);
             }
 
-            await Task.Delay(200);
+            return false;
+        }).ConfigureAwait(true);
+
+        if (reachedRunning)
+        {
+            _logger.LogInformation("远程桌面服务已自动启动。");
+            RefreshTermServiceStatusCache();
+            return true;
         }
 
         _logger.LogWarning("远程桌面服务启动后 {Seconds} 秒内未进入运行状态。", timeoutSeconds);
@@ -1225,11 +1237,33 @@ public sealed class ChildSessionService : IDisposable
         _reconnectingSessionId = null;
         _awaitingPasswordChange = false;
 
+        // 窗口自己会把 Close() 拦下来（OnClosing 默认 e.Cancel = true），
+        // 这是「用户点关闭转为隐藏」的设计，重建时必须显式放行。
+        old.AllowClose = true;
+
+        // 不能在断开回调栈上同步关闭：这条重建路径来自 OnDisconnected（ActiveX 事件回调）
+        // → ReportConnectionFailure → 这里。Close 会同步触发 OnClosed 里的 RdpHost.Dispose，
+        // 也就是在原生控件的回调还没返回时释放 AxHost 与底层 RDP 控件——经典的原生崩溃点。
+        // 排到消息队列末尾，等回调展开后再关（与 OnDisconnected 里 BeginInvoke 同一思路）。
+        if (old.Dispatcher.CheckAccess() && !old.Dispatcher.HasShutdownStarted)
+        {
+            old.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    old.Close();
+                }
+                catch (Exception exception) when (IsExpectedChildSessionException(exception))
+                {
+                    _logger.LogWarning(exception, "关闭旧的桌面分身窗口失败，继续重建。");
+                }
+            }));
+
+            return;
+        }
+
         try
         {
-            // 窗口自己会把 Close() 拦下来（OnClosing 默认 e.Cancel = true），
-            // 这是「用户点关闭转为隐藏」的设计，重建时必须显式放行。
-            old.AllowClose = true;
             old.Close();
         }
         catch (Exception exception) when (IsExpectedChildSessionException(exception))
