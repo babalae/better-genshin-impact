@@ -469,8 +469,21 @@ public partial class App : Application
     private static bool IsWpfPopupHandleRace(Exception? exception)
     {
         var root = exception?.GetBaseException() ?? exception;
-        return root is Win32Exception { NativeErrorCode: 1400 }
-               && root.StackTrace?.Contains("PopupControlService", StringComparison.Ordinal) == true;
+        if (root is not Win32Exception { NativeErrorCode: 1400 })
+        {
+            return false;
+        }
+
+        var stack = root.StackTrace;
+        if (stack is null || !stack.Contains("PopupControlService", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        // 只放行已知的坐标转换竞态：PopupControlService 也分发 ContextMenuOpening 等
+        // 路由事件，别的窗口操作抛 1400 同样会带着这个栈帧——那些要保留完整错误日志。
+        return stack.Contains("ConvexHull.ContainsMousePoint", StringComparison.Ordinal)
+               || stack.Contains("PointUtil.ScreenToClient", StringComparison.Ordinal);
     }
 
     //非UI线程未捕获异常处理事件(例如自己创建的一个子线程)

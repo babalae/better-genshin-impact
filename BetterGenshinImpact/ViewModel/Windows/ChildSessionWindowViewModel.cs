@@ -791,6 +791,18 @@ public partial class ChildSessionWindowViewModel : ViewModel
             }));
     }
 
+    /// <summary>
+    /// 全屏工具栏首次自动收起时的提示：告诉用户怎么再叫出来，免得以为工具栏没了。
+    /// </summary>
+    internal void ShowFullscreenBarHint()
+    {
+        ShowNotification(
+            "工具栏已收起",
+            "把鼠标移到屏幕顶部即可重新显示工具栏。",
+            InfoBarSeverity.Informational,
+            TimeSpan.FromSeconds(6));
+    }
+
     private void ShowNotification(
         string title,
         string message,

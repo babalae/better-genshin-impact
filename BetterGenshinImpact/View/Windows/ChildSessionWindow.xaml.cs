@@ -101,6 +101,7 @@ public partial class ChildSessionWindow : FluentWindow
 
     private readonly object _credentialDialogWatchGate = new();
     private System.Threading.Timer? _credentialDialogWatchTimer;
+    private bool _fullscreenBarHintShown;
     private IntPtr _windowHandle;
     private IntPtr _revealedCredentialDialog;
 
@@ -533,7 +534,12 @@ public partial class ChildSessionWindow : FluentWindow
                 return;
             }
 
-            var dialog = ChildSessionAutoLoginService.FindCredentialDialog();
+            // 已连接说明登录阶段早已结束：这时冒出来的凭据框不可能属于本次 RDP 连接，
+            // 不去认它（也就不会为它降置顶、去激活别的应用的提示）。
+            // 登录进行中（0 未连/2 连接中）才认。
+            var dialog = RdpHost.ConnectedState == 1
+                ? IntPtr.Zero
+                : ChildSessionAutoLoginService.FindCredentialDialog();
             if (dialog != IntPtr.Zero)
             {
                 lock (_credentialDialogWatchGate)
@@ -1247,7 +1253,20 @@ public partial class ChildSessionWindow : FluentWindow
 
     private void HideFullscreenBar()
     {
+        if (!FullscreenBarPopup.IsOpen)
+        {
+            return;
+        }
+
         FullscreenBarPopup.IsOpen = false;
+
+        // 首次自动收起时提示一次唤出方式：全屏下工具栏消失没有其它可见线索，
+        // 用户容易以为功能没了。只提示首次，避免每次收纳都打扰。
+        if (!_fullscreenBarHintShown)
+        {
+            _fullscreenBarHintShown = true;
+            _viewModel.ShowFullscreenBarHint();
+        }
     }
 
     /// <summary>

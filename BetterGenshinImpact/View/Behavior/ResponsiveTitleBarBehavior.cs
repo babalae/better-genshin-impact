@@ -144,6 +144,31 @@ public sealed class ResponsiveTitleBarBehavior : Behavior<Panel>
             }));
     }
 
+    /// <summary>
+    /// 标记「互斥槽位」的 Tag：同 Tag 的多个元素物理上共用一个位置，宽度只计一份。
+    /// </summary>
+    internal const string MutuallyExclusiveSlotTag = "MutuallyExclusiveSlot";
+
+    private double SumRequiredWidth()
+    {
+        var total = 0.0;
+        var countedSlots = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var element in AssociatedObject.Children.OfType<FrameworkElement>())
+        {
+            if (element.Tag is string slot
+                && slot.Length > 0
+                && !countedSlots.Add(slot))
+            {
+                continue;
+            }
+
+            total += GetCachedWidth(element);
+        }
+
+        return total;
+    }
+
     private void CacheElementWidths()
     {
         foreach (var element in AssociatedObject.Children.OfType<FrameworkElement>())
@@ -204,9 +229,11 @@ public sealed class ResponsiveTitleBarBehavior : Behavior<Panel>
         //
         // 反过来「都算」会多折一个按钮，但那是可接受的方向：少显示一个按钮还能从
         // 「更多」下拉找到，被系统按钮盖住则直接点不到。
-        var requiredWidth = AssociatedObject.Children
-            .OfType<FrameworkElement>()
-            .Sum(GetCachedWidth);
+        //
+        // 例外是「互斥槽位」：两组按钮物理上共用一个位置、只会显示其中一个
+        // （例如置顶/取消置顶），按两份算会凭空多出 40 DIP，明明放得下却先折叠了。
+        // 用 Tag 标记同一槽位，求和时只计一份。
+        var requiredWidth = SumRequiredWidth();
         var collapsedElements = new HashSet<FrameworkElement>();
 
         foreach (var element in collapsibleElements)
