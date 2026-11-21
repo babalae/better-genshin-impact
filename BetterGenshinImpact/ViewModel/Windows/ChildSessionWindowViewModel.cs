@@ -478,9 +478,14 @@ public partial class ChildSessionWindowViewModel : ViewModel
         ShowNotification(
             FullscreenInputModeText,
             FullscreenInputModeToolTip,
-            InputMode == ChildSessionInputMode.Watch
-                ? InfoBarSeverity.Informational
-                : InfoBarSeverity.Success);
+            InputMode switch
+            {
+                ChildSessionInputMode.Watch => InfoBarSeverity.Informational,
+                ChildSessionInputMode.GameMouse => InfoBarSeverity.Success,
+                // 停在普通鼠标：说明这次切换没生效（COM 写入被拒），用警告色而不是成功色，
+                // 否则界面会一边报「成功」一边显示没切过去。
+                _ => InfoBarSeverity.Warning
+            });
     }
 
     /// <summary>
