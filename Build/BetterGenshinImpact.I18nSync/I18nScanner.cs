@@ -41,7 +41,7 @@ internal static partial class I18nScanner
 
             foreach (var attribute in document.Descendants().Attributes())
             {
-                AddMatches(I18nKeyRegex().Matches(attribute.Value), keys, knownKeys);
+                AddMatches(I18nKeyRegex().Matches(attribute.Value), keys, knownKeys, isXaml: true);
             }
         }
 
@@ -63,11 +63,17 @@ internal static partial class I18nScanner
         MatchCollection matches,
         ICollection<string> keys,
         ISet<string> knownKeys,
-        bool normalizeCSharpEscapes = false)
+        bool normalizeCSharpEscapes = false,
+        bool isXaml = false)
     {
         foreach (Match match in matches)
         {
             var key = match.Groups["key"].Value.Trim();
+            if (isXaml)
+            {
+                key = NormalizeXamlKey(key);
+            }
+
             if (normalizeCSharpEscapes)
             {
                 key = NormalizeCSharpEscapes(key);
@@ -78,6 +84,19 @@ internal static partial class I18nScanner
                 keys.Add(key);
             }
         }
+    }
+
+    private static string NormalizeXamlKey(string key)
+    {
+        key = key.Trim();
+        if (key.Length >= 2 &&
+            ((key.StartsWith('\'') && key.EndsWith('\'')) ||
+             (key.StartsWith('"') && key.EndsWith('"'))))
+        {
+            return key[1..^1].Trim();
+        }
+
+        return key;
     }
 
     private static string NormalizeCSharpEscapes(string key)
