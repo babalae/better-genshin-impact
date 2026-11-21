@@ -21,6 +21,7 @@ internal static class ChildSessionLogonFailure
     {
         return errorCode switch
         {
+            -1 => true, // 访问被拒绝：凭据或权限不足，同样不该重试
             0 => true, // LOGON_FAILED_BAD_PASSWORD：凭据无效
             1 => true, // LOGON_FAILED_UPDATE_PASSWORD：密码过期，必须改密
             _ => IsAccountLevelFailure(errorCode)

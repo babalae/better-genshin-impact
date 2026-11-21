@@ -986,11 +986,22 @@ internal sealed class RdpActiveXHost : AxHost
         }
         catch (Exception exception) when (IsCredentialStepException(exception))
         {
-            // 密码本身已验证正确，这里只是写不进控件、原因未知；不主动清旧密码，
-            // 直接退回手动输入（凭据框由自动登录兜底再填一次）。
+            // 密码本身已验证正确，这里只是写不进控件、原因未知。但控件是跨连接复用的，
+            // 里面可能还留着上一次连接成功写入的旧密码——不主动清，Connect() 会带着
+            // 旧密码静默提交，连手动输入的机会都没有。清失败就重建控件。
+            if (!TryClearStoredPassword(client))
+            {
+                ReportConnectionFailure(
+                    "写入登录密码失败，控件里残留的上一次密码也清不掉，正在重建连接控件。",
+                    0,
+                    isLogonFailure: true,
+                    recoverableByRecreatingHost: true);
+                return false;
+            }
+
             ChildSessionDiagnosticsLog.Instance.LogWarning(
                 exception,
-                "密码正确，但因未知原因保存失败，将退回手动输入。");
+                "密码正确，但因未知原因写入失败，已清除旧密码并退回手动输入。");
         }
 
         // 其余各步失败都只是「退回手动输入」，连接本身还可以继续。
