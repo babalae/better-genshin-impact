@@ -453,7 +453,13 @@ public partial class ChildSessionWindowViewModel : ViewModel
     [RelayCommand]
     private void ToggleFullscreenWatchMode()
     {
-        var target = IsWatching ? ChildSessionInputMode.GameMouse : ChildSessionInputMode.Watch;
+        // 普通鼠标是「全屏自动切游戏鼠标失败」的残留态。这时点击应直接补上那次失败的
+        // 切换（进游戏模式），而不是先进观看——否则用户为了玩游戏要点两次，
+        // 而且第一次的方向和全屏的意图相反。
+        var switchingFromNormal = InputMode == ChildSessionInputMode.Normal;
+        var target = switchingFromNormal || IsWatching
+            ? ChildSessionInputMode.GameMouse
+            : ChildSessionInputMode.Watch;
         if (!Execute(() => _childSessionService.SetInputMode(target)))
         {
             InputMode = _childSessionService.InputMode;
@@ -462,8 +468,9 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
         InputMode = _childSessionService.InputMode;
 
-        // 同 CycleInputMode：这次是用户的选择，退出全屏时不再还原。
-        _autoSwitchedToGameMouse = false;
+        // 从普通鼠标切上去的仍算「自动切换的后续」，退出全屏要还原成普通鼠标；
+        // 其余情况是用户对两态的显式选择，退出不还原。同 CycleInputMode 的口径。
+        _autoSwitchedToGameMouse = switchingFromNormal;
 
         // 全屏下没有标题栏，浮层按钮是唯一入口，切完必须给一条通知：
         // 画面本身不会因为模式变化而改变，没有提示用户根本看不出现在是哪一档。
