@@ -333,8 +333,15 @@ public partial class PathExecutor
         // 切换队伍前判断是否全队死亡 // 可能队伍切换失败导致的死亡
         if (Bv.ClickIfInReviveModal(ra))
         {
-            await Bv.WaitForMainUi(ct); // 等待主界面加载完成
-            Logger.LogInformation("复苏完成");
+            if (await Bv.WaitForMainUi(ct))
+            {
+                Logger.LogInformation("复苏完成");
+            }
+            else
+            {
+                Logger.LogWarning("复苏未生效，界面未回到主界面");
+            }
+
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
@@ -650,8 +657,15 @@ public partial class PathExecutor
         }
         else if (Bv.ClickIfInReviveModal(region))
         {
-            await Bv.WaitForMainUi(ct); // 等待主界面加载完成
-            Logger.LogInformation("复苏完成");
+            if (await Bv.WaitForMainUi(ct))
+            {
+                Logger.LogInformation("复苏完成");
+            }
+            else
+            {
+                Logger.LogWarning("复苏未生效，界面未回到主界面");
+            }
+
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
