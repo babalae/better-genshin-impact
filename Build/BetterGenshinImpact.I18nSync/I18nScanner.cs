@@ -1,5 +1,8 @@
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+
+[assembly: InternalsVisibleTo("BetterGenshinImpact.UnitTest")]
 
 namespace BetterGenshinImpact.I18nSync;
 
@@ -86,17 +89,17 @@ internal static partial class I18nScanner
         }
     }
 
-    private static string NormalizeXamlKey(string key)
+    internal static string NormalizeXamlKey(string key)
     {
-        key = key.Trim();
-        if (key.Length >= 2 &&
-            ((key.StartsWith('\'') && key.EndsWith('\'')) ||
-             (key.StartsWith('"') && key.EndsWith('"'))))
+        var trimmed = key.Trim();
+        if (trimmed.Length >= 2 &&
+            ((trimmed[0] == '\'' && trimmed[^1] == '\'') ||
+             (trimmed[0] == '"' && trimmed[^1] == '"')))
         {
-            return key[1..^1].Trim();
+            return trimmed[1..^1];
         }
 
-        return key;
+        return trimmed;
     }
 
     private static string NormalizeCSharpEscapes(string key)
