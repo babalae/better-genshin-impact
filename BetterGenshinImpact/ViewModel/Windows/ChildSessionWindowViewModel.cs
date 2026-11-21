@@ -169,9 +169,15 @@ public partial class ChildSessionWindowViewModel : ViewModel
     /// <summary>
     /// 全屏浮层开关的提示：只讲两态，不讲三态循环。
     /// </summary>
-    public string FullscreenInputModeToolTip => IsWatching
-        ? "当前处于观看模式：本机键鼠不会进入桌面分身。点击切换为游戏模式。"
-        : "当前处于游戏模式：按住 Alt 可临时释放鼠标。点击切换为观看模式。";
+    public string FullscreenInputModeToolTip => InputMode switch
+    {
+        ChildSessionInputMode.Watch =>
+            "当前处于观看模式：本机键鼠不会进入桌面分身。点击切换为游戏模式。",
+        ChildSessionInputMode.GameMouse =>
+            "当前处于游戏模式：按住 Alt 可临时释放鼠标。点击切换为观看模式。",
+        // 自动切游戏鼠标失败时会停在这里：如实说明，并给出下一步。
+        _ => "当前是普通鼠标模式（全屏自动切换未生效）。点击切换为观看模式。"
+    };
 
     public string AudioButtonToolTip => IsAudioMuted
         ? "开启桌面分身声音，不影响主桌面的其他程序；切换时会自动重新连接 RDP"
@@ -803,6 +809,12 @@ public partial class ChildSessionWindowViewModel : ViewModel
     /// </summary>
     internal void ShowFullscreenBarHint()
     {
+        // 已经有通知占着（例如 RDP 连接失败）：不能用工具栏提示把它盖掉。
+        if (IsNotificationOpen)
+        {
+            return;
+        }
+
         ShowNotification(
             "工具栏已收起",
             "把鼠标移到屏幕顶部即可重新显示工具栏。",

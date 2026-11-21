@@ -1181,6 +1181,10 @@ public sealed class ChildSessionService : IDisposable
             // 登录界面归用户操作：取消后不要再自动重试（每次重试都可能再弹一次界面），
             // 把首连重试预算清掉，交给用户重新点「启动并连接」。
             _initialConnectionRetriesRemaining = 0;
+
+            // 也不能在用户取消后重建控件：重建分支的本意是「控件状态机卡死」，
+            // 而这里是正常的登录流程在等人。禁用本轮重建即可。
+            _controlRecreatedForAttempt = true;
             _logger.LogInformation("客户端显示交互式登录界面，保持连接等待用户操作。");
             RefreshState("等待在会话中完成登录");
             return;
@@ -1707,6 +1711,10 @@ public sealed class ChildSessionService : IDisposable
         var previousRetriesRemaining = _rdpSettingsReconnectRetriesRemaining;
         _pendingRdpSettingChanges |= settingChange;
         _rdpSettingsReconnectRetriesRemaining = RdpSettingsReconnectRetryCount;
+
+        // 登录完成后 _reconnectingSessionId 会被清空，但设置类重连同样可能遇到
+        // 「ActiveX 不再发 OnLoginComplete」：把当前会话号记下来，WTS 兜底才有依据。
+        _reconnectingSessionId ??= ChildSessionNativeMethods.TryGetChildSessionId();
 
         // 新的设置变更会让在途的那次重试作废：否则它醒来后看到 RdpSettingChange 非空，
         // 会把这次刚发起的连接断开重来（ReconnectToChildSession 在已连接状态下会
