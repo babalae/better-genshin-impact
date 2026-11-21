@@ -59,7 +59,7 @@
             </ui:TitleBar.Header>
             <ui:TitleBar.TrailingContent>
                 <StackPanel VerticalAlignment="Top"
-                            IsEnabled="{Binding IsSessionInteractionEnabled}"
+                            IsEnabled="{Binding IsSessionInteractionEnabled, Mode=OneWay}"
                             Orientation="Horizontal">
                     <b:Interaction.Behaviors>
                         <behavior:ResponsiveTitleBarBehavior />
@@ -104,9 +104,9 @@
                                BorderBrush="Transparent"
                                behavior:ResponsiveTitleBarBehavior.CollapseOrder="4"
                                Command="{Binding CycleInputModeCommand}"
-                               Content="{Binding InputModeButtonText}"
+                               Content="{Binding InputModeButtonText, Mode=OneWay}"
                                CornerRadius="0"
-                               ToolTip="{Binding InputModeButtonToolTip}">
+                               ToolTip="{Binding InputModeButtonToolTip, Mode=OneWay}">
                         <ui:Button.Icon>
                             <!-- 三态：观看模式（眼睛）→ 普通鼠标 → 游戏鼠标（准星） -->
                             <ui:SymbolIcon>
@@ -189,9 +189,9 @@
                                              Command="{Binding SwitchWindowCommand}"
                                              Icon="{ui:SymbolIcon ArrowSwap24}"
                                              Visibility="{Binding Source={x:Reference SwitchWindowButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
-                                <ui:MenuItem Header="{Binding InputModeButtonText}"
+                                <ui:MenuItem Header="{Binding InputModeButtonText, Mode=OneWay}"
                                              Command="{Binding CycleInputModeCommand}"
-                                             ToolTip="{Binding InputModeButtonToolTip}"
+                                             ToolTip="{Binding InputModeButtonToolTip, Mode=OneWay}"
                                              Visibility="{Binding Source={x:Reference InputModeButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
@@ -343,7 +343,7 @@
                 <behavior:WindowResizeBehavior AspectRatio="1.7777777777777777"
                                                IsSmallWindowMode="{Binding IsSmallWindowMode}"
                                                NormalWindowPosition="{Binding NormalWindowPosition, Mode=TwoWay}"
-                                               PauseSaving="{Binding IsFullscreen, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               PauseSaving="{Binding IsFullscreen, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}"
                                                ResizeRequest="{Binding SmallWindowResizeRequest}"
                                                SmallWindowPosition="{Binding SmallWindowPosition, Mode=TwoWay}"
                                                TargetWidth="{Binding WindowResizeTargetWidth}" />
@@ -528,7 +528,7 @@
                     BorderBrush="#40FFFFFF"
                     BorderThickness="1"
                     CornerRadius="8">
-                <StackPanel IsEnabled="{Binding IsSessionInteractionEnabled}"
+                <StackPanel IsEnabled="{Binding IsSessionInteractionEnabled, Mode=OneWay}"
                             Orientation="Horizontal">
                     <ui:Button Width="36"
                                Height="30"
@@ -540,7 +540,7 @@
                                Height="30"
                                Margin="6,0,0,0"
                                Command="{Binding ToggleFullscreenWatchModeCommand}"
-                               Content="{Binding FullscreenInputModeText}"
+                               Content="{Binding FullscreenInputModeText, Mode=OneWay}"
                                ToolTip="{Binding FullscreenInputModeToolTip}" />
                     <ui:Button Width="36"
                                Height="30"

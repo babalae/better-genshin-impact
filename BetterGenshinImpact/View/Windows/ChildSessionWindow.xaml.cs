@@ -286,6 +286,13 @@ public partial class ChildSessionWindow : FluentWindow
         StopCredentialDialogWatch();
         _credentialDialogWatchTimer?.Dispose();
         _credentialDialogWatchTimer = null;
+
+        // 真正关闭时解除两层订阅：旧 ViewModel 对单例服务的事件订阅，以及本窗口
+        // 对旧 ViewModel 的 PropertyChanged。普通隐藏不经过这里（OnClosing 已取消），
+        // 只有重建或退出时才会走到，此时新旧实例彻底分离。
+        _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _viewModel.DetachServiceEvents();
+
         RdpFormsHost.Child = null;
         RdpHost.Dispose();
         base.OnClosed(e);

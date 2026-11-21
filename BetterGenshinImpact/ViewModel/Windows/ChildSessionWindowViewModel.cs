@@ -206,7 +206,44 @@ public partial class ChildSessionWindowViewModel : ViewModel
         _childSessionService.SystemShortcutsReconnectCompleted +=
             OnSystemShortcutsReconnectCompleted;
         _childSessionService.AudioReconnectCompleted += OnAudioReconnectCompleted;
+        _childSessionService.SettingsReconnectCancelled +=
+            OnSettingsReconnectCancelled;
         UpdateConnectionStatus();
+    }
+
+    /// <summary>
+    /// 解除对服务的全部事件订阅并停掉通知计时器。
+    ///
+    /// 重建控件会创建新的窗口与 ViewModel：旧实例若不解除订阅，单例服务会一直
+    /// 持有它们并继续向旧实例发送状态通知——内存泄漏 + 幽灵通知。
+    /// 只在窗口真正关闭时调用；普通隐藏（点关闭转为隐藏）不解除。
+    /// </summary>
+    internal void DetachServiceEvents()
+    {
+        _notificationTimer.Stop();
+        _childSessionService.StateChanged -= OnChildSessionStateChanged;
+        _childSessionService.ConnectionFailed -= OnChildSessionConnectionFailed;
+        _childSessionService.SystemShortcutsReconnectCompleted -=
+            OnSystemShortcutsReconnectCompleted;
+        _childSessionService.AudioReconnectCompleted -= OnAudioReconnectCompleted;
+        _childSessionService.SettingsReconnectCancelled -=
+            OnSettingsReconnectCancelled;
+    }
+
+    private void OnSettingsReconnectCancelled(object? sender, EventArgs e)
+    {
+        _ = Application.Current.Dispatcher.BeginInvoke(
+            DispatcherPriority.Normal,
+            new Action(() =>
+            {
+                IsSystemShortcutsReconnectPending = false;
+                IsAudioReconnectPending = false;
+                UpdateConnectionStatus();
+                ShowNotification(
+                    "设置未生效",
+                    "登录已取消，待生效的设置已放弃。重新连接后可再次修改。",
+                    InfoBarSeverity.Informational);
+            }));
     }
 
     partial void OnNormalWindowPositionChanged(WindowPositionConfig? value)

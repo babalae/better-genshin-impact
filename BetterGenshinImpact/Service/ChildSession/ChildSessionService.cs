@@ -131,6 +131,12 @@ public sealed class ChildSessionService : IDisposable
 
     public event EventHandler? SystemShortcutsReconnectCompleted;
 
+    /// <summary>
+    /// 挂起的设置重连被取消（用户在改密/交互登录界面取消，连接随之结束）。
+    /// 订阅方据此解除「设置重连中」的占用状态——否则音频等按钮会一直禁用。
+    /// </summary>
+    public event EventHandler? SettingsReconnectCancelled;
+
     public event EventHandler? AudioReconnectCompleted;
 
     public string StatusText { get; private set; } = "桌面分身尚未启动";
@@ -896,6 +902,7 @@ public sealed class ChildSessionService : IDisposable
         if (window.RdpHost.ConnectedState == 0)
         {
             _connectionAttemptGeneration++;
+            _connectionRetryInProgress = false;
             _reconnectingSessionId = existingSessionId;
             _autoLaunchBetterGiPending = existingSessionId is null;
             _initialConnectionRetriesRemaining = _autoLaunchBetterGiPending
@@ -984,6 +991,26 @@ public sealed class ChildSessionService : IDisposable
                 _autoLaunchBetterGiPending = false;
                 _initialConnectionRetriesRemaining = 0;
                 _connectionAttemptCompletionSource?.TrySetResult(false);
+
+                // 挂着的设置重连也要一并收尾：用户取消登录后，不能再自动发起重连
+                // （每次都可能又弹出一个登录界面），订阅方的「设置重连中」占用要解除，
+                // 否则音频等按钮会一直禁用。
+                // 只有真的挂了待生效设置才发取消事件：普通登录被取消时没有设置工作，
+                // 发事件会让订阅方弹一个无关的「设置未生效」通知。
+                var hadPendingSettings = _pendingRdpSettingChanges != RdpSettingChange.None
+                    || _rdpSettingsReconnectRetryInProgress;
+                _pendingRdpSettingChanges = RdpSettingChange.None;
+                _rdpSettingsReconnectRetriesRemaining = 0;
+                if (_rdpSettingsReconnectRetryInProgress)
+                {
+                    _rdpSettingsReconnectRetryInProgress = false;
+                    _settingsReconnectGeneration++;
+                }
+                if (hadPendingSettings)
+                {
+                    SettingsReconnectCancelled?.Invoke(this, EventArgs.Empty);
+                }
+
                 RefreshState("已取消登录，未完成密码修改");
             }
 
@@ -1367,17 +1394,38 @@ public sealed class ChildSessionService : IDisposable
     private async void RetryHostRecreationAsync(int expectedGeneration)
     {
         var expectedLifecycle = _lifecycleGeneration;
+        var expectedSettingsGeneration = _settingsReconnectGeneration;
 
         try
         {
             await Task.Delay(HostRecreationDelay, _disposeCancellationTokenSource.Token);
 
             // 期间用户可能注销并重新启动：新尝试会递增连接代际，注销会推进生命周期代际。
-            // 两者任一变，旧重建醒来后都必须拒绝，否则会拿旧状态去动新一轮的控件或会话。
+            // 重建等待期间用户还可能改设置：设置重连接管后会递增设置代际并对（新）窗口
+            // 直接重连——旧重建醒来再重连就是多余的，而且已连接时该调用会先断开当前连接。
+            // 任一代际变了都必须放弃。
             if (_disposed
                 || expectedGeneration != _connectionAttemptGeneration
                 || expectedLifecycle != _lifecycleGeneration)
             {
+                return;
+            }
+
+            // 设置重连已在等待期间接管（用户改了设置）：放弃本次重建重连，但要把
+            // 暂存的「重新附着会话号」转交给当前状态——接管方对新窗口发起的重连
+            // 不经过 ConnectCore，不恢复这个号的话，登录完成的 WTS 兜底就失效了。
+            if (expectedSettingsGeneration != _settingsReconnectGeneration)
+            {
+                if (_reconnectingSessionId is null
+                    && _reconnectingSessionIdAfterRecreate is { } pending)
+                {
+                    _reconnectingSessionId = pending;
+                }
+                _reconnectingSessionIdAfterRecreate = null;
+
+                // 接管方的设置重连只 Ensure 不 Show：重建场景下窗口是新建的，
+                // 这里先显示出来，否则接管重连完成后分身窗口不可见。
+                ShowDesktopWindow(EnsureDesktopWindow());
                 return;
             }
 
@@ -1419,6 +1467,11 @@ public sealed class ChildSessionService : IDisposable
         _initialConnectionRetriesRemaining--;
         var retryDelay = TimeSpan.FromSeconds(1 << (retryNumber - 1));
 
+        // 与重建重连同理：延时期间用户可能注销并重新启动，醒来后必须确认自己
+        // 还是「当前这一代」，否则会拿旧状态去动新一轮连接的控件。
+        var expectedGeneration = _connectionAttemptGeneration;
+        var expectedLifecycle = _lifecycleGeneration;
+
         _logger.LogWarning(
             "桌面分身首次初始化连接失败，将在 {RetryDelaySeconds} 秒后进行第 {RetryNumber} 次重试。"
             + "错误：{ErrorMessage}，错误代码：{ErrorCode}，扩展错误代码：{ExtendedErrorCode}",
@@ -1434,7 +1487,10 @@ public sealed class ChildSessionService : IDisposable
         try
         {
             await Task.Delay(retryDelay, _disposeCancellationTokenSource.Token);
-            if (_disposed || !_autoLaunchBetterGiPending)
+            if (_disposed
+                || expectedGeneration != _connectionAttemptGeneration
+                || expectedLifecycle != _lifecycleGeneration
+                || !_autoLaunchBetterGiPending)
             {
                 return;
             }
@@ -1465,7 +1521,11 @@ public sealed class ChildSessionService : IDisposable
         }
         finally
         {
-            _connectionRetryInProgress = false;
+            // 只有自己这一代才能清：过期重试不清，标志由新一次 ConnectCore 重置。
+            if (expectedGeneration == _connectionAttemptGeneration)
+            {
+                _connectionRetryInProgress = false;
+            }
         }
 
         if (retryFailure is not null)

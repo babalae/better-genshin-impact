@@ -30,6 +30,9 @@ internal sealed class RdpActiveXHost : AxHost
     private bool _connectionFailureReported;
     private ChildSessionConnectionFailedEventArgs? _lastConnectionDiagnostic;
     private bool _disconnectRequested;
+
+    /// <summary>每次发起连接递增。延迟回调据此判断「排队时的连接」是否还是当前连接。</summary>
+    private int _connectGeneration;
     private bool _sendSystemShortcutsToRemote = true;
     private bool _audioMuted;
     private DrawingSize? _pendingReconnectDesktopSize;
@@ -78,6 +81,7 @@ internal sealed class RdpActiveXHost : AxHost
 
     internal void ConnectToChildSession(DrawingSize desktopSize)
     {
+        _connectGeneration++;
         if (ConnectedState != 0)
         {
             return;
@@ -324,6 +328,10 @@ internal sealed class RdpActiveXHost : AxHost
         _reconnectGeneration++;
         _pendingReconnectDesktopSize = null;
 
+        // 记下排队时所属的连接代际：延迟回调执行前若已发起新连接，这次断开必须放弃——
+        // DisconnectCore 看的是「当前」连接状态，照常执行会把新连接断掉。
+        var generation = _connectGeneration;
+
         if (!IsHandleCreated || IsDisposed || Disposing)
         {
             _ = DisconnectCore();
@@ -332,7 +340,15 @@ internal sealed class RdpActiveXHost : AxHost
 
         try
         {
-            BeginInvoke(new Action(DisconnectSafely));
+            BeginInvoke(new Action(() =>
+            {
+                if (generation != _connectGeneration)
+                {
+                    return;
+                }
+
+                DisconnectSafely();
+            }));
         }
         catch (InvalidOperationException)
         {
@@ -523,6 +539,17 @@ internal sealed class RdpActiveXHost : AxHost
         if (_connectionFailureReported
             || (!failedWhileConnecting
                 && IsNormalDisconnect(disconnectReason, extendedDisconnectReason)))
+        {
+            return;
+        }
+
+        // 用户在分身会话里主动「注销」：会话已从系统里消失，断开只是注销的必然结果。
+        // 这种情况不能报失败——它不是故障，报出来只会让用户莫名其妙地看到错误提示。
+        // 与正常断开白名单的差别：注销的断开原因组合不固定，但「会话没了」是唯一可靠特征。
+        // 网络闪断时会话仍在（可能 Active），不会误伤。
+        if (!failedWhileConnecting
+            && ChildSessionNativeMethods.TryQueryChildSessionId(out var sessionAfterDisconnect)
+            && sessionAfterDisconnect is null)
         {
             return;
         }
