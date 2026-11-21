@@ -679,8 +679,6 @@ internal static class ChildSessionEnvironmentFixer
 
         var stoppedDependents = new List<string>();
         var termServiceStopped = false;
-        // 回滚失败时磁盘上会留一个未通过校验的 DLL，这时候不能把服务拉起来。
-        var restoreSafeToStart = true;
 
         try
         {
@@ -730,11 +728,12 @@ internal static class ChildSessionEnvironmentFixer
                                                               or UnauthorizedAccessException
                                                               or SecurityException)
                 {
-                    // 回滚也失败了：磁盘上仍是不合格的 DLL，交给 finally 记住别重启服务。
-                    restoreSafeToStart = false;
+                    // 回滚也失败了：磁盘上是未通过校验的 DLL。仍然照常把服务拉回来——
+                    // 文件合不合规由 SFC 与服务自己判断，用户需要能立刻试连接；
+                    // 我们不替用户做「不许启动」的决定，启动失败会把真实错误暴露出来。
                     Logger.LogError(
                         rollbackException,
-                        "回滚 termsrv.dll 失败，当前文件未通过校验，远程桌面服务将保持停止状态，请运行 sfc /scannow 修复后重启电脑。");
+                        "回滚 termsrv.dll 失败，当前文件未通过校验。仍会尝试重启远程桌面服务，如启动失败请运行 sfc /scannow。");
                 }
             }
             else
@@ -754,31 +753,13 @@ internal static class ChildSessionEnvironmentFixer
                     Logger.LogWarning(deleteException, "删除未通过校验的 termsrv.dll 失败。");
                 }
 
-                // 两种情况都不允许重启服务：DLL 缺失时服务起不来，残留未校验 DLL 更不能加载。
-                restoreSafeToStart = false;
-
-                if (backupRemoved)
-                {
-                    // 磁盘已回到「文件缺失」的原状，没有不可信文件了：继续修复链——
-                    // sfc /scanfile 能从组件库补回缺失文件，没必要让用户直接去做完整扫描。
-                    Logger.LogWarning(
-                        "备份未通过 sfc 校验，原文件本就不存在。已删除不合格备份，继续尝试 sfc 就地修复。");
-                    return null;
-                }
-
-                Logger.LogWarning("备份未通过 sfc 校验，删除也失败，终止自动修复。");
-            }
-
-            if (!restoreSafeToStart)
-            {
-                // 回滚失败：磁盘上留的是我们刚换上去的那份不合格 DLL。
-                // 这时候不能把 null 交给调用方继续走 sfc /scanfile —— 那一步会再停一次服务、
-                // 结束时无条件重启，等于把这份不可信的文件重新加载一遍，正好绕过了 finally 的守卫。
-                // 到此为止，把「手动完整扫描 + 重启」讲清楚。
-                return new ChildSessionFixResult(
-                    false,
-                    "备份还原失败，回滚也没能把原文件写回去。为避免远程桌面服务加载一份不可信的文件，"
-                    + "服务已保持停止状态。请以管理员身份运行 sfc /scannow 修复，然后重启电脑。");
+                // 不管删除是否成功都继续修复链：sfc /scanfile 能从组件库补回缺失文件、
+                // 也可能修好残留的不合格文件；是否加载由服务自己判断，不拦着用户试。
+                Logger.LogWarning(
+                    backupRemoved
+                        ? "备份未通过 sfc 校验，原文件本就不存在。已删除不合格备份，继续尝试 sfc 就地修复。"
+                        : "备份未通过 sfc 校验，删除也未成功，仍继续尝试 sfc 就地修复。");
+                return null;
             }
 
             Logger.LogWarning("备份 {Backup} 未通过 sfc 校验，已回滚。", Path.GetFileName(backupPath));
@@ -793,21 +774,16 @@ internal static class ChildSessionEnvironmentFixer
         }
         finally
         {
-            // 回滚失败时磁盘上留的是未通过校验的文件：这时候既不能重启 TermService，
-            // 也不能恢复依赖服务——SCM 启动 UmRdpService 这类服务时会把它的依赖
-            // TermService 一起拉起来，同样会加载坏 DLL。所以整块跳过，等 sfc 修完再说。
-            //
-            // 其余情况一律把服务拉回来，否则用户会剩下一个停着的远程桌面服务。
-            if (restoreSafeToStart)
+            // 一律把服务拉回来，包括刚换上去的文件未通过校验的情况：
+            // 「修复」不应该顺带阻止用户尝试启动——文件合不合规由 SFC 与服务自己判断，
+            // 真有问题时启动会失败并暴露真实错误，比留下一个停着的服务更有用。
+            if (termServiceStopped
+                && !ChildSessionServiceNativeMethods.TryStart(TermServiceName, out var startError))
             {
-                if (termServiceStopped
-                    && !ChildSessionServiceNativeMethods.TryStart(TermServiceName, out var startError))
-                {
-                    Logger.LogWarning("还原流程结束后重启 TermService 失败：{Error}", startError);
-                }
-
-                RestoreDependents(stoppedDependents);
+                Logger.LogWarning("还原流程结束后重启 TermService 失败：{Error}", startError);
             }
+
+            RestoreDependents(stoppedDependents);
         }
     }
 
