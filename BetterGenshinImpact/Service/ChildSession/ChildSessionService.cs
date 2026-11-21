@@ -82,11 +82,12 @@ public sealed class ChildSessionService : IDisposable
     private DateTime? _connectStartedAt;
 
     /// <summary>
-    /// 会话正在等用户修改 Windows 密码。
+    /// 会话正在等用户在会话内的交互界面操作：改密界面，或「其它登录错误」弹出的
+    /// 交互式登录界面（重新输入凭据）。
     ///
     /// 这种情况下 RDP 画面已经渲染、用户可以点击操作，连接本身是通的，只是登录流程
-    /// 停在改密这一步。它不该按「连接超时」判失败——那会 TryDisconnectRdpHost，
-    /// 把用户正在操作的改密界面一起关掉。
+    /// 停在这类界面。它不该按「连接超时」判失败——那会 TryDisconnectRdpHost，
+    /// 把用户正在操作的界面一起关掉。
     /// </summary>
     private volatile bool _awaitingPasswordChange;
 
@@ -971,9 +972,9 @@ public sealed class ChildSessionService : IDisposable
 
             RefreshState();
 
-            // 改密等待期间连接断了（用户在改密界面点了取消）：这次登录尝试到此为止。
+            // 改密/交互登录等待期间连接断了（用户在界面里点了取消）：这次尝试到此为止。
             // 只看 RDP 是否断开——用户取消后 WTS 会话可能还留着，按会话是否存在判断
-            // 会让等待一直挂着，状态行也停在「等待修改密码」。
+            // 会让等待一直挂着。
             if (_awaitingPasswordChange && ConnectedState == 0)
             {
                 _awaitingPasswordChange = false;
@@ -1080,7 +1081,7 @@ public sealed class ChildSessionService : IDisposable
                 // 否则重新附着已有会话后也会去拉起 BetterGI。
                 var generation = _connectionAttemptGeneration;
                 RecreateDesktopWindow();
-                RetryHostRecreationAsync(e, generation);
+                RetryHostRecreationAsync(generation);
                 return;
             }
 
@@ -1166,7 +1167,7 @@ public sealed class ChildSessionService : IDisposable
 
             var generation = _connectionAttemptGeneration;
             RecreateDesktopWindow();
-            RetryHostRecreationAsync(e, generation);
+            RetryHostRecreationAsync(generation);
             return;
         }
 
@@ -1363,9 +1364,7 @@ public sealed class ChildSessionService : IDisposable
         }
     }
 
-    private async void RetryHostRecreationAsync(
-        ChildSessionConnectionFailedEventArgs failure,
-        int expectedGeneration)
+    private async void RetryHostRecreationAsync(int expectedGeneration)
     {
         var expectedLifecycle = _lifecycleGeneration;
 
