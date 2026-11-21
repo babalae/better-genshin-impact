@@ -15,6 +15,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -33,23 +34,52 @@ public partial class PathExecutor
 {
     private class HurryOnState
     {
-        public int MavikaFlyCount;
         public bool SprintMouseLogo = true;
-        public int RunCount;
-        public bool IsFlyingMwk;
         public bool PendingApproach = true;
         public bool? RunToDash = false;
-        public double DistanceHalf;
         public int MavikaSlopeCount;
         public int ClimbLogo;
         public int RotationStableCount;
-        public string? OriginalMoveMode;
         public bool FlyingState;
-        public int ChascaFlightCheckCount;
         public int WandererFlightCheckCount;
+        /// <summary>
+        /// 上次施放瓦雷莎 E 时的剩余距离。NaN = 本段尚未放 E。
+        /// </summary>
+        public double VaresaLastSkillDistance = double.NaN;
+        /// <summary>
+        /// 本次 E 之后是否已经观察到粉色夜魂条。看到 → 疾冲中；之后条消失 → 一段跑完。
+        /// 用于区分"夜魂耗尽"与"刚放完 E、UI 还没把条画出来"，避免刚施放就连放下一段。
+        /// </summary>
+        public bool VaresaNightsoulSeen;
+        /// <summary>
+        /// 当前这段疾冲是否已提示过"两段充能都在冷却"，避免无充能时每帧刷同一条日志。
+        /// </summary>
+        public bool VaresaNoChargeLogged;
+        /// <summary>
+        /// 本次接近段尝试切步行位的次数，连续失败达到上限后放弃切换，避免卡住路线。
+        /// </summary>
+        public int VaresaWalkSwitchAttempts;
     }
     // 赶路切换角色黑名单，防止切人后触发夜魂传递
     private static readonly HashSet<string> HurryOnBlacklist = ["玛薇卡", "希诺宁", "瓦雷莎", "茜特菈莉", "伊法", "恰斯卡", "玛拉妮", "基尼奇"];
+
+    /// <summary>
+    /// 瓦雷莎技能赶路的最低启用距离（游戏内距离单位）。路段剩余距离低于该值时不进夜魂疾冲，
+    /// 交还通用逻辑用普通速度接近并刹车——夜魂疾冲惯性滑行距离长，短路段用技能必冲过头。
+    /// </summary>
+    private const double HurryOnMinEntryDistance = 50;
+
+    /// <summary>
+    /// 赶路心跳日志的帧间隔。原来每 5 帧一条，瓦雷莎帧长约 400ms 时约 2 秒刷一条，日志噪声过大；
+    /// 放稀到 25 帧（约 10 秒），只保留"还在赶路、剩余多少"的最低限度信息。
+    /// </summary>
+    private const int HurryOnLogFrameInterval = 25;
+
+    /// <summary>
+    /// 瓦雷莎 E 施放的最小间隔（ms），仅作防抖兜底。
+    /// 两段 E 的实际节奏由夜魂条（是否有粉色填充）决定：条在 = 疾冲未结束，条消失 = 变回普通跑步才放下一段。
+    /// </summary>
+    private const int VaresaSkillIntervalMs = 500;
 
     /// <summary>
     /// 各角色在连续赶路模式下的转向夹角阈值（度）。
@@ -78,7 +108,21 @@ public partial class PathExecutor
     /// </summary>
     private int _mavikaSprintJumpCount;
     private DateTime _lastSkillCheckTime = DateTime.MinValue;
+    private DateTime _lastVaresaSkillTime = DateTime.MinValue;
     private DateTime _lastLandingTime = DateTime.MinValue;
+
+    /// <summary>
+    /// 夜魂条确实出现过的像素下限。取低值，只用于确认"本段疾冲的条已经画出来了"，
+    /// 避免第一段 E 刚施放、UI 还没刷新时把空条误判成"一段已跑完"而立刻连按第二段。
+    /// </summary>
+    private const int VaresaNightsoulSeenPixels = 100;
+
+    /// <summary>
+    /// 条填充降到该像素数以下即可放下一段 E。满条约 1400~1800 像素，800 约为消耗一半，
+    /// 此时接第二段能把两段疾冲连起来，又不会一施放就把第二段浪费掉。
+    /// </summary>
+    private const int VaresaNextSkillPixels = 800;
+
     /// <summary>
     /// 上一帧识别的体力值，用于跨帧 fallback。初始为满值 240。
     /// </summary>
@@ -157,7 +201,7 @@ public partial class PathExecutor
             await SwitchAvatar(avatar.Index.ToString());
         }
 
-        if (num % 5 == 0)
+        if (num % HurryOnLogFrameInterval == 0)
         {
             Logger.LogInformation("自动赶路：{t} 赶路...{t2}", avatar.Name, Math.Round(distance));
         }
@@ -420,138 +464,130 @@ public partial class PathExecutor
 
                 break;
 
-            // case "瓦雷莎":
-            //     if (state.PendingApproach)
-            //     {
-            //         var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
-            //
-            //         if (shouldApproach)
-            //         {
-            //             InputHub.ReleaseAll();
-            //             state.PendingApproach = false;
-            //             if (PartyConfig.SwitchToWalkEnabled)
-            //             {
-            //                 var nextIdx = GetSwitchToWalkIndex();
-            //                 Logger.LogInformation("自动赶路：瓦雷莎接近节点，切人步行 {t}", nextIdx);
-            //                 Task.Run(async () =>
-            //                 {
-            //                     await SwitchAvatar(nextIdx);
-            //                 }, ct);
-            //             }
-            //             else
-            //             {
-            //                 if (await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct))
-            //                 {
-            //                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            //                     await Delay(300, ct);
-            //                 }
-            //
-            //                 var lower = new Scalar(220, 150, 150);
-            //                 var higher = new Scalar(230, 160, 180);
-            //                 using var mask = OpenCvCommonHelper.Threshold(screen2.DeriveCrop(948, 410, 26, 30).SrcMat, lower, higher);
-            //                 using var labels = new Mat();
-            //                 using var stats = new Mat();
-            //                 using var centroids = new Mat();
-            //
-            //                 var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
-            //                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-            //
-            //                 if (numLabels > 3 && numLabels < 40)
-            //                 {
-            //                     state.MavikaFlyCount++;
-            //                     if (state.MavikaFlyCount > 2 && avatar.IsActive(screen2))
-            //                     {
-            //                         Task.Run(async () =>
-            //                         {
-            //                             await Delay(1000, ct);
-            //                             using var region3 = CaptureToRectArea();
-            //                             if (avatar.IsActive(region3))
-            //                             {
-            //                                 InputHub.Foreground.SimulateAction(GIActions.Jump);
-            //                                 await Delay(100, ct);
-            //                                 using var region4 = CaptureToRectArea();
-            //                                 var isFlying = Bv.GetMotionStatus(region4) == MotionStatus.Fly;
-            //                                 if (isFlying)
-            //                                 {
-            //                                     InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
-            //                                     Logger.LogInformation("自动赶路：{t} 下落攻击...", "瓦蕾莎");
-            //                                 }
-            //                             }
-            //                             state.MavikaFlyCount = 0;
-            //                         }, ct);
-            //                     }
-            //                 }
-            //             }
-            //             return false;
-            //         }
-            //     }
-            //
-            //     if (distance > PartyConfig.Distance)
-            //     {
-            //         await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
-            //
-            //         waypoint.MoveMode = MoveModeEnum.Run.Code;
-            //
-            //         await Delay(300, ct);
-            //         if (!await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct))
-            //         {
-            //             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
-            //             await Delay(300, ct);
-            //             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
-            //             await Delay(200, ct);
-            //             avatar.LastSkillTime = DateTime.UtcNow;
-            //
-            //             if (!await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct))
-            //             {
-            //                 if (distance > 20)
-            //                 {
-            //                     if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
-            //                     {
-            //                         InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
-            //                     }
-            //                     else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
-            //                     {
-            //                         if (state.RunCount < 2)
-            //                         {
-            //                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
-            //                         }
-            //                     }
-            //                 }
-            //             }
-            //             else
-            //             {
-            //                 var higher = new Scalar(0, 221, 250);
-            //                 using var region2 = CaptureToRectArea();
-            //                 using var mask = OpenCvCommonHelper.Threshold(region2.DeriveCrop(1686, 949, 10, 10).SrcMat, higher);
-            //                 using var labels = new Mat();
-            //                 using var stats = new Mat();
-            //                 using var centroids = new Mat();
-            //                 var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
-            //                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-            //
-            //                 if (numLabels > 1)
-            //                 {
-            //                     if (distance > 20)
-            //                     {
-            //                         if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
-            //                         {
-            //                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
-            //                         }
-            //                         else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
-            //                         {
-            //                             if (state.RunCount < 2)
-            //                             {
-            //                                 InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
-            //                             }
-            //                         }
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }
-            //
-            //     return true;
-            // break;
+            case "瓦雷莎":
+                if (state.PendingApproach)
+                {
+                    var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+
+                    if (shouldApproach)
+                    {
+                        InputHub.ReleaseAll();
+                        if (PartyConfig.SwitchToWalkEnabled)
+                        {
+                            var nextIdx = GetSwitchToWalkIndex();
+                            Logger.LogInformation("自动赶路：瓦雷莎接近节点，切人步行 {t}", nextIdx);
+                            state.VaresaWalkSwitchAttempts++;
+                            var nextAvatar = await SwitchAvatar(nextIdx);
+                            if (nextAvatar != null)
+                            {
+                                // 切人成功才结束接近态，失败保留 PendingApproach 下帧重试（与玛薇卡一致）
+                                state.PendingApproach = false;
+                            }
+                            else if (state.VaresaWalkSwitchAttempts >= 3)
+                            {
+                                // 连续失败达上限：放弃切步行位，保留当前角色交还通用逻辑继续赶路，避免卡死路线
+                                state.PendingApproach = false;
+                                Logger.LogWarning("自动赶路：瓦雷莎切步行位连续 {n} 次失败，放弃切换继续赶路",
+                                    state.VaresaWalkSwitchAttempts);
+                            }
+                        }
+                        else
+                        {
+                            state.PendingApproach = false;
+                            var approachEOnCd = await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct);
+                            if (approachEOnCd)
+                            {
+                                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                                await Delay(300, ct);
+                            }
+
+                            // 接近节点时若仍在滑翔，下落攻击快速落在航点上，
+                            // 防止滑过头；坠落态读作 Normal 无法与地面区分，靠自然落地即可不处理
+                            if (Bv.GetMotionStatus(screen2) == MotionStatus.Fly)
+                            {
+                                Logger.LogInformation("自动赶路：瓦雷莎接近节点时在滑翔，执行安全落地");
+                                await SafeLanding(ct);
+                            }
+                        }
+                        return false;
+                    }
+                }
+
+                // 前方（当前或下一个航点）有跳跃动作时停用技能赶路：
+                // 跳跃路段大概率是要起跳起飞，瓦雷莎的E夜魂态/冲刺会干扰正常起跳，
+                // 且本分支会强制路段为Run，会吞掉Jump路段的跳跃动作
+                if (waypoint?.MoveMode == MoveModeEnum.Jump.Code
+                    || nextWaypoint?.MoveMode == MoveModeEnum.Jump.Code)
+                {
+                    return true;
+                }
+
+                // 路段守卫：只在 Run/Dash 路段用技能赶路。
+                // 入口的路段过滤对终点（nextWaypoint == null）放行，而 "fly 路段 + 终点" 意味着
+                // 前方是悬崖/高空、需要走到边缘跳下开飞——此时用E夜魂疾冲会直接冲下悬崖摔死，
+                // 且强制 MoveMode=Run 会破坏 fly 路段的起飞处理。
+                if (waypoint?.MoveMode != MoveModeEnum.Run.Code
+                    && waypoint?.MoveMode != MoveModeEnum.Dash.Code)
+                {
+                    return false;
+                }
+
+                // 技能赶路只在路段足够长时启用：夜魂疾冲速度约 17m/s，松键后靠惯性滑行减速，
+                // 滑行距离可达 15m+。若在近距离（如 46m 的短路段）仍触发长按E，
+                // 刹车时的惯性会直接冲过航点（实测阿如村路线冲进河里，日志 13:58:49 dist=46.1 技能赶路 → 13:58:55 游泳中）。
+                // 因此离航点 50 以内不再进技能赶路，交还通用逻辑用普通速度跑完并正常刹车。
+                if (distance > Math.Max(PartyConfig.Distance, HurryOnMinEntryDistance))
+                {
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+
+                    waypoint.MoveMode = MoveModeEnum.Run.Code;
+
+                    await Delay(300, ct);
+                    // 一段 E 能跑多远由夜魂值决定：粉色夜魂条填充充足 = 仍在夜魂疾冲中，继续跑；
+                    // 填充降到 VaresaNextSkillPixels 以下 = 这一段消耗得差不多了，才接第二段 E。
+                    // 复用本帧截图，不额外截屏；能进到这个块本身就说明还有路程（distance > 50 门槛）。
+                    var nsPixels = CountVaresaNightsoulPixels(screen2);
+                    if (nsPixels >= VaresaNightsoulSeenPixels)
+                    {
+                        state.VaresaNightsoulSeen = true;
+                    }
+
+                    // 状态机：从未放过 E -> 放第一段；见过夜魂条且填充降到 VaresaNextSkillPixels 以下 -> 放第二段；
+                    // 放过 E 但条从未出现（UI 还没画出来/识别失败）-> 什么都不做，避免刚施放就连按第二段。
+                    var neverCast = double.IsNaN(state.VaresaLastSkillDistance);
+                    var dashEnded = state.VaresaNightsoulSeen && nsPixels < VaresaNextSkillPixels;
+                    var canDecide = (neverCast || dashEnded)
+                        && (DateTime.UtcNow - _lastVaresaSkillTime).TotalMilliseconds >= VaresaSkillIntervalMs;
+                    // 只在需要决定"是否放 E"时截屏数青色充能点；疾冲途中既不截屏也不做连通域识别。
+                    if (canDecide)
+                    {
+                        // 瓦雷莎 E 有两段充能：按图标上方青色菱形点数判断，不用白色连通域 OCR
+                        //（充能数字/夜魂态图标会让它误判）。
+                        var charges = CountVaresaECharges();
+                        if (charges > 0)
+                        {
+                            _lastVaresaSkillTime = DateTime.UtcNow;
+                            InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                            await Delay(300, ct);
+                            InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                            await Delay(200, ct);
+                            avatar.LastSkillTime = DateTime.UtcNow;
+                            state.VaresaLastSkillDistance = distance;
+                            state.VaresaNightsoulSeen = false; // 等下一段夜魂条出现，再按 800 阈值判下一段
+                            state.VaresaNoChargeLogged = false;
+                            Logger.LogInformation("自动赶路：瓦雷莎 施放夜魂疾冲，剩余 {d}，可用充能 {n}",
+                                Math.Round(distance), charges);
+                            // 夜魂疾冲自身提供加速，不再额外点按 SprintMouse
+                        }
+                        else if (!state.VaresaNoChargeLogged)
+                        {
+                            state.VaresaNoChargeLogged = true;
+                            Logger.LogDebug("自动赶路：瓦雷莎 夜魂条已消耗（像素 {px}），但两段充能都在冷却，继续跑", nsPixels);
+                        }
+                    }
+                }
+
+                return true;
 
             case "希诺宁":
                 if (state.PendingApproach)
@@ -731,7 +767,11 @@ public partial class PathExecutor
                         return false;
                     }
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is not RetryException
+                    and not RetryNoCountException
+                    and not NormalEndException
+                    and not HandledException
+                    and not OperationCanceledException)
                 {
                     Logger.LogError(e, $"[{avatar.Name}] 赶路逻辑异常");
                     return false;
@@ -829,7 +869,11 @@ public partial class PathExecutor
                         return false;
                     }
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is not RetryException
+                    and not RetryNoCountException
+                    and not NormalEndException
+                    and not HandledException
+                    and not OperationCanceledException)
                 {
                     Logger.LogError(e, $"[{avatar.Name}] 赶路逻辑异常");
                     state.FlyingState = false;
@@ -1080,7 +1124,11 @@ public partial class PathExecutor
                         return false;
                     }
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is not RetryException
+                    and not RetryNoCountException
+                    and not NormalEndException
+                    and not HandledException
+                    and not OperationCanceledException)
                 {
                     Logger.LogError(e, $"[{avatar.Name}] 赶路逻辑异常");
                     state.FlyingState = false;
@@ -1088,6 +1136,9 @@ public partial class PathExecutor
                 }
                 break;
             }
+
+            default:
+                break;
         }
 
         if ((waypoint?.MoveMode == MoveModeEnum.Fly.Code && PartyConfig.TravelMode == "连续赶路"
@@ -1484,6 +1535,105 @@ public partial class PathExecutor
         return HasColoredBlob(crop.SrcMat, new Scalar(0, 210, 240), new Scalar(15, 235, 255), 5);
     }
 
+    /// <summary>
+    /// 瓦雷莎 E 当前充能点数（0~2）：技能图标上方最多两个 #00DCFA 青色菱形点，按一次 E 消耗一个。
+    /// 坐标以 1920×1080 为基准，按 SystemInfo.AssetScale 缩放（覆盖 DPI / 窗口分辨率差异），
+    /// 并从画面右下角锚定，避免非 16:9 或缩放时从左上角定位产生偏移。
+    /// </summary>
+    private int CountVaresaECharges()
+    {
+        using var region = CaptureToRectArea();
+        var s = TaskContext.Instance().SystemInfo.AssetScale;
+        // 两个充能点中心约 (1676,953)、(1691,953)，各约 10px 宽；
+        // 取覆盖两者的横条 (1666,944) 40×18，右边缘距画面右边 214、下边缘距底边 118。
+        const int rightMargin1080 = 214;
+        const int bottomMargin1080 = 118;
+        const int width1080 = 40;
+        const int height1080 = 18;
+
+        var w = Math.Max(12, (int)Math.Round(width1080 * s));
+        var h = Math.Max(8, (int)Math.Round(height1080 * s));
+        var x = region.Width - (int)Math.Round(rightMargin1080 * s) - w;
+        var y = region.Height - (int)Math.Round(bottomMargin1080 * s) - h;
+        if (x < 0 || y < 0 || x + w > region.Width || y + h > region.Height)
+        {
+            return 0;
+        }
+
+        using var crop = region.DeriveCrop(x, y, w, h);
+        // Threshold 内部先 BGR2RGB，Scalar 为 RGB 顺序：#00DCFA = R0,G220,B250
+        using var mask = OpenCvCommonHelper.Threshold(crop.SrcMat,
+            new Scalar(0, 200, 225), new Scalar(30, 240, 255));
+        using var labels = new Mat();
+        using var stats = new Mat();
+        using var centroids = new Mat();
+        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+        // 单个菱形约 50 像素，面积按 scale² 缩放；上下限过滤抗锯齿噪点与图标高亮大块
+        var minArea = Math.Max(3, (int)Math.Round(8 * s * s));
+        var maxArea = Math.Max(60, (int)Math.Round(300 * s * s));
+        var count = 0;
+        for (var i = 1; i < numLabels && count < 2; i++)
+        {
+            var area = stats.At<int>(i, 4);
+            if (area >= minArea && area <= maxArea) count++;
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// 数出屏幕中心左侧粉色夜魂条的填充像素数。条填充充足 = 仍在夜魂疾冲中；
+    /// 填充随夜魂值消耗而减少，降到 VaresaNextSkillPixels 以下才接下一段 E。
+    /// 坐标以 1920×1080 为基准、相对画面中心锚定（角色固定在中心附近），按 AssetScale 缩放以适配 DPI/分辨率。
+    /// 复用主循环本帧已有的截图，不额外截屏。
+    /// </summary>
+    private int CountVaresaNightsoulPixels(ImageRegion screen)
+    {
+        var s = TaskContext.Instance().SystemInfo.AssetScale;
+        // 以 BGI 自身截图校准：夜魂条是 "(" 形弧线，会随角色移动上下漂移约 60px，
+        // 实测纵向分布约 y 420..660、横向 x 785..845，中心相对画面中心约 (-134,-40)。
+        // ROI 取 x=791..861、y=420..660：纵向完整覆盖漂移范围，右边缘 861 离角色身上的粉色（x870+）仍有 9px 余量；
+        // 横向不加宽，避免把角色算进来；横向漂移由 800 阈值本身留出的余量吸收。
+        const int offsetX1080 = -134;
+        const int offsetY1080 = 0;
+        const int width1080 = 70;
+        const int height1080 = 240;
+
+        var w = Math.Max(20, (int)Math.Round(width1080 * s));
+        var h = Math.Max(45, (int)Math.Round(height1080 * s));
+        var x = (int)Math.Round(screen.Width / 2d + (offsetX1080 - width1080 / 2d) * s);
+        var y = (int)Math.Round(screen.Height / 2d + (offsetY1080 - height1080 / 2d) * s);
+        if (x < 0 || y < 0 || x + w > screen.Width || y + h > screen.Height)
+        {
+            return 0;
+        }
+
+        using var crop = screen.DeriveCrop(x, y, w, h);
+        var mat = crop.SrcMat;
+        // BGI 图里亮粉是 (240,208,208)、暗粉 (192,128,128)，共同特征是 R 明显高于 G。
+        // 只写逐通道上下限会把浅蓝白天空、黄叶、沙滩一并算进来（实测无条时天空区假阳性 153 像素），
+        // 导致条已消失仍判为"疾冲中"，第二段 E 永远不触发。按校准时的判据补上通道间色差约束。
+        // 注意 SrcMat 是 BGR 顺序：Item0=B / Item1=G / Item2=R。
+        var pixels = 0;
+        for (var row = 0; row < mat.Rows; row++)
+        {
+            for (var col = 0; col < mat.Cols; col++)
+            {
+                var c = mat.At<Vec3b>(row, col);
+                var b = c.Item0;
+                var g = c.Item1;
+                var r = c.Item2;
+                if (r >= 160 && g >= 80 && g <= 225 && b >= 95 && b <= 245
+                    && r - g > 30 && b - g > -10)
+                {
+                    pixels++;
+                }
+            }
+        }
+
+        return pixels;
+    }
+
     private async Task SafeLanding(CancellationToken ct)
     {
         await Delay(250, ct);
@@ -1653,7 +1803,11 @@ public partial class PathExecutor
             // Logger.LogInformation("[赶路调试] TryHurryOnAsync  exit: result={r}", result);
             return result;
         }
-        catch (Exception e)
+        catch (Exception e) when (e is not RetryException
+            and not RetryNoCountException
+            and not NormalEndException
+            and not HandledException
+            and not OperationCanceledException)
         {
             Logger.LogError(e, "赶路逻辑执行异常");
             return false;
@@ -1706,6 +1860,10 @@ public partial class PathExecutor
                 {
                     Logger.LogWarning("手动指定的赶路角色 {Name} 不在当前队伍中，不启用赶路", _hurryOnAvatar);
                     _hurryOnAvatar = "";
+                }
+                else
+                {
+                    Logger.LogInformation("自动赶路角色：手动指定 {Name}", _hurryOnAvatar);
                 }
             }
         }
