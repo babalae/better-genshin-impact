@@ -1,5 +1,8 @@
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+
+[assembly: InternalsVisibleTo("BetterGenshinImpact.UnitTest")]
 
 namespace BetterGenshinImpact.I18nSync;
 
@@ -41,7 +44,7 @@ internal static partial class I18nScanner
 
             foreach (var attribute in document.Descendants().Attributes())
             {
-                AddMatches(I18nKeyRegex().Matches(attribute.Value), keys, knownKeys);
+                AddMatches(I18nKeyRegex().Matches(attribute.Value), keys, knownKeys, isXaml: true);
             }
         }
 
@@ -63,11 +66,17 @@ internal static partial class I18nScanner
         MatchCollection matches,
         ICollection<string> keys,
         ISet<string> knownKeys,
-        bool normalizeCSharpEscapes = false)
+        bool normalizeCSharpEscapes = false,
+        bool isXaml = false)
     {
         foreach (Match match in matches)
         {
             var key = match.Groups["key"].Value.Trim();
+            if (isXaml)
+            {
+                key = NormalizeXamlKey(key);
+            }
+
             if (normalizeCSharpEscapes)
             {
                 key = NormalizeCSharpEscapes(key);
@@ -78,6 +87,19 @@ internal static partial class I18nScanner
                 keys.Add(key);
             }
         }
+    }
+
+    internal static string NormalizeXamlKey(string key)
+    {
+        var trimmed = key.Trim();
+        if (trimmed.Length >= 2 &&
+            ((trimmed[0] == '\'' && trimmed[^1] == '\'') ||
+             (trimmed[0] == '"' && trimmed[^1] == '"')))
+        {
+            return trimmed[1..^1];
+        }
+
+        return trimmed;
     }
 
     private static string NormalizeCSharpEscapes(string key)
