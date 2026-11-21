@@ -1,4 +1,4 @@
-using BetterGenshinImpact.Core.Input;
+﻿using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
@@ -71,6 +71,10 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     /// <summary>后台建树的取消源：链接主令牌，秘境流程结束时取消，避免宿主异常退出后建树白跑</summary>
     private CancellationTokenSource? _comboBuildCts;
     private readonly Dictionary<string, int> _rewardSummary = new();
+
+    private bool _isCombatTimeout = false;
+
+    private bool _isFindTreeTimeout = false;
 
     private CancellationToken _ct;
 
@@ -283,6 +287,9 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         var combatScenes = new CombatScenes();
         for (var i = 0; i < _taskParam.DomainRoundNum; i++)
         {
+            _isCombatTimeout = false;
+            _isFindTreeTimeout = false;
+
             // 0. 关闭秘境提示
             Logger.LogDebug("0. 关闭秘境提示");
             await CloseDomainTip();
@@ -352,11 +359,13 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 await StartFight(combatScenes, combatCommands);
                 combatScenes.AfterTask();
             }
+            CheckCombatTimeout();
             EndFightWait();
 
             // 3. 寻找石化古树 并左右移动直到石化古树位于屏幕中心
             Logger.LogInformation("自动秘境：{Text}", "3. 寻找石化古树");
             await FindPetrifiedTree();
+            CheckFindTreeTimeout();
 
             // 4. 走到石化古树处
             Logger.LogInformation("自动秘境：{Text}", "4. 走到石化古树处");
@@ -1019,6 +1028,36 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         await Task.WhenAll(combatTask, domainEndTask);
     }
 
+    /// <summary>战斗超时后传送到七天神像并触发秘境重试。</summary>
+    private void CheckCombatTimeout()
+    {
+        if (!_isCombatTimeout)
+        {
+            return;
+        }
+
+        _isCombatTimeout = false;
+        var fightTimeout = _taskParam.FightTimeout > 0 ? _taskParam.FightTimeout : 300;
+        Logger.LogWarning("自动秘境：战斗超过 {Timeout} 秒，直接传送到七天神像并进行恢复重试", fightTimeout);
+        Avatar.TpForRecover(_ct,
+            new RetryException($"战斗超过 {fightTimeout} 秒，先传送到七天神像，然后重试秘境"));
+    }
+
+    /// <summary>寻找石化古树超时后传送到七天神像并触发秘境重试。</summary>
+    private void CheckFindTreeTimeout()
+    {
+        if (!_isFindTreeTimeout)
+        {
+            return;
+        }
+
+        _isFindTreeTimeout = false;
+        var findTreeTimeout = _taskParam.FindTreeTimeout > 0 ? _taskParam.FindTreeTimeout : 60;
+        Logger.LogWarning("自动秘境：寻找石化古树超过 {Timeout} 秒，直接传送到七天神像并进行恢复重试", findTreeTimeout);
+        Avatar.TpForRecover(_ct,
+            new RetryException($"寻找石化古树超过 {findTreeTimeout} 秒，先传送到七天神像，然后重试秘境"));
+    }
+
     private void EndFightWait()
     {
         if (_ct.IsCancellationRequested)
@@ -1043,8 +1082,18 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         {
             try
             {
+                var fightTimeout = _taskParam.FightTimeout > 0 ? _taskParam.FightTimeout : 300;
+                var stopwatch = Stopwatch.StartNew();
                 while (!_ct.IsCancellationRequested)
                 {
+                    if (stopwatch.Elapsed >= TimeSpan.FromSeconds(fightTimeout))
+                    {
+                        Logger.LogWarning("自动秘境：战斗超过 {Timeout} 秒，取消本轮战斗", fightTimeout);
+                        _isCombatTimeout = true;
+                        await cts.CancelAsync();
+                        break;
+                    }
+
                     if (IsDomainEnd())
                     {
                         await cts.CancelAsync();
@@ -1168,152 +1217,178 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             var noDetectCount = 0;
             var prevKey = moveLeftKey;
             var backwardsAndForwardsCount = 0;
-            while (!_ct.IsCancellationRequested)
+            var findTreeTimeout = _taskParam.FindTreeTimeout > 0 ? _taskParam.FindTreeTimeout : 60;
+            var stopwatch = Stopwatch.StartNew();
+            try
             {
-                using var capture = CaptureToRectArea();
-                var treeRect = DetectTree(capture);
-                if (treeRect != default)
+                while (!_ct.IsCancellationRequested && !treeCts.Token.IsCancellationRequested)
                 {
-                    var treeMiddleX = treeRect.X + treeRect.Width / 2;
-                    if (treeRect.X + treeRect.Width < middleX && !_config.ShortMovement)
+                    if (stopwatch.Elapsed >= TimeSpan.FromSeconds(findTreeTimeout))
                     {
-                        backwardsAndForwardsCount = 0;
-                        // 树在左边 往左走
-                        Debug.WriteLine($"树在左边 往左走 {treeMiddleX}  {middleX}");
-                        if (rightKeyDown)
-                        {
-                            // 先松开D键
-                            InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
-                            rightKeyDown = false;
-                        }
-
-                        if (!leftKeyDown)
-                        {
-                            InputHub.Foreground.Keyboard.KeyDown(moveLeftKey);
-                            leftKeyDown = true;
-                        }
+                        Logger.LogWarning("自动秘境：移动寻找石化古树超过 {Timeout} 秒，取消搜索", findTreeTimeout);
+                        _isFindTreeTimeout = true;
+                        treeCts.Cancel();
+                        break;
                     }
-                    else if (treeRect.X > middleX && !_config.ShortMovement)
+
+                    using var capture = CaptureToRectArea();
+                    var treeRect = DetectTree(capture);
+                    if (treeRect != default)
                     {
-                        backwardsAndForwardsCount = 0;
-                        // 树在右边 往右走
-                        Debug.WriteLine($"树在右边 往右走 {treeMiddleX}  {middleX}");
-                        if (leftKeyDown)
+                        var treeMiddleX = treeRect.X + treeRect.Width / 2;
+                        if (treeRect.X + treeRect.Width < middleX && !_config.ShortMovement)
                         {
-                            // 先松开A键
-                            InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
-                            leftKeyDown = false;
-                        }
-
-                        if (!rightKeyDown)
-                        {
-                            InputHub.Foreground.Keyboard.KeyDown(moveRightKey);
-                            rightKeyDown = true;
-                        }
-                    }
-                    else
-                    {
-                        // 树在中间 松开所有键
-                        if (rightKeyDown)
-                        {
-                            InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
-                            prevKey = moveRightKey;
-                            rightKeyDown = false;
-                        }
-
-                        if (leftKeyDown)
-                        {
-                            InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
-                            prevKey = moveLeftKey;
-                            leftKeyDown = false;
-                        }
-
-                        // 松开按键后使用小碎步移动
-                        if (treeMiddleX < middleX)
-                        {
-                            if (prevKey == moveRightKey)
+                            backwardsAndForwardsCount = 0;
+                            // 树在左边 往左走
+                            Debug.WriteLine($"树在左边 往左走 {treeMiddleX}  {middleX}");
+                            if (rightKeyDown)
                             {
-                                backwardsAndForwardsCount++;
+                                // 先松开D键
+                                InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
+                                rightKeyDown = false;
                             }
 
-                            InputHub.Foreground.Keyboard.KeyDown(moveLeftKey);
-                            Sleep(60);
-                            InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
-                            prevKey = moveLeftKey;
-                        }
-                        else if (treeMiddleX > middleX)
-                        {
-                            if (prevKey == moveLeftKey)
+                            if (!leftKeyDown)
                             {
-                                backwardsAndForwardsCount++;
+                                InputHub.Foreground.Keyboard.KeyDown(moveLeftKey);
+                                leftKeyDown = true;
+                            }
+                        }
+                        else if (treeRect.X > middleX && !_config.ShortMovement)
+                        {
+                            backwardsAndForwardsCount = 0;
+                            // 树在右边 往右走
+                            Debug.WriteLine($"树在右边 往右走 {treeMiddleX}  {middleX}");
+                            if (leftKeyDown)
+                            {
+                                // 先松开A键
+                                InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
+                                leftKeyDown = false;
                             }
 
-                            InputHub.Foreground.Keyboard.KeyDown(moveRightKey);
-                            Sleep(60);
-                            InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
-                            prevKey = moveRightKey;
+                            if (!rightKeyDown)
+                            {
+                                InputHub.Foreground.Keyboard.KeyDown(moveRightKey);
+                                rightKeyDown = true;
+                            }
                         }
                         else
                         {
-                            InputHub.Foreground.Keyboard.KeyDown(moveForwardKey);
-                            Sleep(60);
-                            InputHub.Foreground.Keyboard.KeyUp(moveForwardKey);
-                            Sleep(500, _ct);
-                            treeCts.Cancel();
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    backwardsAndForwardsCount = 0;
-                    // 左右巡逻
-                    noDetectCount++;
-                    if (noDetectCount > 40)
-                    {
-                        if (leftKeyDown)
-                        {
-                            InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
-                            leftKeyDown = false;
-                        }
+                            // 树在中间 松开所有键
+                            if (rightKeyDown)
+                            {
+                                InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
+                                prevKey = moveRightKey;
+                                rightKeyDown = false;
+                            }
 
-                        if (!rightKeyDown)
-                        {
-                            InputHub.Foreground.Keyboard.KeyDown(moveRightKey);
-                            rightKeyDown = true;
+                            if (leftKeyDown)
+                            {
+                                InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
+                                prevKey = moveLeftKey;
+                                leftKeyDown = false;
+                            }
+
+                            // 松开按键后使用小碎步移动
+                            if (treeMiddleX < middleX)
+                            {
+                                if (prevKey == moveRightKey)
+                                {
+                                    backwardsAndForwardsCount++;
+                                }
+
+                                InputHub.Foreground.Keyboard.KeyDown(moveLeftKey);
+                                Sleep(60);
+                                InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
+                                prevKey = moveLeftKey;
+                            }
+                            else if (treeMiddleX > middleX)
+                            {
+                                if (prevKey == moveLeftKey)
+                                {
+                                    backwardsAndForwardsCount++;
+                                }
+
+                                InputHub.Foreground.Keyboard.KeyDown(moveRightKey);
+                                Sleep(60);
+                                InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
+                                prevKey = moveRightKey;
+                            }
+                            else
+                            {
+                                InputHub.Foreground.Keyboard.KeyDown(moveForwardKey);
+                                Sleep(60);
+                                InputHub.Foreground.Keyboard.KeyUp(moveForwardKey);
+                                Sleep(500, _ct);
+                                treeCts.Cancel();
+                                break;
+                            }
                         }
                     }
                     else
                     {
-                        if (rightKeyDown)
+                        backwardsAndForwardsCount = 0;
+                        // 左右巡逻
+                        noDetectCount++;
+                        if (noDetectCount > 40)
                         {
-                            InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
-                            rightKeyDown = false;
-                        }
+                            if (leftKeyDown)
+                            {
+                                InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
+                                leftKeyDown = false;
+                            }
 
-                        if (!leftKeyDown)
+                            if (!rightKeyDown)
+                            {
+                                InputHub.Foreground.Keyboard.KeyDown(moveRightKey);
+                                rightKeyDown = true;
+                            }
+                        }
+                        else
                         {
-                            InputHub.Foreground.Keyboard.KeyDown(moveLeftKey);
-                            leftKeyDown = true;
+                            if (rightKeyDown)
+                            {
+                                InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
+                                rightKeyDown = false;
+                            }
+
+                            if (!leftKeyDown)
+                            {
+                                InputHub.Foreground.Keyboard.KeyDown(moveLeftKey);
+                                leftKeyDown = true;
+                            }
                         }
                     }
-                }
 
-                if (backwardsAndForwardsCount >= _config.LeftRightMoveTimes)
-                {
-                    // 左右移动5次说明已经在树中心了
-                    InputHub.Foreground.Keyboard.KeyDown(moveForwardKey);
-                    Sleep(60);
-                    InputHub.Foreground.Keyboard.KeyUp(moveForwardKey);
-                    Sleep(500, _ct);
-                    treeCts.Cancel();
-                    break;
-                }
+                    if (backwardsAndForwardsCount >= _config.LeftRightMoveTimes)
+                    {
+                        // 左右移动5次说明已经在树中心了
+                        InputHub.Foreground.Keyboard.KeyDown(moveForwardKey);
+                        Sleep(60);
+                        InputHub.Foreground.Keyboard.KeyUp(moveForwardKey);
+                        Sleep(500, _ct);
+                        treeCts.Cancel();
+                        break;
+                    }
 
-                Sleep(60, _ct);
+                    Sleep(60, _ct);
+                }
             }
+            finally
+            {
+                if (leftKeyDown)
+                {
+                    InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
+                }
 
-            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+                if (rightKeyDown)
+                {
+                    InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
+                }
+
+                InputHub.Foreground.Keyboard.KeyUp(moveForwardKey);
+                TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+            }
         });
     }
 
@@ -1344,8 +1419,18 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         {
             var continuousCount = 0; // 连续东方向次数
             var started = false;
+            var findTreeTimeout = _taskParam.FindTreeTimeout > 0 ? _taskParam.FindTreeTimeout : 60;
+            var stopwatch = Stopwatch.StartNew();
             while (!cts.Token.IsCancellationRequested)
             {
+                if (stopwatch.Elapsed >= TimeSpan.FromSeconds(findTreeTimeout))
+                {
+                    Logger.LogWarning("自动秘境：锁定东方向视角超过 {Timeout} 秒，取消搜索石化古树", findTreeTimeout);
+                    _isFindTreeTimeout = true;
+                    cts.Cancel();
+                    break;
+                }
+
                 using var captureRegion = CaptureToRectArea();
                 var angle = CameraOrientation.Compute(captureRegion.SrcMat);
                 CameraOrientation.DrawDirection(captureRegion, angle);
@@ -1356,7 +1441,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     // 360 度 东方向视角
                     if (continuousCount > 5)
                     {
-                        if (!started && moveAvatarTask.Status != TaskStatus.Running)
+                        if (!started && moveAvatarTask.Status == TaskStatus.Created)
                         {
                             started = true;
                             moveAvatarTask.Start();
@@ -1392,6 +1477,11 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 }
 
                 Sleep(100, _ct);
+            }
+
+            if (moveAvatarTask.Status == TaskStatus.Created)
+            {
+                moveAvatarTask.Start();
             }
 
             Logger.LogInformation("锁定东方向视角线程结束");

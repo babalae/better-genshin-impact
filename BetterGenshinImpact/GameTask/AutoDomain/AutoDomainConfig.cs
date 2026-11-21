@@ -14,6 +14,12 @@ public partial class AutoDomainConfig : ObservableObject
     [ObservableProperty]
     private double _fightEndDelay = 5;
 
+    [ObservableProperty]
+    private int _fightTimeout = 300;
+
+    [ObservableProperty]
+    private int _findTreeTimeout = 60;
+
     /// <summary>
     /// 寻找古树时，短距离移动，用于识别速度过慢的计算机使用
     /// </summary>
