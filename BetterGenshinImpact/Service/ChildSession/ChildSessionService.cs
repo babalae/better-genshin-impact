@@ -922,6 +922,29 @@ public sealed class ChildSessionService : IDisposable
         _disposeCancellationTokenSource.Dispose();
     }
 
+    /// <summary>
+    /// 发起一次重连，并把「登录阶段」标志（<see cref="_connectAttempting"/>）置位。
+    ///
+    /// 首次重试、重建重连、设置重试、设置变更这四条路径都不经过 <see cref="ConnectCore"/>，
+    /// 漏置标志会让凭据框轮询在登录阶段跳过查找——设置重连时弹出的凭据框就没人认，
+    /// 用户在全屏里会卡住。发起失败立刻还原标志；成功（OnRdpLoginCompleted）与
+    /// 失败（CompleteConnectionFailure）仍由既有收尾置回 false。
+    /// </summary>
+    private void ReconnectForConnectAttempt(Action reconnect)
+    {
+        _connectAttempting = true;
+
+        try
+        {
+            reconnect();
+        }
+        catch
+        {
+            _connectAttempting = false;
+            throw;
+        }
+    }
+
     private void ConnectCore(string operationMessage)
     {
         // 每次新连接都重置：上一次「等用户改密」的状态不能带过来，
@@ -1436,7 +1459,8 @@ public sealed class ChildSessionService : IDisposable
             RefreshState(
                 $"正在重试 RDP 自动连接（{retryNumber}/{RdpSettingsReconnectRetryCount}）");
             _rdpSettingsReconnectRetryInProgress = false;
-            EnsureDesktopWindow().RdpHost.ReconnectToChildSession(DefaultDesktopSize);
+            ReconnectForConnectAttempt(
+                () => EnsureDesktopWindow().RdpHost.ReconnectToChildSession(DefaultDesktopSize));
         }
         catch (OperationCanceledException) when (_disposed)
         {
@@ -1516,7 +1540,8 @@ public sealed class ChildSessionService : IDisposable
             }
 
             _logger.LogInformation("RDP 控件重建完成，用新控件重新连接。");
-            window.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
+            ReconnectForConnectAttempt(
+                () => window.RdpHost.ReconnectToChildSession(DefaultDesktopSize));
         }
         catch (OperationCanceledException) when (_disposed)
         {
@@ -1581,7 +1606,8 @@ public sealed class ChildSessionService : IDisposable
             _connectionRetryInProgress = false;
             // OnLogonError 触发后 ActiveX 可能仍处于连接状态，必须先断开再重连。
             // 否则这里直接退出会丢失已捕获的真实错误，最终只剩外层连接超时。
-            window.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
+            ReconnectForConnectAttempt(
+                () => window.RdpHost.ReconnectToChildSession(DefaultDesktopSize));
         }
         catch (OperationCanceledException) when (_disposed)
         {
@@ -1748,7 +1774,8 @@ public sealed class ChildSessionService : IDisposable
 
         try
         {
-            window.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
+            ReconnectForConnectAttempt(
+                () => window.RdpHost.ReconnectToChildSession(DefaultDesktopSize));
         }
         catch
         {
