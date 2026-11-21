@@ -1429,8 +1429,11 @@ internal static class ChildSessionEnvironmentCheck
         catch (Exception exception) when (exception is InvalidOperationException
                                               or System.ComponentModel.Win32Exception)
         {
-            Logger.LogWarning(exception, "无法枚举 sfc 进程，按「没有在运行」处理。");
-            return false;
+            // 枚举失败不代表「没有 sfc 在跑」：/.NET 8 的进程查询在系统态紧张时可能抛错，
+            // 此时无法排除有扫描正在进行。按忙碌处理是保守方向——闸的持有与启动前检查
+            // 都会多等/多拦一轮，代价只是延迟；误放闸则会让两个 sfc 争同一个文件。
+            Logger.LogWarning(exception, "无法枚举 sfc 进程，按「可能在运行」处理。");
+            return true;
         }
 
         try

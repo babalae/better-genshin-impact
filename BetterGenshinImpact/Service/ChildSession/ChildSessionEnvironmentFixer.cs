@@ -1156,6 +1156,30 @@ internal static class ChildSessionEnvironmentFixer
                     await Task.Delay(200).ConfigureAwait(false);
                 }
 
+                // 10 秒没见到不等于没起来：外层 cmd 到内层 sfc 之间的间隔在磁盘繁忙时
+                // 可能超过 10 秒，立刻放闸会让后台 /verifyfile 与刚冒头的扫描抢文件。
+                // 再给 60 秒宽限：期间出现就继续等退出；始终没出现按「启动失败」放闸——
+                // 不能因为一次启动失败把闸永久占死。
+                if (!IsSfcRunning())
+                {
+                    var graceDeadline = DateTime.UtcNow + TimeSpan.FromSeconds(60);
+                    while (DateTime.UtcNow < graceDeadline)
+                    {
+                        if (IsSfcRunning())
+                        {
+                            break;
+                        }
+
+                        await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                    }
+
+                    if (!IsSfcRunning())
+                    {
+                        Logger.LogWarning("sfc /scannow 启动后 70 秒内未见到扫描进程，按启动失败释放闸。");
+                        return;
+                    }
+                }
+
                 // 再等它退出。给个上限，避免异常情况下把闸永久占住。
                 var exitDeadline = DateTime.UtcNow + TimeSpan.FromMinutes(30);
                 while (DateTime.UtcNow < exitDeadline && IsSfcRunning())

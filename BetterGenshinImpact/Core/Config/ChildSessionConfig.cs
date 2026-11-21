@@ -64,6 +64,10 @@ public partial class ChildSessionConfig : ObservableObject
     /// <summary>
     /// 连接桌面分身时是否使用已保存的密码自动登录。默认开启：没存密码时只尝试 RDP
     /// 记住的上一次凭据，失败或没有就退回手动输入。密码存放在 Windows 凭据管理器。
+    ///
+    /// 保存的密码被拒（微软账户改密、密码过期等）时的恢复方式：
+    /// 在「自动登录」窗口里更新保存的密码；或临时关闭自动登录改用手动输入——
+    /// 关闭开关不会删除已保存的密码，重新打开后继续使用，彻底不用可点「清除密码」。
     /// </summary>
     [ObservableProperty]
     private bool _autoLoginEnabled = true;
