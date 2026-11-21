@@ -534,13 +534,13 @@ public partial class ChildSessionWindow : FluentWindow
                 return;
             }
 
-            // 已连接说明登录阶段早已结束：这时冒出来的凭据框不可能属于本次 RDP 连接，
-            // 不去认它（也就不会为它降置顶、去激活别的应用的提示）。
-            // 用 ViewModel 在 UI 线程写的快照判断——本回调在线程池上，不能读 ActiveX 的
-            // COM 属性（ConnectedState 必须在控件所属线程访问）。
-            var dialog = _viewModel.RdpConnected
-                ? IntPtr.Zero
-                : ChildSessionAutoLoginService.FindCredentialDialog();
+            // 凭据框只出现在登录阶段：只在「正在发起连接/登录中」时去找框。
+            // 用服务侧的实时标志（volatile），既不在线程池读 ActiveX 的 COM 属性，
+            // 也不依赖 UI 定时器刷新的状态快照——设置类重连可能在刷新前就弹出凭据框，
+            // 用快照会把它漏掉，用户在全屏里就卡住了。
+            var dialog = _viewModel.IsConnectAttempting
+                ? ChildSessionAutoLoginService.FindCredentialDialog()
+                : IntPtr.Zero;
             if (dialog != IntPtr.Zero)
             {
                 lock (_credentialDialogWatchGate)

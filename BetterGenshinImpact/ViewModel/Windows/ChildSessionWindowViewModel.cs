@@ -25,13 +25,6 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private readonly ChildSessionService _childSessionService;
     private readonly DispatcherTimer _notificationTimer;
 
-    /// <summary>
-    /// RDP 是否已连接的快照，只在 UI 线程（UpdateConnectionStatus）写。
-    ///
-    /// 凭据框轮询跑在线程池上，而 <c>RdpHost.ConnectedState</c> 是 ActiveX 的 COM 属性、
-    /// 必须在控件所属的 UI 线程读取。后台只读这个快照，不去碰控件。
-    /// </summary>
-    private volatile bool _rdpConnected;
     private bool _startRequested;
     private ChildSessionDiagnosticsWindow? _diagnosticsWindow;
     private ChildSessionAutoLoginWindow? _autoLoginWindow;
@@ -234,9 +227,12 @@ public partial class ChildSessionWindowViewModel : ViewModel
     }
 
     /// <summary>
-    /// 线程池可安全读取的「RDP 已连接」快照。见 <see cref="_rdpConnected"/>。
+    /// 是否有连接尝试正在进行（线程池可安全读取）。
+    ///
+    /// 凭据框只出现在登录阶段，轮询用这个实时标志判断要不要找框——不依赖 UI 定时器
+    /// 刷新的状态快照，避免设置类重连时漏检刚弹出的凭据框。
     /// </summary>
-    internal bool RdpConnected => _rdpConnected;
+    internal bool IsConnectAttempting => _childSessionService.IsConnectAttempting;
 
     /// <summary>
     /// 解除对服务的全部事件订阅并停掉通知计时器。
@@ -873,7 +869,6 @@ public partial class ChildSessionWindowViewModel : ViewModel
     {
         var connectedState = _childSessionService.ConnectedState;
         var childSessionId = _childSessionService.ChildSessionId;
-        _rdpConnected = connectedState == 1;
         IsTopmost = _childSessionService.TopmostEnabled;
         IsAdaptive = _childSessionService.SmartSizingEnabled;
         KeepAspectRatio = _childSessionService.KeepAspectRatio;

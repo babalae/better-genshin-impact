@@ -92,6 +92,15 @@ public sealed class ChildSessionService : IDisposable
     private volatile bool _awaitingPasswordChange;
 
     /// <summary>
+    /// 是否正在发起连接或登录尚未完成（含等待改密/交互登录）。
+    ///
+    /// 凭据框只在这段时间里可能出现，凭据框轮询用它判断要不要去找框。
+    /// 用服务侧的实时标志而不是 UI 侧的状态快照：状态刷新依赖 500ms 定时器，
+    /// 设置类重连可能在刷新前就弹出凭据框——那时快照还是「已连接」，框会被漏掉。
+    /// </summary>
+    private volatile bool _connectAttempting;
+
+    /// <summary>
     /// 本轮启动是否已经重建过 RDP 控件。
     ///
     /// 「由于协议错误，连接失败」这类失败常出在控件内部状态机卡死（上一次连接异常收尾），
@@ -136,6 +145,11 @@ public sealed class ChildSessionService : IDisposable
     /// 订阅方据此解除「设置重连中」的占用状态——否则音频等按钮会一直禁用。
     /// </summary>
     public event EventHandler? SettingsReconnectCancelled;
+
+    /// <summary>
+    /// 是否有连接尝试正在进行（线程安全，任意线程可读）。见 <see cref="_connectAttempting"/>。
+    /// </summary>
+    internal bool IsConnectAttempting => _connectAttempting;
 
     public event EventHandler? AudioReconnectCompleted;
 
@@ -788,6 +802,7 @@ public sealed class ChildSessionService : IDisposable
         // 它会把刚注销的分身又连回来。
         _settingsReconnectGeneration++;
         _lifecycleGeneration++;
+        _connectAttempting = false;
         _connectionAttemptCompletionSource?.TrySetResult(false);
 
         await _launchSemaphore.WaitAsync();
@@ -913,6 +928,9 @@ public sealed class ChildSessionService : IDisposable
         // 否则新一轮连接超时会被误判成「还在改密」而永远不报失败。
         _awaitingPasswordChange = false;
 
+        // 从这里开始到登录完成（或失败）都属于「登录阶段」：凭据框只在这期间出现。
+        _connectAttempting = true;
+
         var existingSessionId = ChildSessionNativeMethods.TryGetChildSessionId();
         var window = EnsureDesktopWindow();
         ShowDesktopWindow(window);
@@ -1003,6 +1021,7 @@ public sealed class ChildSessionService : IDisposable
             if (_awaitingPasswordChange && ConnectedState == 0)
             {
                 _awaitingPasswordChange = false;
+                _connectAttempting = false;
 
                 // 这两个是 ConnectCore 为「自动拉起 BetterGI」留的状态：本次尝试已经结束，
                 // 不清的话下一轮连接会带着上次的自动启动意图和剩余重试次数。
@@ -1300,6 +1319,7 @@ public sealed class ChildSessionService : IDisposable
     private async void OnRdpLoginCompleted(object? sender, EventArgs e)
     {
         _awaitingPasswordChange = false;
+        _connectAttempting = false;
         _reconnectingSessionId = null;
 
         // 从「开始连接」到登录完成的总耗时：用户感知的黑屏时间基本就是这一段。
@@ -1597,6 +1617,8 @@ public sealed class ChildSessionService : IDisposable
     /// </summary>
     private void CompleteConnectionFailure(ChildSessionConnectionFailedEventArgs e)
     {
+        _connectAttempting = false;
+
         // 统一在这里补充诊断，让「重试耗尽」和「连接超时」两条失败路径给出同样的信息。
         var diagnosed = new ChildSessionConnectionFailedEventArgs(
             $"{e.Message}{BuildFailureDiagnosis()}",
