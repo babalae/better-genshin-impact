@@ -262,9 +262,15 @@ public sealed class ChildSessionService : IDisposable
             try
             {
                 var (state, startType) = ChildSessionEnvironmentCheck.QueryTermService();
-                _termServiceStatusSuffix = startType == "Disabled"
-                    ? " | TermService：已禁用"
-                    : state is "Stopped" or "StopPending" ? " | TermService：未启动" : string.Empty;
+
+                // 两个都是 Unknown 表示这次读不到（注册表/SCM 查询失败）：
+                // 保留上一次的结论，别把「已禁用/未启动」的警告抹成正常。
+                if (state != "Unknown" || startType != "Unknown")
+                {
+                    _termServiceStatusSuffix = startType == "Disabled"
+                        ? " | TermService：已禁用"
+                        : state is "Stopped" or "StopPending" ? " | TermService：未启动" : string.Empty;
+                }
             }
             catch (Exception exception) when (IsExpectedChildSessionException(exception))
             {
@@ -1030,7 +1036,12 @@ public sealed class ChildSessionService : IDisposable
             // 已有会话用系统状态兜底：RDP 已连接 + 会话号没变 + WTS 显示已登录，
             // 三者都满足就按登录完成收尾。新建会话仍只认登录事件。
             // 「等改密」时不走这条：那种情况会话也是 Active，但登录并没有完成。
-            if (_connectionAttemptCompletionSource is { Task.IsCompleted: false }
+            // StartAsync 返回后会清掉 completionSource，但设置类重连没有等待方：
+            // 那时同样需要这条兜底，否则「音频切换后卡在无事件」只能等超时。
+            var wtsFallbackApplicable = _connectionAttemptCompletionSource is { Task.IsCompleted: false }
+                                        || _rdpSettingsReconnectRetryInProgress
+                                        || _pendingRdpSettingChanges != RdpSettingChange.None;
+            if (wtsFallbackApplicable
                 && !_awaitingPasswordChange
                 && ConnectedState == 1
                 && _reconnectingSessionId is { } reconnecting
@@ -1166,6 +1177,10 @@ public sealed class ChildSessionService : IDisposable
         if (e.IsInteractiveLogon)
         {
             _awaitingPasswordChange = true;
+
+            // 登录界面归用户操作：取消后不要再自动重试（每次重试都可能再弹一次界面），
+            // 把首连重试预算清掉，交给用户重新点「启动并连接」。
+            _initialConnectionRetriesRemaining = 0;
             _logger.LogInformation("客户端显示交互式登录界面，保持连接等待用户操作。");
             RefreshState("等待在会话中完成登录");
             return;
@@ -1184,7 +1199,8 @@ public sealed class ChildSessionService : IDisposable
                 return;
             }
 
-            _pendingRdpSettingChanges = RdpSettingChange.None;
+            // 重试耗尽先不丢设置：下面可能走控件重建，重建成功后仍要应用它。
+            // 只有彻底失败（CompleteConnectionFailure）时才放弃。
         }
 
         if (_autoLaunchBetterGiPending
@@ -1210,6 +1226,9 @@ public sealed class ChildSessionService : IDisposable
             return;
         }
 
+        // 走到这里说明不再重试也不会重建：待生效设置随本次失败一起放弃。
+        _pendingRdpSettingChanges = RdpSettingChange.None;
+        _rdpSettingsReconnectRetriesRemaining = 0;
         CompleteConnectionFailure(e);
     }
 

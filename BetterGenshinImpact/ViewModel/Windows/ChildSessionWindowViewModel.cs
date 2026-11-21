@@ -157,7 +157,14 @@ public partial class ChildSessionWindowViewModel : ViewModel
     /// 全屏浮层上那个开关的文字：只有「游戏模式 / 观看模式」两态。
     /// 全屏是为了玩游戏，普通鼠标这一档在这里没有意义，所以不参与。
     /// </summary>
-    public string FullscreenInputModeText => IsWatching ? "观看模式" : "游戏模式";
+    public string FullscreenInputModeText => InputMode switch
+    {
+        // 按实际模式显示：全屏自动切游戏鼠标可能失败（COM 写入被拒），
+        // 那时模式仍是普通鼠标，文案不能谎报成游戏模式。
+        ChildSessionInputMode.Watch => "观看模式",
+        ChildSessionInputMode.GameMouse => "游戏模式",
+        _ => "普通鼠标"
+    };
 
     /// <summary>
     /// 全屏浮层开关的提示：只讲两态，不讲三态循环。

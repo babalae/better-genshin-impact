@@ -1418,8 +1418,19 @@ internal static class ChildSessionEnvironmentCheck
 
     /// <summary>
     /// 是否已经有 sfc 进程在跑（不区分是谁启动的）。
+    ///
+    /// 查询失败时按「在运行」处理：枚举失败无法排除有扫描正在进行，按忙碌走保守方向——
+    /// 闸的持有与启动前检查都多等/多拦一轮，代价只是延迟；误放闸则会让两个 sfc 争同一个文件。
     /// </summary>
-    internal static bool IsSfcProcessRunning()
+    internal static bool IsSfcProcessRunning() => TryQuerySfcProcessRunning() != false;
+
+    /// <summary>
+    /// 三态查询 sfc 进程：<c>true</c> 明确在跑、<c>false</c> 明确没在跑、<c>null</c> 查不到。
+    ///
+    /// 需要区分「查不到」和「明确没在跑」的地方用它——例如等待扫描进程出现时，
+    /// 查不到不能当成「已经出现」，否则宽限期会被直接跳过。
+    /// </summary>
+    internal static bool? TryQuerySfcProcessRunning()
     {
         Process[] processes;
         try
@@ -1429,11 +1440,8 @@ internal static class ChildSessionEnvironmentCheck
         catch (Exception exception) when (exception is InvalidOperationException
                                               or System.ComponentModel.Win32Exception)
         {
-            // 枚举失败不代表「没有 sfc 在跑」：/.NET 8 的进程查询在系统态紧张时可能抛错，
-            // 此时无法排除有扫描正在进行。按忙碌处理是保守方向——闸的持有与启动前检查
-            // 都会多等/多拦一轮，代价只是延迟；误放闸则会让两个 sfc 争同一个文件。
-            Logger.LogWarning(exception, "无法枚举 sfc 进程，按「可能在运行」处理。");
-            return true;
+            Logger.LogWarning(exception, "无法枚举 sfc 进程，本次无法判定。");
+            return null;
         }
 
         try

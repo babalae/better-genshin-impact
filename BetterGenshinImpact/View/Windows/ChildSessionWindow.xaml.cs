@@ -1251,7 +1251,11 @@ public partial class ChildSessionWindow : FluentWindow
         PositionFullscreenBar();
     }
 
-    private void HideFullscreenBar()
+    /// <param name="showHint">
+    /// 是否提示唤出方式。只有「超时自动收起」需要提示——用户主动收起（退全屏、还原）
+    /// 时工具栏消失是预期行为，再弹提示就是噪音。
+    /// </param>
+    private void HideFullscreenBar(bool showHint = false)
     {
         if (!FullscreenBarPopup.IsOpen)
         {
@@ -1262,7 +1266,7 @@ public partial class ChildSessionWindow : FluentWindow
 
         // 首次自动收起时提示一次唤出方式：全屏下工具栏消失没有其它可见线索，
         // 用户容易以为功能没了。只提示首次，避免每次收纳都打扰。
-        if (!_fullscreenBarHintShown)
+        if (showHint && !_fullscreenBarHintShown)
         {
             _fullscreenBarHintShown = true;
             _viewModel.ShowFullscreenBarHint();
@@ -1353,7 +1357,7 @@ public partial class ChildSessionWindow : FluentWindow
         if (!nearTop && !overBar
             && DateTime.UtcNow - _fullscreenBarShownAt > FullscreenBarHideDelay)
         {
-            HideFullscreenBar();
+            HideFullscreenBar(showHint: true);
         }
     }
 

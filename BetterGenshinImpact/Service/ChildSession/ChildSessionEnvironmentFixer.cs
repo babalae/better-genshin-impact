@@ -605,6 +605,10 @@ internal static class ChildSessionEnvironmentFixer
                     false,
                     "已经有一个 sfc 正在运行，本次没有再启动。等它结束后重新检测即可。"),
 
+                SfcLaunch.Cancelled => new ChildSessionFixResult(
+                    false,
+                    "已取消启动 sfc 扫描。需要修复时重新点一次修复即可。"),
+
                 _ => new ChildSessionFixResult(
                     false,
                     "无法自动启动 sfc /scannow，请以管理员身份打开命令行，手动执行 sfc /scannow。")
@@ -733,6 +737,25 @@ internal static class ChildSessionEnvironmentFixer
                         "回滚 termsrv.dll 失败，当前文件未通过校验，远程桌面服务将保持停止状态，请运行 sfc /scannow 修复后重启电脑。");
                 }
             }
+            else
+            {
+                // 原本就没有 termsrv.dll（服务根本跑不起来的那种），没有可回滚的原件：
+                // 把刚复制进去的、未通过校验的备份删掉，恢复「文件缺失」的原状，
+                // 并且同样不允许重启服务——否则服务会加载这份不可信的 DLL。
+                try
+                {
+                    File.Delete(termsrvPath);
+                }
+                catch (Exception deleteException) when (deleteException is IOException
+                                                            or UnauthorizedAccessException
+                                                            or SecurityException)
+                {
+                    Logger.LogWarning(deleteException, "删除未通过校验的 termsrv.dll 失败。");
+                }
+
+                restoreSafeToStart = false;
+                Logger.LogWarning("备份文件未通过 sfc 校验，且原文件本就不存在，已恢复原状并不重启服务。");
+            }
 
             if (!restoreSafeToStart)
             {
@@ -797,6 +820,19 @@ internal static class ChildSessionEnvironmentFixer
                 false,
                 "检测到还有正在运行的桌面分身会话。请先关闭分身再重试，"
                 + "否则重启服务会把里面的程序一起关掉。");
+        }
+
+        // 先确认 sfc 可执行文件在，再动服务：服务停了才发现没有 sfc，
+        // 等于白停一次并把用户的分身会话一起关掉。
+        var sfcPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            "sfc.exe");
+        if (!File.Exists(sfcPath))
+        {
+            Logger.LogWarning("找不到 sfc.exe，跳过 sfc 修复（未停止远程桌面服务）。");
+            return new ChildSessionFixResult(
+                false,
+                "找不到 sfc.exe，无法执行扫描；未停止远程桌面服务。");
         }
 
         var stoppedDependents = new List<string>();
@@ -1025,6 +1061,8 @@ internal static class ChildSessionEnvironmentFixer
     /// </summary>
     private enum SfcLaunch
     {
+        /// <summary>用户在等待期间取消了本次启动。</summary>
+        Cancelled,
         Launched,
         AlreadyRunning,
         Failed
@@ -1057,7 +1095,10 @@ internal static class ChildSessionEnvironmentFixer
         }
         catch (OperationCanceledException)
         {
-            return SfcLaunch.Failed;
+            // 取消不是失败：单独返回一个值，让上层按「已取消」提示，
+            // 而不是当成「启动 sfc 失败」。不能直接抛出——这条链路上没有
+            // OperationCanceledException 的处理者，抛出去会成为未捕获异常。
+            return SfcLaunch.Cancelled;
         }
 
         var handedOver = false;
@@ -1150,8 +1191,10 @@ internal static class ChildSessionEnvironmentFixer
             try
             {
                 // 先等扫描进程真正出现，最多 10 秒（sfc 秒退或没起来就没什么可等的）。
+                // 只认「明确在跑」：查询失败（null）说明不了它已经出现，不能提前结束等待。
                 var appearDeadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-                while (DateTime.UtcNow < appearDeadline && !IsSfcRunning())
+                while (DateTime.UtcNow < appearDeadline
+                       && ChildSessionEnvironmentCheck.TryQuerySfcProcessRunning() != true)
                 {
                     await Task.Delay(200).ConfigureAwait(false);
                 }
@@ -1160,12 +1203,12 @@ internal static class ChildSessionEnvironmentFixer
                 // 可能超过 10 秒，立刻放闸会让后台 /verifyfile 与刚冒头的扫描抢文件。
                 // 再给 60 秒宽限：期间出现就继续等退出；始终没出现按「启动失败」放闸——
                 // 不能因为一次启动失败把闸永久占死。
-                if (!IsSfcRunning())
+                if (ChildSessionEnvironmentCheck.TryQuerySfcProcessRunning() != true)
                 {
                     var graceDeadline = DateTime.UtcNow + TimeSpan.FromSeconds(60);
                     while (DateTime.UtcNow < graceDeadline)
                     {
-                        if (IsSfcRunning())
+                        if (ChildSessionEnvironmentCheck.TryQuerySfcProcessRunning() == true)
                         {
                             break;
                         }
@@ -1173,16 +1216,18 @@ internal static class ChildSessionEnvironmentFixer
                         await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
                     }
 
-                    if (!IsSfcRunning())
+                    if (ChildSessionEnvironmentCheck.TryQuerySfcProcessRunning() != true)
                     {
                         Logger.LogWarning("sfc /scannow 启动后 70 秒内未见到扫描进程，按启动失败释放闸。");
                         return;
                     }
                 }
 
-                // 再等它退出。给个上限，避免异常情况下把闸永久占住。
+                // 再等它退出。只有「明确没在跑」才算结束：查不到时继续等（有限上限），
+                // 避免把还在跑的扫描放过去与后台校验抢文件。
                 var exitDeadline = DateTime.UtcNow + TimeSpan.FromMinutes(30);
-                while (DateTime.UtcNow < exitDeadline && IsSfcRunning())
+                while (DateTime.UtcNow < exitDeadline
+                       && ChildSessionEnvironmentCheck.TryQuerySfcProcessRunning() != false)
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
                 }
