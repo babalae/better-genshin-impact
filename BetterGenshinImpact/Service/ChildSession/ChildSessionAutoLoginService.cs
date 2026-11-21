@@ -196,7 +196,7 @@ internal sealed class ChildSessionAutoLoginService : IDisposable
     {
         errorCode = 0;
 
-        // 身份总是能解析出来：本地/域账户用「用户名 + 域」，微软账户用 UPN + MicrosoftAccount。
+        // 身份总是能解析出来：本地/域账户用「用户名 + 域」，微软账户用 UPN + NULL 域（LogonUserW 文档规定 UPN 必须配 NULL）。
         var (userName, domain) = ResolveLogonIdentity();
 
         if (LogonUserW(
@@ -322,14 +322,14 @@ internal sealed class ChildSessionAutoLoginService : IDisposable
     ///
     /// 判据是当前登录身份本身（<c>GetUserNameEx(NameUserPrincipal)</c> 的 UPN），而不是
     /// 注册表里的微软账户残留：本地账户读不到含 @ 的 UPN，直接回落到「用户名 + 当前域」；
-    /// 微软账户的 UPN 就是邮箱，用它 + MicrosoftAccount 域。
+    /// 微软账户的 UPN 就是邮箱，用它 + NULL 域（LogonUserW 文档规定 UPN 必须配 NULL）。
     ///
     /// 桌面分身只允许当前账户登录，所以只解析「当前登录身份」，不接受自定义账户。
     /// </summary>
     private static (string UserName, string? Domain) ResolveLogonIdentity()
     {
         // 微软账户的 UPN 就是邮箱（例如 batvbs@qq.com）。但要和域账户区分开：
-        // 域账户也有 UPN（alex@corp.example），却不能用 MicrosoftAccount 域登录。
+        // 域账户也有 UPN（alex@corp.example），同样走 UPN + NULL，不能进微软账户分支。
         // 判据是「是不是域成员」：域账户登录时 UserDomainName 是域名（≠ 机器名），
         // 微软账户和本地账户登录时 UserDomainName 都是机器名。
         if (!string.Equals(
@@ -346,7 +346,9 @@ internal sealed class ChildSessionAutoLoginService : IDisposable
         if (WindowNativeMethods.TryGetCurrentUserPrincipal(out var upn)
             && upn.Contains('@'))
         {
-            return (upn, "MicrosoftAccount");
+            // LogonUserW 的文档规定：用户名用 UPN 格式（User@DNSDomain）时，domain 必须为 NULL。
+            // 传 "MicrosoftAccount" 是未定义行为，即使实测能通过也不该依赖。
+            return (upn, null);
         }
 
         // 本地账户：用户名 + 机器名。
