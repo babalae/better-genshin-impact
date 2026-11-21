@@ -105,6 +105,27 @@ public class PathRecorder : Singleton<PathRecorder>
             position = nullablePosition.Value;
         }
 
+        // 相邻途径点跳变校验。
+        //
+        // 背景：GetPositionStable 在局部匹配失败后会 Reset() 并走全图匹配，
+        // 而全图匹配在雪原等低对比地形上可能通过 SIFT 给出"能过阈值但完全错误"的坐标。
+        // 录制过程中玩家是连续移动的，两帧之间不可能出现上千世界单位的跳跃；
+        // 若出现，说明这一帧识别不可信，直接丢弃比写入错误点更好。
+        // 阈值取 800：略大于正常冲刺跨越的距离，远小于误匹配的偏差量级（常见上万）。
+        const double MaxWaypointJump = 800.0;
+        if (_pathingTask.Positions.Count > 0)
+        {
+            var last = _pathingTask.Positions[^1];
+            var jump = Math.Sqrt(Math.Pow(position.X - last.X, 2) + Math.Pow(position.Y - last.Y, 2));
+            if (jump > MaxWaypointJump)
+            {
+                TaskControl.Logger.LogWarning(
+                    "本次识别坐标({x:F0},{y:F0})与上一个途径点({lx:F0},{ly:F0})相距 {jump:F0}，超过可信范围，已丢弃。若确实需要长距离跳点，请分段录制或断开后重新开始录制。",
+                    position.X, position.Y, last.X, last.Y, jump);
+                return;
+            }
+        }
+
         waypoint.X = position.X;
         waypoint.Y = position.Y;
         waypoint.Type = string.IsNullOrEmpty(waypointType) ? WaypointType.Path.Code : waypointType;

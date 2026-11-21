@@ -30,8 +30,27 @@ public class MatchContext : IDisposable
         path = Global.Absolute($@"log\screenshot\{name2}");
         Cv2.ImWrite(path, mask);
         */
+        // 排查落盘（DEBUG 限定，每次进程最多 8 组）。
+        // 前两组是「喂进匹配的原始小地图/遮罩」，后三组是真正参与 NCC 的
+        // 52x52 粗模板、粗遮罩与 260x260 精模板 —— 只看这个就能判断
+        // 到底是「小地图没内容」还是「图层对不上」，不必再靠猜。
+        var dumpId = MiniMapDump.Begin();
+
         GetRoughMiniMap(miniMap, mask);
         GetExactMiniMap(miniMap, mask);
+
+        if (dumpId > 0)
+        {
+            MiniMapDump.Save(dumpId, "a_minimap", miniMap);
+            MiniMapDump.Save(dumpId, "a_mask", mask);
+            if (MaskedMiniMapRoughs is { Length: > 0 })
+            {
+                MiniMapDump.Save(dumpId, "b_rough_c0", MaskedMiniMapRoughs[0]);
+            }
+            MiniMapDump.Save(dumpId, "b_rough_maskF", MaskRoughF);
+            MiniMapDump.Save(dumpId, "c_exact", MiniMapExact);
+            MiniMapDump.Save(dumpId, "c_exact_mask", MaskExact);
+        }
     }
         
     public void GetRoughMiniMap(Mat miniMap, Mat mask)
