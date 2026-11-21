@@ -96,7 +96,9 @@ internal sealed class RdpActiveXHost : AxHost
         var width = Math.Clamp(desktopSize.Width, 200, 8192);
         var height = Math.Clamp(desktopSize.Height, 200, 8192);
 
-        SetComProperty(client, "Server", "localhost");
+        // 必须用 IPv4 字面量：连 "localhost" 会先走名称解析并优先尝试 IPv6（::1），
+        // 解析/回退失败时整段登录要等 30 秒才完成（实测 30~32 秒）；127.0.0.1 直连只要 1~2 秒。
+        SetComProperty(client, "Server", "127.0.0.1");
         SetComProperty(client, "DesktopWidth", width);
         SetComProperty(client, "DesktopHeight", height);
         SetComProperty(client, "ColorDepth", 32);
@@ -948,6 +950,13 @@ internal sealed class RdpActiveXHost : AxHost
                     recoverableByRecreatingHost: true);
                 return false;
             }
+
+            // 控件里的密码清掉了还不够：Windows 还给 RDP 服务器存了一份凭据
+            // （凭据管理器里的 "TERMSRV/主机"），RDP 会拿它把密码补回来静默登录。
+            // 不清这份缓存，「关闭自动登录」就会表现成「照常自动登录」。
+            // 两个主机名都清——早期版本连 localhost，现在是 127.0.0.1。
+            Helpers.Win32.CredentialManagerHelper.DeleteRdpServerCredential("127.0.0.1");
+            Helpers.Win32.CredentialManagerHelper.DeleteRdpServerCredential("localhost");
 
             return true;
         }

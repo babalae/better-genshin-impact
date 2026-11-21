@@ -170,6 +170,17 @@ internal sealed class ChildSessionAutoLoginService : IDisposable
         ThrowIfDisposed();
         CredentialManagerHelper.DeleteCredential(GetCredentialTargetName());
 
+        // Windows 自己还给 RDP 服务器存了一份凭据（"TERMSRV/主机"）。只删我们自己的条目不够：
+        // RDP 会用它把密码补回来，表现成「清除了密码、关闭了自动登录，却照常免密登录」。
+        // 两个主机名都清——早期版本连的是 localhost，现在改成了 127.0.0.1。
+        var rdpCredentialCleared =
+            CredentialManagerHelper.DeleteRdpServerCredential("127.0.0.1")
+            & CredentialManagerHelper.DeleteRdpServerCredential("localhost");
+        if (!rdpCredentialCleared)
+        {
+            _logger.LogWarning("自动登录：清除 Windows 保存的 RDP 凭据未完全成功，可能仍会免密登录。");
+        }
+
         // Helper 内部吞掉异常且不返回结果，这里回读确认：删不掉时要让调用方知道，
         // 否则界面会显示「已清除」，下次连接又拿旧密码去登录。
         if (HasStoredPassword)
