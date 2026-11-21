@@ -536,8 +536,9 @@ public partial class ChildSessionWindow : FluentWindow
 
             // 已连接说明登录阶段早已结束：这时冒出来的凭据框不可能属于本次 RDP 连接，
             // 不去认它（也就不会为它降置顶、去激活别的应用的提示）。
-            // 登录进行中（0 未连/2 连接中）才认。
-            var dialog = RdpHost.ConnectedState == 1
+            // 用 ViewModel 在 UI 线程写的快照判断——本回调在线程池上，不能读 ActiveX 的
+            // COM 属性（ConnectedState 必须在控件所属线程访问）。
+            var dialog = _viewModel.RdpConnected
                 ? IntPtr.Zero
                 : ChildSessionAutoLoginService.FindCredentialDialog();
             if (dialog != IntPtr.Zero)

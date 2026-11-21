@@ -24,6 +24,14 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
     private readonly ChildSessionService _childSessionService;
     private readonly DispatcherTimer _notificationTimer;
+
+    /// <summary>
+    /// RDP 是否已连接的快照，只在 UI 线程（UpdateConnectionStatus）写。
+    ///
+    /// 凭据框轮询跑在线程池上，而 <c>RdpHost.ConnectedState</c> 是 ActiveX 的 COM 属性、
+    /// 必须在控件所属的 UI 线程读取。后台只读这个快照，不去碰控件。
+    /// </summary>
+    private volatile bool _rdpConnected;
     private bool _startRequested;
     private ChildSessionDiagnosticsWindow? _diagnosticsWindow;
     private ChildSessionAutoLoginWindow? _autoLoginWindow;
@@ -175,8 +183,9 @@ public partial class ChildSessionWindowViewModel : ViewModel
             "当前处于观看模式：本机键鼠不会进入桌面分身。点击切换为游戏模式。",
         ChildSessionInputMode.GameMouse =>
             "当前处于游戏模式：按住 Alt 可临时释放鼠标。点击切换为观看模式。",
-        // 自动切游戏鼠标失败时会停在这里：如实说明，并给出下一步。
-        _ => "当前是普通鼠标模式（全屏自动切换未生效）。点击切换为观看模式。"
+        // 自动切游戏鼠标失败时会停在这里：如实说明。点击会补上那次失败的切换
+        // （进游戏模式），文案必须跟着按钮的实际行为走。
+        _ => "当前是普通鼠标模式（全屏自动切换未生效）。点击切换为游戏模式。"
     };
 
     public string AudioButtonToolTip => IsAudioMuted
@@ -223,6 +232,11 @@ public partial class ChildSessionWindowViewModel : ViewModel
             OnSettingsReconnectCancelled;
         UpdateConnectionStatus();
     }
+
+    /// <summary>
+    /// 线程池可安全读取的「RDP 已连接」快照。见 <see cref="_rdpConnected"/>。
+    /// </summary>
+    internal bool RdpConnected => _rdpConnected;
 
     /// <summary>
     /// 解除对服务的全部事件订阅并停掉通知计时器。
@@ -859,6 +873,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
     {
         var connectedState = _childSessionService.ConnectedState;
         var childSessionId = _childSessionService.ChildSessionId;
+        _rdpConnected = connectedState == 1;
         IsTopmost = _childSessionService.TopmostEnabled;
         IsAdaptive = _childSessionService.SmartSizingEnabled;
         KeepAspectRatio = _childSessionService.KeepAspectRatio;

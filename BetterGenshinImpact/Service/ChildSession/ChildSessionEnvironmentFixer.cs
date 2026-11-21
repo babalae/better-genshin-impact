@@ -740,11 +740,12 @@ internal static class ChildSessionEnvironmentFixer
             else
             {
                 // 原本就没有 termsrv.dll（服务根本跑不起来的那种），没有可回滚的原件：
-                // 把刚复制进去的、未通过校验的备份删掉，恢复「文件缺失」的原状，
-                // 并且同样不允许重启服务——否则服务会加载这份不可信的 DLL。
+                // 把刚复制进去的、未通过校验的备份删掉，恢复「文件缺失」的原状。
+                var backupRemoved = false;
                 try
                 {
                     File.Delete(termsrvPath);
+                    backupRemoved = true;
                 }
                 catch (Exception deleteException) when (deleteException is IOException
                                                             or UnauthorizedAccessException
@@ -753,8 +754,19 @@ internal static class ChildSessionEnvironmentFixer
                     Logger.LogWarning(deleteException, "删除未通过校验的 termsrv.dll 失败。");
                 }
 
+                // 两种情况都不允许重启服务：DLL 缺失时服务起不来，残留未校验 DLL 更不能加载。
                 restoreSafeToStart = false;
-                Logger.LogWarning("备份文件未通过 sfc 校验，且原文件本就不存在，已恢复原状并不重启服务。");
+
+                if (backupRemoved)
+                {
+                    // 磁盘已回到「文件缺失」的原状，没有不可信文件了：继续修复链——
+                    // sfc /scanfile 能从组件库补回缺失文件，没必要让用户直接去做完整扫描。
+                    Logger.LogWarning(
+                        "备份未通过 sfc 校验，原文件本就不存在。已删除不合格备份，继续尝试 sfc 就地修复。");
+                    return null;
+                }
+
+                Logger.LogWarning("备份未通过 sfc 校验，删除也失败，终止自动修复。");
             }
 
             if (!restoreSafeToStart)
