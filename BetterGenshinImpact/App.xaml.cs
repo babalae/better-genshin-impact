@@ -39,6 +39,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.RichTextBox.Abstraction;
@@ -177,6 +178,7 @@ public partial class App : Application
                 services.AddTransient<ChildSessionWindow>();
                 services.AddTransient<ChildSessionDiagnosticsWindowViewModel>();
                 services.AddTransient<ChildSessionDiagnosticsWindow>();
+                services.AddTransient<ChildSessionAutoLoginWindow>();
 
                 // Views
                 services.AddView<HomePage, HomePageViewModel>();
@@ -457,6 +459,33 @@ public partial class App : Application
         return false;
     }
 
+    /// <summary>
+    /// 是否是 WPF 弹层服务在窗口句柄已销毁时的竞态异常（Win32 1400）。
+    ///
+    /// 典型栈：<c>PopupControlService.OnMouseMove → ConvexHull.ContainsMousePoint →
+    /// PointUtil.ScreenToClient</c>。窗口关闭/隐藏后系统还会派发一次鼠标移动，
+    /// 这时代码区转算拿不到有效句柄。异常本身不影响任何功能，不值得打扰用户。
+    /// </summary>
+    private static bool IsWpfPopupHandleRace(Exception? exception)
+    {
+        var root = exception?.GetBaseException() ?? exception;
+        if (root is not Win32Exception { NativeErrorCode: 1400 })
+        {
+            return false;
+        }
+
+        var stack = root.StackTrace;
+        if (stack is null || !stack.Contains("PopupControlService", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        // 只放行已知的坐标转换竞态：PopupControlService 也分发 ContextMenuOpening 等
+        // 路由事件，别的窗口操作抛 1400 同样会带着这个栈帧——那些要保留完整错误日志。
+        return stack.Contains("ConvexHull.ContainsMousePoint", StringComparison.Ordinal)
+               || stack.Contains("PointUtil.ScreenToClient", StringComparison.Ordinal);
+    }
+
     //非UI线程未捕获异常处理事件(例如自己创建的一个子线程)
     private static void CurrentDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
@@ -483,6 +512,15 @@ public partial class App : Application
     {
         try
         {
+            // WPF 的 PopupControlService 在窗口句柄刚销毁时仍会处理一次鼠标移动，
+            // 内部 ScreenToClient 返回 1400（无效的窗口句柄），WPF 没有兜住这个返回值。
+            // 属于 WPF 自身的竞态：只影响那一次鼠标消息，功能完全正常，弹窗只会吓到用户。
+            if (IsWpfPopupHandleRace(e.Exception))
+            {
+                Log.Debug("{Text}", "忽略 WPF 弹层句柄竞态：窗口已销毁但仍有一次鼠标移动消息。");
+                return;
+            }
+
             HandleException(e.Exception);
         }
         catch (Exception ex)

@@ -225,31 +225,6 @@ internal static class ChildSessionEnvironmentCheck
     }
 
     /// <summary>
-    /// 把结论格式化成可直接展示给用户的文本。
-    /// </summary>
-    internal static string BuildSummary(IReadOnlyList<Issue> issues)
-    {
-        if (issues.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        var builder = new StringBuilder();
-        foreach (var issue in issues)
-        {
-            if (builder.Length > 0)
-            {
-                builder.AppendLine().AppendLine();
-            }
-
-            builder.Append('【').Append(issue.Title).Append('】').AppendLine();
-            builder.Append(issue.Summary);
-        }
-
-        return builder.ToString();
-    }
-
-    /// <summary>
     /// 检查项清单：标题、默认严重度，以及未触发时展示的当前值。
     /// 修复动作按 Id 分发，所以 Id 一旦发布就不应再改。
     /// </summary>
@@ -1379,15 +1354,24 @@ internal static class ChildSessionEnvironmentCheck
     /// </summary>
     private static int RunSfcVerifyFile(string path)
     {
-        // 排队等前一个跑完，而不是同时起两个。等不到（前一个卡住）就照跑：
-        // 校验本身不该因为排队而失败，多一个进程也比拿不到结论强。
+        // 排队等前一个跑完，而不是同时起两个。等不到就跳过：
+        // 兜底扫描会长时间持闸，这时再起一个 sfc 就是两个进程抢同一个文件。
         var acquired = false;
         try
         {
             acquired = SfcGate.Wait(TimeSpan.FromSeconds(20));
             if (!acquired)
             {
-                Logger.LogDebug("等待上一次 sfc 校验超时，直接开始本次校验。");
+                Logger.LogDebug("等待上一次 sfc 校验超时，本次跳过校验。");
+                return -1;
+            }
+
+            // 闸只管本进程。用户的 /scannow、或兜底扫描超时放闸后仍在跑的那种，
+            // 都只能靠查进程发现——撞上去会让校验结论不可信（两个 sfc 争 CBS）。
+            if (IsSfcProcessRunning())
+            {
+                Logger.LogDebug("已有 sfc 进程在运行，本次跳过校验。");
+                return -1;
             }
 
             return RunSfcVerifyFileCore(path);
@@ -1397,6 +1381,47 @@ internal static class ChildSessionEnvironmentCheck
             if (acquired)
             {
                 SfcGate.Release();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 是否已经有 sfc 进程在跑（不区分是谁启动的）。
+    ///
+    /// 查询失败时按「在运行」处理：枚举失败无法排除有扫描正在进行，按忙碌走保守方向——
+    /// 闸的持有与启动前检查都多等/多拦一轮，代价只是延迟；误放闸则会让两个 sfc 争同一个文件。
+    /// </summary>
+    internal static bool IsSfcProcessRunning() => TryQuerySfcProcessRunning() != false;
+
+    /// <summary>
+    /// 三态查询 sfc 进程：<c>true</c> 明确在跑、<c>false</c> 明确没在跑、<c>null</c> 查不到。
+    ///
+    /// 需要区分「查不到」和「明确没在跑」的地方用它——例如等待扫描进程出现时，
+    /// 查不到不能当成「已经出现」，否则宽限期会被直接跳过。
+    /// </summary>
+    internal static bool? TryQuerySfcProcessRunning()
+    {
+        Process[] processes;
+        try
+        {
+            processes = Process.GetProcessesByName("sfc");
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+                                              or System.ComponentModel.Win32Exception)
+        {
+            Logger.LogWarning(exception, "无法枚举 sfc 进程，本次无法判定。");
+            return null;
+        }
+
+        try
+        {
+            return processes.Length > 0;
+        }
+        finally
+        {
+            foreach (var process in processes)
+            {
+                process.Dispose();
             }
         }
     }
