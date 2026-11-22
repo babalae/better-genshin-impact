@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,6 +24,30 @@ internal static class InstrumentExitRecovery
         var runtime = TaskContext.Instance().Runtime;
         try
         {
+            if (quest?.IsReentry(runtime) == true)
+            {
+                var afterExit = ReadScreen(screen, true, out var target,
+                    durinKeyboard: DurinScoreVision.HasKeyboard(screen.SrcMat));
+                using (target)
+                {
+                    if (afterExit != InstrumentExitScreen.World)
+                        throw new InstrumentExitRecoveryException("核对同一路线点退出演奏后的画面", true);
+                    return !instrumentOnly;
+                }
+            }
+            if (!waitForWorld)
+            {
+                var view = ReadScreen(screen, false, out var target,
+                    durinKeyboard: quest != null && DurinScoreVision.HasKeyboard(screen.SrcMat));
+                using (target)
+                {
+                    if (view is InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
+                        throw new InstrumentExitRecoveryException("传送期间遇到演奏，重新取帧处理退出", retryExit: true);
+                    if (view == InstrumentExitScreen.BlockedPrompt)
+                        throw new InstrumentExitRecoveryException("传送期间遇到无法确认的演奏界面");
+                    return !instrumentOnly && view == InstrumentExitScreen.World;
+                }
+            }
             return await TryExitOnceAsync(screen, runtime, ct, instrumentOnly, quest);
         }
         catch (InstrumentExitRecoveryException e) when (waitForWorld)
@@ -42,11 +67,9 @@ internal static class InstrumentExitRecovery
         {
             var result = Advance(flow, screen, runtime, ct, ref hasPreviousWorld, null, action =>
             {
-                if (action == InstrumentExitAction.Close && quest?.IsReentry(runtime) == true)
-                    throw new InstrumentExitRecoveryException("同一路线点再次进入演奏，等待核对任务谱面", true);
                 pausedTriggers = TaskTriggerDispatcher.Instance().PauseForInference();
                 EnsureTargetWindow(runtime);
-                runtime!.Input.ReleaseAll();
+                ReleasePressedKeys(runtime!);
             }, quest != null);
             if (!flow.Started)
                 return !instrumentOnly && result == InstrumentExitAction.Complete;
@@ -95,9 +118,10 @@ internal static class InstrumentExitRecovery
     {
         EnsureSameRuntime(runtime, ct);
         using var pausedTriggers = TaskTriggerDispatcher.Instance().PauseForInference();
-        runtime!.Input.ReleaseAll();
+        ReleasePressedKeys(runtime!);
         TaskControl.Logger.LogWarning("{Reason}，保留当前步骤，确认回到大世界后继续", reason);
         var session = new InstrumentRecoverySession(playDurin);
+        bool awaitingFirstPage = playDurin;
         using var previous = new Mat();
         var rings = playDurin ? new InstrumentRingTracker() : null;
         DurinScoreVision? score = null;
@@ -109,13 +133,16 @@ internal static class InstrumentExitRecovery
             var window = runtime.Window;
             try
             {
-                var image = CanObserve(window) ? TaskControl.CaptureGameImageNoRetry(runtime.Capture) : null;
-                if (image == null)
+                var captureStart = Stopwatch.GetElapsedTime(0);
+                var frame = CanObserve(window) ? runtime.Capture.Capture() : null;
+                if (frame == null)
                 {
                     ResetObservation();
                     continue;
                 }
-                using var current = new CaptureContent(image, 0, 0);
+                using var current = new CaptureContent(frame.Frame, 0, 0);
+                // WGC 会在 KeyDown 之后交付此前缓存的画面。同步截图后端按采样起点判断。
+                if (!session.IsAfterInput(frame.SystemRelativeTime ?? captureStart)) continue;
                 var region = current.CaptureRectArea;
                 bool samePointReopened = reentry?.IsReentry(runtime) == true;
                 var view = ReadRecoveryScreen(region, session.CanPlay || samePointReopened, out var target);
@@ -132,6 +159,9 @@ internal static class InstrumentExitRecovery
                         rings = new InstrumentRingTracker();
                         reentry = null;
                     }
+                    if (view == InstrumentExitScreen.InstrumentPage) awaitingFirstPage = false;
+                    if (awaitingFirstPage && view is InstrumentExitScreen.BlockedPrompt or InstrumentExitScreen.ExitPrompt)
+                        view = InstrumentExitScreen.Other;
 
                     var same = !previous.Empty() && IsSameFrame(previous, region.SrcMat);
                     if (!same) region.SrcMat.CopyTo(previous);
@@ -150,7 +180,7 @@ internal static class InstrumentExitRecovery
                         rings?.Reset();
                     }
 
-                    if (await ObserveRecoveryFrame(session, region, view, same, reading, cues, runtime, ct))
+                    if (await ObserveRecoveryFrame(session, region, view, same, reading, cues, rings, score, runtime, ct))
                     {
                         EnsureSameRuntime(runtime, ct);
                         if (CanObserve(window)) return;
@@ -182,7 +212,8 @@ internal static class InstrumentExitRecovery
     }
 
     private static async Task<bool> ObserveRecoveryFrame(InstrumentRecoverySession session, ImageRegion region,
-        InstrumentExitScreen view, bool same, ScoreReading reading, uint cues, GameRuntime runtime, CancellationToken ct)
+        InstrumentExitScreen view, bool same, ScoreReading reading, uint cues, InstrumentRingTracker? rings,
+        DurinScoreVision? score, GameRuntime runtime, CancellationToken ct)
     {
         User32.VK? held = null;
         var keyboard = runtime.Input.Foreground.Keyboard;
@@ -190,17 +221,21 @@ internal static class InstrumentExitRecovery
         {
             bool world = session.Observe(view, same, reading, cues, key =>
             {
-                var verified = ReadScreen(region, true, out var close, durinKeyboard: true);
-                using (close)
-                {
-                    if (verified != InstrumentExitScreen.InstrumentPage)
-                        throw new InstrumentExitRecoveryException("演奏页已改变，已停止发键");
-                }
                 ct.ThrowIfCancellationRequested();
                 EnsureTargetWindow(runtime);
                 EnsureCaptureGeometry(region, runtime.Window);
                 held = (User32.VK)key;
                 keyboard.KeyDown(held.Value);
+                session.RecordKeyDown(Stopwatch.GetElapsedTime(0));
+            }, key =>
+            {
+                EnsureTargetWindow(runtime);
+                var frame = runtime.Capture.Capture();
+                if (frame == null) return false;
+                using var latest = new CaptureContent(frame.Frame, 0, 0);
+                EnsureCaptureGeometry(latest.CaptureRectArea, runtime.Window);
+                return CanDispatchOnFrame(region, latest.CaptureRectArea, cues, rings!, score!,
+                    session.Playback!.Sheet, session.Playback.NextNote, key);
             });
             if (held.HasValue) await Task.Delay(35, ct);
             return world;
@@ -209,6 +244,29 @@ internal static class InstrumentExitRecovery
         {
             if (held.HasValue) keyboard.KeyUp(held.Value);
         }
+    }
+
+    internal static bool CanDispatchOnFrame(ImageRegion proposal, ImageRegion latest, uint proposalRings,
+        InstrumentRingTracker rings, DurinScoreVision score, int sheet, int slot, char key)
+    {
+        if (latest.Width != 1920 || latest.Height != 1080 || !DurinScoreVision.HasKeyboard(latest.SrcMat)) return false;
+        var view = ReadScreen(latest, true, out var target, durinKeyboard: true);
+        using (target)
+        {
+            if (view != InstrumentExitScreen.InstrumentPage) return false;
+        }
+        var reading = score.Read(latest.SrcMat, sheet, slot);
+        uint cue = IsSameFrame(proposal.SrcMat, latest.SrcMat)
+            ? proposalRings : rings.Observe(latest.SrcMat, advance: false);
+        return reading.RemainingScore && reading.Red == 0 && reading.PressedKeys == 0
+            && (reading.Hits >> slot) == 0 && cue == (1u << DurinPlayback.KeyLayout.IndexOf(key));
+    }
+
+    private static void ReleasePressedKeys(GameRuntime runtime)
+    {
+        runtime.Input.Foreground.ReleasePressedKeys();
+        if (!ReferenceEquals(runtime.Input.Foreground, runtime.Input.Background))
+            runtime.Input.Background.ReleasePressedKeys();
     }
 
     // 收缩光圈只持续数帧。每帧核对琴键和 X，实际发键前再执行完整的弹窗排除。
@@ -282,7 +340,22 @@ internal static class InstrumentExitRecovery
                 ct.ThrowIfCancellationRequested();
                 EnsureTargetWindow(runtime);
                 EnsureCaptureGeometry(screen, runtime!.Window);
-                target!.Click();
+                // 暂停触发器可能要等正在运行的一轮结束，重新捕获并定位按钮。
+                var image = TaskControl.CaptureGameImageNoRetry(runtime.Capture);
+                if (image == null) throw new InstrumentExitRecoveryException("操作前未能再次捕获演奏页");
+                using var fresh = new CaptureContent(image, 0, 0);
+                var latest = fresh.CaptureRectArea;
+                var verified = ReadScreen(latest, true, out var currentTarget,
+                    durinKeyboard: declaredQuest && DurinScoreVision.HasKeyboard(latest.SrcMat));
+                using (currentTarget)
+                {
+                    if (verified != view || currentTarget == null)
+                        throw new InstrumentExitRecoveryException("操作前演奏界面已改变，等待重新确认");
+                    ct.ThrowIfCancellationRequested();
+                    EnsureTargetWindow(runtime);
+                    EnsureCaptureGeometry(latest, runtime.Window);
+                    currentTarget.Click();
+                }
             }
 
             return action;
@@ -386,7 +459,9 @@ internal static class InstrumentExitRecovery
 }
 
 // 让上层异常清理保留这次恢复的停止结果，避免再次操作同一个演奏页。
-internal sealed class InstrumentExitRecoveryException(string message, bool allowPerformance = false) : NormalEndException(message)
+internal sealed class InstrumentExitRecoveryException(string message, bool allowPerformance = false,
+    bool retryExit = false) : NormalEndException(message)
 {
     internal bool AllowPerformance { get; } = allowPerformance;
+    internal bool RetryExit { get; } = retryExit;
 }

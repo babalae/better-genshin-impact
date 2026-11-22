@@ -28,4 +28,7 @@ public interface IInputChannel
     /// 释放本通道中处于按下状态的按键
     /// </summary>
     void ReleaseAll();
+
+    /// <summary>只释放通过本通道按下并记录的键。</summary>
+    void ReleasePressedKeys();
 }

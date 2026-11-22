@@ -21,7 +21,11 @@ internal sealed class DurinPlayback
     internal int NextNote { get; private set; }
     internal bool Completed => Sheet == Scores.Length;
     internal bool Stopped { get; private set; }
-    internal void Stop() => Stopped = true;
+    internal bool BetweenSheets => Sheet > 0 && !_armed && !_awaitingRestart && !Completed;
+    internal void Stop()
+    {
+        if (!Completed) Stopped = true;
+    }
 
     internal void MissingPage()
     {
@@ -30,7 +34,7 @@ internal sealed class DurinPlayback
         _neutralFrames = 0;
     }
 
-    internal void Observe(ScoreReading reading, uint rings, Action<char> send)
+    internal void Observe(ScoreReading reading, uint rings, Action<char> send, Func<char, bool>? verify = null)
     {
         if (Stopped || Completed) return;
 
@@ -102,6 +106,7 @@ internal sealed class DurinPlayback
 
         try
         {
+            if (verify != null && !verify(key)) return;
             send(key);
             // 只有实际输入调用成功返回后，后续画面才占用确认帧数。
             _pending = true;

@@ -1237,6 +1237,12 @@ public class TpTask
             catch (InstrumentExitRecoveryException e)
             {
                 // 等待期间不消耗传送本身的时限。确认回到大世界后重新开始同一次传送。
+                if (e.RetryExit)
+                {
+                    using var fresh = CaptureToRectArea();
+                    if (await InstrumentExitRecovery.TryExitAsync(fresh, ct, instrumentOnly: true, quest: InstrumentQuest))
+                        continue;
+                }
                 await InstrumentExitRecovery.WaitForWorldAsync(runtime, e.Message, ct,
                     playDurin: InstrumentQuest != null && e.AllowPerformance);
             }

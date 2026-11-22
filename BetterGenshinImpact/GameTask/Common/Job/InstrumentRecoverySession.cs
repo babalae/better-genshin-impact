@@ -9,8 +9,13 @@ internal sealed class InstrumentRecoverySession(bool playDurin)
     internal DurinPlayback? Playback { get; } = playDurin ? new DurinPlayback() : null;
     internal bool CanPlay => Playback is { Completed: false, Stopped: false };
     private bool _sawWorld;
+    private TimeSpan _sentAt;
 
-    internal bool Observe(InstrumentExitScreen screen, bool sameFrame, ScoreReading reading, uint rings, Action<char> send)
+    internal void RecordKeyDown(TimeSpan time) => _sentAt = time;
+    internal bool IsAfterInput(TimeSpan capturedAt) => capturedAt > _sentAt;
+
+    internal bool Observe(InstrumentExitScreen screen, bool sameFrame, ScoreReading reading, uint rings,
+        Action<char> send, Func<char, bool>? verify = null)
     {
         if (screen == InstrumentExitScreen.World)
         {
@@ -20,12 +25,13 @@ internal sealed class InstrumentRecoverySession(bool playDurin)
             return false;
         }
         _sawWorld = false;
-        if (screen is InstrumentExitScreen.BlockedPrompt or InstrumentExitScreen.ExitPrompt)
+        if (screen is (InstrumentExitScreen.BlockedPrompt or InstrumentExitScreen.ExitPrompt)
+            && Playback is { BetweenSheets: false })
             Playback?.Stop();
         else if (screen != InstrumentExitScreen.InstrumentPage)
             Playback?.MissingPage();
         else if (!sameFrame && CanPlay)
-            Playback!.Observe(reading, rings, send);
+            Playback!.Observe(reading, rings, send, verify);
         return false;
     }
 }

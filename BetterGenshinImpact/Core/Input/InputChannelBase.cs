@@ -119,7 +119,9 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
     /// <summary>
     /// 按记录逐个抬起。单个按键失败不影响其余按键
     /// </summary>
-    public virtual void ReleaseAll()
+    public virtual void ReleaseAll() => ReleasePressedKeys();
+
+    public void ReleasePressedKeys()
     {
         foreach (var key in TakePressedKeys())
         {

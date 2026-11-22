@@ -21,7 +21,7 @@ internal sealed class InstrumentRingTracker
     public void Reset() => (_next, _count) = (0, 0);
 
     // 同一琴键两侧都有亮边且连续六帧向内收缩，排除固定琴键边缘和背景。
-    public unsafe uint Observe(Mat frame)
+    public unsafe uint Observe(Mat frame, bool advance = true)
     {
         if (frame.Width != 1920 || frame.Height != 1080 || (frame.Type() != MatType.CV_8UC3 && frame.Type() != MatType.CV_8UC4))
         {
@@ -57,8 +57,11 @@ internal sealed class InstrumentRingTracker
             _history[_next, key] = peak;
             if (_count >= History - 1 && IsContracting(key)) keys |= 1u << key;
         }
-        _count = Math.Min(History, _count + 1);
-        _next = (_next + 1) % History;
+        if (advance)
+        {
+            _count = Math.Min(History, _count + 1);
+            _next = (_next + 1) % History;
+        }
         GC.KeepAlive(frame);
         return keys;
     }

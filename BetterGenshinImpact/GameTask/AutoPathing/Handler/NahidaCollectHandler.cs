@@ -20,7 +20,7 @@ public class NahidaCollectHandler : IActionHandler
     {
         Logger.LogInformation("执行 {Nhd} 长按E转圈拾取", "纳西妲");
 
-        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
+        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct, waypointForTrack?.InstrumentQuest);
         if (combatScenes == null)
         {
             Logger.LogError("队伍识别未初始化成功！");

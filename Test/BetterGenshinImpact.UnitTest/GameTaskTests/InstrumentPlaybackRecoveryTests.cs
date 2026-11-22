@@ -31,6 +31,8 @@ public class InstrumentPlaybackRecoveryTests
             // 演奏前和两张谱之间的剧情由玩家推进。
             for (var i = 0; i < 90; i++)
                 Assert.False(recovery.Observe(InstrumentExitScreen.Other, false, default, 0, Receive));
+            if (recovery.Playback!.BetweenSheets)
+                Assert.False(recovery.Observe(InstrumentExitScreen.BlockedPrompt, false, default, 0, Receive));
             for (var i = 0; i < 90; i++)
                 Assert.False(recovery.Observe(InstrumentExitScreen.InstrumentPage, false, Neutral, 0, Receive));
             for (var slot = 0; slot < score.Length; slot++)
@@ -56,6 +58,8 @@ public class InstrumentPlaybackRecoveryTests
             }
         }
         Assert.True(recovery.Playback!.Completed);
+        recovery.Observe(InstrumentExitScreen.BlockedPrompt, false, default, 0, Receive);
+        Assert.False(recovery.Playback.Stopped);
         for (var i = 0; i < 120; i++)
             Assert.False(recovery.Observe(InstrumentExitScreen.Other, false, default, 0, Receive));
         Assert.False(recovery.Observe(InstrumentExitScreen.World, false, default, 0, Receive));
@@ -91,6 +95,29 @@ public class InstrumentPlaybackRecoveryTests
         Tick(Neutral, Key('H'));
         Assert.True(recovery.Playback!.Stopped);
         Assert.Equal(3, sent.Count);
+    }
+
+    [Fact]
+    public void NewCaptureMustStillAuthorizeInputAndOnlyLaterCapturesCanAcknowledgeIt()
+    {
+        var recovery = new InstrumentRecoverySession(true);
+        var sent = new List<char>();
+        var beforeSend = TimeSpan.FromMilliseconds(24);
+        var dispatched = TimeSpan.FromMilliseconds(37);
+        void Send(char key)
+        {
+            sent.Add(key);
+            recovery.RecordKeyDown(dispatched);
+        }
+        recovery.Observe(InstrumentExitScreen.InstrumentPage, false, Neutral, 0, Send);
+        for (int i = 0; i < 90; i++)
+            recovery.Observe(InstrumentExitScreen.InstrumentPage, false, Neutral, Key('H'), Send, _ => false);
+        Assert.Empty(sent);
+        recovery.Observe(InstrumentExitScreen.InstrumentPage, false, Neutral, Key('H'), Send, _ => true);
+        Assert.Equal(new[] { 'H' }, sent);
+        Assert.False(recovery.IsAfterInput(beforeSend));
+        Assert.False(recovery.IsAfterInput(dispatched));
+        Assert.True(recovery.IsAfterInput(dispatched + TimeSpan.FromTicks(1)));
     }
 
     [Fact]

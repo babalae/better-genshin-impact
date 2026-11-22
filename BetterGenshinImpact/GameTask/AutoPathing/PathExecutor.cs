@@ -149,21 +149,28 @@ public partial class PathExecutor
         }
 
 
-        // 切换队伍
-        if (!await SwitchPartyBefore(task))
+        var waypointsList = ConvertWaypointsForTrack(task.Positions, task);
+        var firstQuest = waypointsList[0][0].InstrumentQuest;
+        if (firstQuest != null)
+        {
+            using var beforeSetup = CaptureToRectArea();
+            await InstrumentExitRecovery.TryExitAsync(beforeSetup, ct, instrumentOnly: true, quest: firstQuest);
+        }
+
+        // 切换队伍。如果先去神像，后续队伍识别发生在异地。
+        var (ready, localQuest) = await SwitchPartyBefore(task, firstQuest);
+        if (!ready)
         {
             return;
         }
 
         // 校验路径是否可以执行
-        if (!await ValidateGameWithTask(task))
+        if (!await ValidateGameWithTask(task, localQuest))
         {
             return;
         }
 
         InitializePathing(task);
-        // 转换、按传送点分割路径
-        var waypointsList = ConvertWaypointsForTrack(task.Positions, task);
 
         await Delay(100, ct);
         Navigation.WarmUp(task.Info.MapMatchMethod); // 提前加载地图特征点
@@ -326,7 +333,7 @@ public partial class PathExecutor
         return waypoint.Type == WaypointType.Target.Code;
     }
 
-    private async Task<bool> SwitchPartyBefore(PathingTask task)
+    private async Task<(bool Ready, InstrumentQuestRecovery? LocalQuest)> SwitchPartyBefore(PathingTask task, InstrumentQuestRecovery? quest)
     {
         using var ra = CaptureToRectArea();
 
@@ -338,11 +345,12 @@ public partial class PathExecutor
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
+            quest = null;
         }
 
         if (PartyConfig.SkipPartySwitch)
         {
-            return true;
+            return (true, quest);
         }
 
         var pRaList = ra.FindMulti(RecognitionAssets.Get("AutoFight", "P", ra)); // 判断是否联机
@@ -356,23 +364,25 @@ public partial class PathExecutor
             {
                 // 调度器未配置的情况下，根据地图追踪条件配置切换队伍
                 var partyName = FilterPartyNameByConditionConfig(task);
-                if (!await SwitchParty(partyName, false))
+                var result = await SwitchParty(partyName, false, quest);
+                if (!result.Ready)
                 {
                     Logger.LogError("切换队伍失败，无法执行此路径！请检查地图追踪设置！");
-                    return false;
                 }
+                return result;
             }
             else if (!string.IsNullOrEmpty(PartyConfig.PartyName))
             {
-                if (!await SwitchParty(PartyConfig.PartyName, PartyConfig.IsVisitStatueBeforeSwitchParty))
+                var result = await SwitchParty(PartyConfig.PartyName, PartyConfig.IsVisitStatueBeforeSwitchParty, quest);
+                if (!result.Ready)
                 {
                     Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的地图追踪配置！");
-                    return false;
                 }
+                return result;
             }
         }
 
-        return true;
+        return (true, quest);
     }
 
     private void InitializePathing(PathingTask task)
@@ -407,18 +417,19 @@ public partial class PathExecutor
     /// <param name="partyName"></param>
     /// <param name="forceTp">切换前是否前往七天神像</param>
     /// <returns></returns>
-    private async Task<bool> SwitchParty(string? partyName, bool forceTp)
+    private async Task<(bool Ready, InstrumentQuestRecovery? LocalQuest)> SwitchParty(string? partyName, bool forceTp, InstrumentQuestRecovery? quest)
     {
         bool success = true;
         if (!string.IsNullOrEmpty(partyName))
         {
             if (RunnerContext.Instance.PartyName == partyName)
             {
-                return success;
+                return (success, quest);
             }
 
             if (forceTp) // 强制传送模式
             {
+                quest = null;
                 await new TpTask(ct).TpToStatueOfTheSeven(); // fix typos
                 success = await new SwitchPartyTask().Start(partyName, ct);
             }
@@ -426,10 +437,11 @@ public partial class PathExecutor
             {
                 try
                 {
-                    success = await new SwitchPartyTask().Start(partyName, ct);
+                    success = await new SwitchPartyTask().Start(partyName, ct, quest);
                 }
                 catch (PartySetupFailedException)
                 {
+                    quest = null;
                     await new TpTask(ct).TpToStatueOfTheSeven();
                     success = await new SwitchPartyTask().Start(partyName, ct);
                 }
@@ -442,7 +454,7 @@ public partial class PathExecutor
             }
         }
 
-        return success;
+        return (success, quest);
     }
 
 
@@ -464,9 +476,9 @@ public partial class PathExecutor
     /// </summary>
     /// <param name="task"></param>
     /// <returns></returns>
-    private async Task<bool> ValidateGameWithTask(PathingTask task)
+    private async Task<bool> ValidateGameWithTask(PathingTask task, InstrumentQuestRecovery? quest)
     {
-        _combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
+        _combatScenes = await RunnerContext.Instance.GetCombatScenes(ct, quest);
         if (_combatScenes == null)
         {
             return false;
@@ -1333,7 +1345,7 @@ public partial class PathExecutor
             }else if (waypoint.Misidentification.HandlingMode == "mapRecognition"){
                 //大地图识别坐标
                 DateTime start = DateTime.Now;
-                TpTask tpTask = new TpTask(ct);
+                var tpTask = new TpTask(ct) { InstrumentQuest = waypoint.InstrumentQuest };
                 await tpTask.OpenBigMapUi(mapName: waypoint.MapName);
                 try
                 {
@@ -1387,18 +1399,23 @@ public partial class PathExecutor
 
     private async Task WaitUntilRotatedTo(WaypointForTrack waypoint, int targetOrientation, int maxDiff)
     {
-        if (await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff))
+        var ordinaryFailures = 0;
+        while (!await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff))
         {
-            return;
+            ct.ThrowIfCancellationRequested();
+            var recoveryStarted = Stopwatch.GetTimestamp();
+            if (await ResolveAnomalies(waypoint))
+            {
+                targetOrientation = Navigation.GetTargetOrientation(waypoint, await WaitForInstrumentPosition(waypoint));
+                if (moveToStartTime != default)
+                    moveToStartTime += Stopwatch.GetElapsedTime(recoveryStarted);
+                ordinaryFailures = 0;
+            }
+            else if (++ordinaryFailures >= 2)
+            {
+                throw new RetryException("连续两次无法转到目标方向，重试路线");
+            }
         }
-        var recoveryStarted = Stopwatch.GetTimestamp();
-        if (await ResolveAnomalies(waypoint))
-        {
-            targetOrientation = Navigation.GetTargetOrientation(waypoint, await WaitForInstrumentPosition(waypoint));
-            if (moveToStartTime != default)
-                moveToStartTime += Stopwatch.GetElapsedTime(recoveryStarted);
-        }
-        await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff);
     }
 
     /**

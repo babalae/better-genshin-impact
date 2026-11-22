@@ -47,7 +47,7 @@ public class MiningHandler : IActionHandler
 
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
+        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct, waypointForTrack?.InstrumentQuest);
         if (combatScenes == null)
         {
             Logger.LogError("队伍识别未初始化成功！");
