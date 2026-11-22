@@ -316,7 +316,7 @@ internal sealed class CharacterDevelopmentStateMachineTask : StateMachineBase<Ch
             await RunStateMachineUntil(new BvPage(ct), CharacterDevelopmentState.Completed);
             return _results;
         }
-        catch
+        catch (Exception e) when (e is not InstrumentExitRecoveryException)
         {
             if (!ct.IsCancellationRequested)
             {

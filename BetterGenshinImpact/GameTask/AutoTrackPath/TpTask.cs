@@ -1171,9 +1171,13 @@ public class TpTask
     /// </summary>
     private async Task<bool> TryToOpenBigMapUi(string? mapName)
     {
-        if (IsInBigMapUi())
+        using (var capture = CaptureToRectArea())
         {
-            return true;
+            if (Bv.IsInBigMapUi(capture))
+                return true;
+
+            // 默认地图键 M 在演奏页也是琴键，先处理已经打开的演奏页。
+            await InstrumentExitRecovery.TryExitAsync(capture, ct);
         }
 
         InputHub.Foreground.SimulateAction(GIActions.OpenMap);
