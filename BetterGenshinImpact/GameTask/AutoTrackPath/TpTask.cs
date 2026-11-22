@@ -52,6 +52,7 @@ public class TpTask
     private CancellationToken? RouteCancellation { get; init; }
     private bool GuardDepartureOnly { get; init; }
     internal InstrumentQuestRecovery? InstrumentQuest { get; set; }
+    internal string? ArrivalMapMatchMethod { get; init; }
     private readonly CultureInfo cultureInfo;
     private readonly IStringLocalizer stringLocalizer;
 
@@ -90,6 +91,7 @@ public class TpTask
     private const int TeleportClickableAreaRetryDelayMs = 80;
     private const int BigMapRectRetryIntervalMs = 150;
     private const int TeleportTimeoutMs = 60_000;
+    private const double TeleportArrivalTolerance = 12d;
     private const double MapPositionRecognitionRecoveryZoomStep = 1.0;
     private static string? s_lastSuccessfulTeleportMapName;
     private double _mapZoomLevelPerWheelNotch = DefaultMapZoomLevelPerWheelNotch;
@@ -418,7 +420,7 @@ public class TpTask
         var clickView = await PrepareTeleportClickView(target);
         var fallbackCandidate = ClickTeleportTargetMapPoint(target, clickView);
         await ClickTpPointAfterMapPointSelected(target, fallbackCandidate);
-        await WaitForTeleportCompletion();
+        await WaitForTeleportCompletion(target);
 
         s_lastSuccessfulTeleportMapName = target.MapName;
         return (target.X, target.Y);
@@ -1022,8 +1024,17 @@ public class TpTask
     /// <summary>
     ///     检查传送是否完成，未完成则等待
     /// </summary>
-    private async Task WaitForTeleportCompletion()
+    private async Task WaitForTeleportCompletion(TeleportTargetContext destination)
     {
+        if (InstrumentQuest != null)
+        {
+            // 标记路线已发出确认键。只有定位到目的地才提交传送结果，未知界面不能当作加载证据。
+            await WaitForTeleportArrivalAsync(destination, RouteCancellation ?? ct,
+                GuardDepartureOnly ? null : InstrumentQuest);
+            Logger.LogInformation("传送完成");
+            return;
+        }
+
         var observedLoadingState = false;
         var consecutiveNonUiChecks = 0;
         var consecutiveMainUiChecks = 0;
@@ -1034,26 +1045,7 @@ public class TpTask
 
             var capture = CaptureToRectArea();
             using var ownedCapture = capture;
-            InstrumentExitScreen? markedScreen = null;
-            if (InstrumentQuest != null)
-            {
-                markedScreen = InstrumentExitRecovery.ReadScreen(capture, true, out var target,
-                    durinKeyboard: DurinScoreVision.HasKeyboard(capture.SrcMat), classifyWelkin: true);
-                target?.Dispose();
-                if (markedScreen is InstrumentExitScreen.BlockedPrompt or InstrumentExitScreen.WelkinReward
-                    or InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
-                {
-                    // 标记点只有实际发出确认键才能走到这里。保留已请求的传送与路线取消令牌。
-                    var routeToken = RouteCancellation ?? ct;
-                    var quest = GuardDepartureOnly ? null : InstrumentQuest;
-                    if (markedScreen is (InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
-                        && await InstrumentExitRecovery.TryExitAsync(capture, routeToken, instrumentOnly: true, quest: quest))
-                        return;
-                    await RecoverConfirmedTeleportAsync(routeToken, quest);
-                    return;
-                }
-            }
-            var isInMainUi = markedScreen.HasValue ? markedScreen == InstrumentExitScreen.World : Bv.IsInMainUi(capture);
+            var isInMainUi = Bv.IsInMainUi(capture);
 
             if (isInMainUi)
             {
@@ -1070,7 +1062,7 @@ public class TpTask
             {
                 consecutiveMainUiChecks = 0;
                 var isInBigMapUi = Bv.IsInBigMapUi(capture);
-                if (InstrumentQuest == null && !isInBigMapUi)
+                if (!isInBigMapUi)
                 {
                     // 加载中只观察；明确看到演奏界面才由外层在传送时限之外处理。
                     var view = InstrumentExitRecovery.ReadScreen(capture, true, out var target);
@@ -1101,7 +1093,7 @@ public class TpTask
             }
 
             // 打开大地图期间推送的月卡会在传送之后直接显示，导致检测不到传送完成。
-            if (InstrumentQuest == null && observedLoadingState && !isInMainUi && blessingCheckCountdown == 0)
+            if (observedLoadingState && !isInMainUi && blessingCheckCountdown == 0)
             {
                 await _blessingOfTheWelkinMoonTask.Start(ct);
                 ct.ThrowIfCancellationRequested();
@@ -1112,16 +1104,39 @@ public class TpTask
         Logger.LogWarning("传送等待超时，换台电脑吧");
     }
 
-    private static async Task RecoverConfirmedTeleportAsync(CancellationToken ct, InstrumentQuestRecovery? quest)
+    private async Task WaitForTeleportArrivalAsync(TeleportTargetContext destination, CancellationToken ct,
+        InstrumentQuestRecovery? quest)
     {
         var runtime = TaskContext.Instance().Runtime;
         while (!await InstrumentExitRecovery.WaitForWorldOrInstrumentAsync(runtime,
-                   "已请求传送，等待确认回到大世界", ct, quest))
+                   "已请求传送，等待核对目的地", ct, quest, screen => IsAtTeleportDestination(screen, destination)))
         {
-            using var screen = CaptureToRectArea();
-            if (await InstrumentExitRecovery.TryExitAsync(screen, ct, instrumentOnly: true, quest: quest))
-                return;
+            using var frame = await InstrumentExitRecovery.CaptureFreshForInputAsync(runtime, ct);
+            if (frame != null)
+                await InstrumentExitRecovery.TryExitAsync(frame.CaptureRectArea, ct, instrumentOnly: true, quest: quest);
         }
+
+        ct.ThrowIfCancellationRequested();
+    }
+
+    private bool IsAtTeleportDestination(ImageRegion screen, TeleportTargetContext destination)
+    {
+        var map = MapManager.GetMap(destination.MapName, ArrivalMapMatchMethod ?? _mapMatchingMethod);
+        using var minimap = new Mat(screen.SrcMat, MapAssets.Get(screen).MimiMapRect);
+        var match = map is SceneBaseMapByTemplateMatch templateMap
+            ? templateMap.VerifyMiniMapPosition(minimap)
+            : map.GetMiniMapPosition(minimap);
+        var position = map.ConvertImageCoordinatesToGenshinMapCoordinates(match);
+        if (position is not { } current || !IsFinite(current.X) || !IsFinite(current.Y))
+            return false;
+
+        // 强制指定锚点图标时也使用它记录的落点。没有对应锚点的强制坐标以路线为准。
+        var anchor = destination.TargetTp;
+        var hasAnchor = !destination.Force || GetDistance(destination.X, destination.Y, anchor.X, anchor.Y) <= 1d;
+        var (x, y) = hasAnchor && anchor.TranPosition is { Length: >= 3 } spawn && spawn.Any(value => value != 0)
+            ? (anchor.TranX, anchor.TranY)
+            : (destination.X, destination.Y);
+        return GetDistance(current.X, current.Y, x, y) <= TeleportArrivalTolerance;
     }
 
     private bool IsGameRegionPointInClickableArea(double clickX, double clickY, double requiredVisibleRadius = 0)
@@ -1316,6 +1331,7 @@ public class TpTask
                     {
                         IsTimedTeleportAttempt = true,
                         InstrumentQuest = InstrumentQuest,
+                        ArrivalMapMatchMethod = ArrivalMapMatchMethod,
                         GuardDepartureOnly = GuardDepartureOnly,
                         RouteCancellation = ct
                     }
@@ -2865,8 +2881,11 @@ public class TpTask
 
     private async Task PressTeleportConfirmKey()
     {
+        ct.ThrowIfCancellationRequested();
         InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_F);
-        await Delay(30, ct);
+        // 标记传送在可取消的落点观察循环里等待下一帧。
+        if (InstrumentQuest == null)
+            await Delay(30, ct);
     }
 
     private List<NearbyMapIcon> GetMapIconsInRect(

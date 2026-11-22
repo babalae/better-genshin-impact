@@ -740,7 +740,11 @@ public partial class PathExecutor
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)
     {
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
-        var tpTask = new TpTask(ct) { InstrumentQuest = waypoint.InstrumentQuest };
+        var tpTask = new TpTask(ct)
+        {
+            InstrumentQuest = waypoint.InstrumentQuest,
+            ArrivalMapMatchMethod = waypoint.MapMatchMethod
+        };
         await TryGetExpeditionRewardsDispatch(tpTask);
         var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
         var (tprX, tprY) = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod)

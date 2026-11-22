@@ -153,8 +153,8 @@ internal static class InstrumentExitRecovery
         => WaitForWorldOrMenuAsync(runtime, reason, ct, reentry, retryInitialInstrument: true);
 
     internal static Task<bool> WaitForWorldOrInstrumentAsync(GameRuntime? runtime, string reason, CancellationToken ct,
-        InstrumentQuestRecovery? reentry)
-        => WaitForRecoveryAsync(runtime, reason, ct, null, false, reentry, false, retryInitialInstrument: true);
+        InstrumentQuestRecovery? reentry, Func<ImageRegion, bool> additionalCheck)
+        => WaitForRecoveryAsync(runtime, reason, ct, additionalCheck, false, reentry, false, retryInitialInstrument: true);
 
     private static async Task<bool> WaitForRecoveryAsync(GameRuntime? runtime, string reason, CancellationToken ct,
         Func<ImageRegion, bool>? additionalCheck, bool playDurin, InstrumentQuestRecovery? reentry, bool allowOrdinaryMenu,
