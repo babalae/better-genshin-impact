@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using static BetterGenshinImpact.Core.Recognition.OpenCv.OpenCvCommonHelper;
@@ -35,13 +36,20 @@ public class UpDownGrabLeafHandler : IActionHandler
         int verticalMovement = direction * InitialVerticalMovement;
         int remainingCycles = TotalCycles;
         int consecutiveDetections = 0;
+        var quest = waypointForTrack?.InstrumentQuest;
         
         while (remainingCycles > 0 && !ct.IsCancellationRequested)
         {
+            using var screen = CaptureToRectArea();
+            if (quest != null && !RunnerContext.IsWaypointActionWorld(screen))
+            {
+                await RunnerContext.EnsureWaypointActionWorldAsync(ct, quest);
+                consecutiveDetections = 0;
+                continue;
+            }
             if (remainingCycles % MovementDirectionChangeInterval == 0)
                 verticalMovement = -verticalMovement;
-                
-            bool currentDetection = DetectLeaf();
+            bool currentDetection = DetectLeaf(screen);
             
             if (currentDetection)
             {
@@ -50,7 +58,7 @@ public class UpDownGrabLeafHandler : IActionHandler
                 
                 if (consecutiveDetections >= ConsecutiveDetectionsRequired)
                 {
-                    await InteractWithLeaf(ct);
+                    await InteractWithLeaf(ct, waypointForTrack);
                     return;
                 }
                 
@@ -65,14 +73,14 @@ public class UpDownGrabLeafHandler : IActionHandler
             }
         }
         // 失败后视角回正
+        if (quest != null) await RunnerContext.EnsureWaypointActionWorldAsync(ct, quest);
         InputHub.Foreground.Mouse.MiddleButtonClick();
         await Delay(300, ct);
         Logger.LogError("没有找到四叶印");
     }
     
-    private bool DetectLeaf()
+    private static bool DetectLeaf(ImageRegion captureRegion)
     {
-        using var captureRegion = CaptureToRectArea();
         if (captureRegion.SrcMat.Empty())
             return false;
             
@@ -90,16 +98,24 @@ public class UpDownGrabLeafHandler : IActionHandler
                CheckPointsInRange(captureRegion.SrcMat, detectPointsShifted2, lower, upper);
     }
     
-    private async Task InteractWithLeaf(CancellationToken ct)
+    private async Task InteractWithLeaf(CancellationToken ct, WaypointForTrack? waypoint)
     {
         Logger.LogInformation("连续检测到 {syy}，开始交互", "四叶印");
         InputHub.Foreground.SimulateAction(GIActions.InteractionInSomeMode);
         await Delay(200, ct);
+        var quest = waypoint?.InstrumentQuest;
+        if (quest != null) await RunnerContext.EnsureWaypointActionWorldAsync(ct, quest);
         InputHub.Foreground.Mouse.MiddleButtonClick();
         
         for (int i = 0; i < 20; i++)
         {
             using var screen = CaptureToRectArea();
+            if (quest != null && !RunnerContext.IsWaypointActionWorld(screen))
+            {
+                await RunnerContext.EnsureWaypointActionWorldAsync(ct, quest);
+                i--;
+                continue;
+            }
             var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
             if (!isFlying)
             {

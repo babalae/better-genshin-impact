@@ -97,6 +97,26 @@ public class RunnerContext : Singleton<RunnerContext>
         return _combatScenes;
     }
 
+    internal static async Task<bool> TrySwitchWaypointAvatarAsync(Avatar avatar, int tries, CancellationToken ct,
+        InstrumentQuestRecovery? quest, bool guardWorld = false)
+    {
+        if (quest == null && !guardWorld) return avatar.TrySwitch(tries);
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            bool interrupted = false;
+            bool CanSwitch(ImageRegion screen)
+            {
+                ct.ThrowIfCancellationRequested();
+                interrupted = !IsWaypointActionWorld(screen);
+                return !interrupted;
+            }
+            bool switched = avatar.TrySwitch(tries, CanSwitch);
+            if (!interrupted) return switched;
+            await EnsureWaypointActionWorldAsync(ct, quest);
+        }
+    }
+
     internal static bool IsWaypointActionWorld(ImageRegion screen)
     {
         var view = InstrumentExitRecovery.ReadScreen(screen, true, out var target);
@@ -125,7 +145,8 @@ public class RunnerContext : Singleton<RunnerContext>
                 continue;
             }
             if (await InstrumentExitRecovery.TryExitAsync(screen, ct, instrumentOnly: true, quest: quest)) continue;
-            if (await InstrumentExitRecovery.WaitForWorldOrMenuAsync(runtime, "等待当前路线动作恢复", ct, quest))
+            if (await InstrumentExitRecovery.WaitForWorldOrMenuAsync(runtime, "等待当前路线动作恢复", ct, quest,
+                    retryInitialInstrument: true))
                 return true;
         }
     }

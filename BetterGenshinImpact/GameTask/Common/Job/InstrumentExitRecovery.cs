@@ -145,12 +145,12 @@ internal static class InstrumentExitRecovery
         => WaitForRecoveryAsync(runtime, reason, ct, additionalCheck, playDurin, reentry, false);
 
     internal static Task<bool> WaitForWorldOrMenuAsync(GameRuntime? runtime, string reason, CancellationToken ct,
-        InstrumentQuestRecovery? reentry)
-        => WaitForRecoveryAsync(runtime, reason, ct, null, false, reentry, true);
+        InstrumentQuestRecovery? reentry, bool retryInitialInstrument = false)
+        => WaitForRecoveryAsync(runtime, reason, ct, null, false, reentry, true, retryInitialInstrument);
 
     internal static Task WaitForMapInputAsync(GameRuntime? runtime, string reason, CancellationToken ct,
         InstrumentQuestRecovery? reentry)
-        => WaitForRecoveryAsync(runtime, reason, ct, null, false, reentry, true, true);
+        => WaitForWorldOrMenuAsync(runtime, reason, ct, reentry, retryInitialInstrument: true);
 
     private static async Task<bool> WaitForRecoveryAsync(GameRuntime? runtime, string reason, CancellationToken ct,
         Func<ImageRegion, bool>? additionalCheck, bool playDurin, InstrumentQuestRecovery? reentry, bool allowOrdinaryMenu,
@@ -208,10 +208,10 @@ internal static class InstrumentExitRecovery
                 if (capturedAt <= acceptAfter || !session.CanObserveCapture(capturedAt)) continue;
                 var region = current.CaptureRectArea;
                 bool samePointReopened = reentry?.IsReentry(runtime) == true;
-                bool canRetryMap = retryInitialInstrument && session.Playback == null && !samePointReopened;
+                bool canRetryExit = retryInitialInstrument && session.Playback == null && !samePointReopened;
                 bool awaitingWelkinReward = captureStart <= welkinFollowUpUntil && capturedAt <= welkinFollowUpUntil;
                 Region? target;
-                var view = canRetryMap
+                var view = canRetryExit
                     ? ReadScreen(region, true, out target, durinKeyboard: DurinScoreVision.HasKeyboard(region.SrcMat),
                         classifyMenu: true, classifyWelkin: true, awaitingWelkinReward: awaitingWelkinReward)
                     : ReadRecoveryScreen(region, session.CanPlay || samePointReopened, out target,
@@ -235,7 +235,7 @@ internal static class InstrumentExitRecovery
                         continue;
                     }
                     if (view != InstrumentExitScreen.Other) welkinFollowUpUntil = TimeSpan.Zero;
-                    if (canRetryMap && view is InstrumentExitScreen.OrdinaryMenu or InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
+                    if (canRetryExit && view is InstrumentExitScreen.OrdinaryMenu or InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
                         return false;
                     if (allowOrdinaryMenu && session.Playback == null
                         && (view == InstrumentExitScreen.OrdinaryMenu

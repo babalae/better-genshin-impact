@@ -50,6 +50,7 @@ public class TpTask
     private readonly CancellationToken ct;
     private bool IsTimedTeleportAttempt { get; init; }
     private CancellationToken? RouteCancellation { get; init; }
+    private bool GuardDepartureOnly { get; init; }
     internal InstrumentQuestRecovery? InstrumentQuest { get; set; }
     private readonly CultureInfo cultureInfo;
     private readonly IStringLocalizer stringLocalizer;
@@ -209,7 +210,8 @@ public class TpTask
     private enum TeleportPanelResult
     {
         Waiting,    // 没传送按钮、也没有匹配候选：继续等
-        Confirmed,  // 已确认传送或已离开大地图
+        Confirmed,  // 已发送传送确认
+        LeftMap,    // 普通传送兼容原有的离图判定
         RetryPoint  // 未激活/标点/候选无效：需要重新点地图
     }
 
@@ -254,9 +256,16 @@ public class TpTask
     /// <summary>
     /// 传送到七天神像
     /// </summary>
-    public async Task TpToStatueOfTheSeven()
+    public Task TpToStatueOfTheSeven() => TpToStatueOfTheSeven(null);
+
+    internal async Task TpToStatueOfTheSeven(InstrumentQuestRecovery? departureQuest)
     {
-        await CheckInBigMapUi();
+        var departure = departureQuest == null ? this : new TpTask(ct)
+        {
+            InstrumentQuest = departureQuest,
+            GuardDepartureOnly = true
+        };
+        await departure.CheckInBigMapUi();
 
         string? country = _tpConfig.ReviveStatueOfTheSevenCountry;
         string? area = _tpConfig.ReviveStatueOfTheSevenArea;
@@ -275,7 +284,7 @@ public class TpTask
         }
 
         Logger.LogInformation("将传送至 {country} {area} 七天神像", country, area);
-        await Tp(x, y, MapTypes.Teyvat.ToString(), false);
+        await departure.Tp(x, y, MapTypes.Teyvat.ToString(), false);
         if (_tpConfig.ShouldMove || _tpConfig.IsReviveInNearestStatueOfTheSeven)
         {
             (x, y) = GetClosestPoint(revivePoint.TranX, revivePoint.TranY, x, y, 5);
@@ -854,6 +863,7 @@ public class TpTask
     {
 
         using var clickCapture = CaptureToRectArea();
+        RequireTeleportMapForMarkedRoute(clickCapture);
         if (TryGetAbsoluteTeleportClickPosition(
                 clickCapture,
                 target,
@@ -956,6 +966,7 @@ public class TpTask
             switch (result)
             {
                 case TeleportPanelResult.Confirmed:
+                case TeleportPanelResult.LeftMap:
                     return true;
                 case TeleportPanelResult.RetryPoint:
                     // 点到未激活点/标点，或候选点击未生效，交给调用方换点。
@@ -977,6 +988,7 @@ public class TpTask
     private void ClickAbsoluteMapCandidate(AbsoluteMapClickCandidate candidate)
     {
         using var clickCapture = CaptureToRectArea();
+        RequireTeleportMapForMarkedRoute(clickCapture);
         clickCapture.ClickTo(candidate.ClickX, candidate.ClickY);
     }
 
@@ -1026,13 +1038,19 @@ public class TpTask
             if (InstrumentQuest != null)
             {
                 markedScreen = InstrumentExitRecovery.ReadScreen(capture, true, out var target,
-                    durinKeyboard: DurinScoreVision.HasKeyboard(capture.SrcMat));
+                    durinKeyboard: DurinScoreVision.HasKeyboard(capture.SrcMat), classifyWelkin: true);
                 target?.Dispose();
-                if (markedScreen == InstrumentExitScreen.BlockedPrompt)
+                if (markedScreen is InstrumentExitScreen.BlockedPrompt or InstrumentExitScreen.WelkinReward
+                    or InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
                 {
-                    // 传送已经点击：暂停完成判断，不再重复发起传送。用户取消仍能打断等待。
+                    // 标记点只有实际发出确认键才能走到这里。保留已请求的传送与路线取消令牌。
+                    var routeToken = RouteCancellation ?? ct;
+                    var quest = GuardDepartureOnly ? null : InstrumentQuest;
+                    if (markedScreen is (InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
+                        && await InstrumentExitRecovery.TryExitAsync(capture, routeToken, instrumentOnly: true, quest: quest))
+                        return;
                     await InstrumentExitRecovery.WaitForWorldAsync(TaskContext.Instance().Runtime,
-                        "已请求传送，等待弹窗关闭并确认回到大世界", RouteCancellation ?? ct, reentry: InstrumentQuest);
+                        "已请求传送，等待确认回到大世界", routeToken, reentry: quest);
                     return;
                 }
             }
@@ -1053,11 +1071,10 @@ public class TpTask
             {
                 consecutiveMainUiChecks = 0;
                 var isInBigMapUi = Bv.IsInBigMapUi(capture);
-                if (!isInBigMapUi)
+                if (InstrumentQuest == null && !isInBigMapUi)
                 {
                     // 加载中只观察；明确看到演奏界面才由外层在传送时限之外处理。
-                    Region? target = null;
-                    var view = markedScreen ?? InstrumentExitRecovery.ReadScreen(capture, true, out target);
+                    var view = InstrumentExitRecovery.ReadScreen(capture, true, out var target);
                     using (target)
                     {
                         if (view is InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
@@ -1085,7 +1102,7 @@ public class TpTask
             }
 
             // 打开大地图期间推送的月卡会在传送之后直接显示，导致检测不到传送完成。
-            if (observedLoadingState && !isInMainUi && blessingCheckCountdown == 0)
+            if (InstrumentQuest == null && observedLoadingState && !isInMainUi && blessingCheckCountdown == 0)
             {
                 await _blessingOfTheWelkinMoonTask.Start(ct);
                 ct.ThrowIfCancellationRequested();
@@ -1284,7 +1301,13 @@ public class TpTask
                 timeoutCts.CancelAfter(TeleportTimeoutMs);
                 try
                 {
-                    return await new TpTask(timeoutCts.Token) { IsTimedTeleportAttempt = true, InstrumentQuest = InstrumentQuest, RouteCancellation = ct }
+                    return await new TpTask(timeoutCts.Token)
+                    {
+                        IsTimedTeleportAttempt = true,
+                        InstrumentQuest = InstrumentQuest,
+                        GuardDepartureOnly = GuardDepartureOnly,
+                        RouteCancellation = ct
+                    }
                         .TpWithRetries(tpX, tpY, mapName, force);
                 }
                 catch (OperationCanceledException e) when (!ct.IsCancellationRequested && timeoutCts.IsCancellationRequested)
@@ -1331,8 +1354,7 @@ public class TpTask
                 // 同一视野内点击后未出现面板，重试只会重复点击同一位置。
                 
                 // 抛出异常按下 ESC 退出大地图，避免影响后续路径追踪任务
-                InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                await Delay(300, ct);
+                await CloseTeleportMapOnFailureAsync();
                 
                 throw;
             }
@@ -1340,8 +1362,7 @@ public class TpTask
             {
                 // 未激活点位的详情面板会遮挡后续地图操作，重试前先关闭。
                 // 最后一次失败也需要执行清理，避免影响脚本组中的下一个任务。
-                InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                await Delay(300, ct);
+                await CloseTeleportMapOnFailureAsync();
                 // throw; // 不抛出异常，继续重试
                 Logger.LogWarning(e.Message + "  重试");
             }
@@ -1358,6 +1379,24 @@ public class TpTask
         }
 
         throw new InvalidOperationException("传送失败");
+    }
+
+    private async Task CloseTeleportMapOnFailureAsync()
+    {
+        if (InstrumentQuest != null)
+        {
+            using var screen = CaptureToRectArea();
+            RequireTeleportMapForMarkedRoute(screen);
+        }
+        InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+        await Delay(300, ct);
+    }
+
+    private void RequireTeleportMapForMarkedRoute(ImageRegion screen)
+    {
+        if (InstrumentQuest != null &&
+            (!Bv.IsInBigMapUi(screen) || !InstrumentExitRecovery.IsKnownOrdinaryMenu(screen)))
+            throw new InstrumentExitRecoveryException("确认传送前大地图已被打断，保留目标等待界面恢复", allowOrdinaryMenu: true);
     }
 
     /// <summary>
@@ -2712,11 +2751,12 @@ public class TpTask
         ImageRegion imageRegion,
         GiTpPosition? targetTp)
     {
-        // 1. 判断是否在地图界面；已离开大地图视为传送已确认。
+        // 标记路线必须实际发送确认键，其他传送沿用原有的离图处理。
+        RequireTeleportMapForMarkedRoute(imageRegion);
         var isInBigMapUi = Bv.IsInBigMapUi(imageRegion);
         if (!isInBigMapUi)
         {
-            return TeleportPanelResult.Confirmed;
+            return TeleportPanelResult.LeftMap;
         }
 
         // 2. 判断是否已经点出传送按钮。
@@ -2741,7 +2781,7 @@ public class TpTask
         for (var clickAttempt = 1; clickAttempt <= MapChooseCandidateClickRetryCount; clickAttempt++)
         {
             var result = await WaitAndPressTeleportConfirm(targetTp);
-            if (result == TeleportPanelResult.Confirmed)
+            if (result is TeleportPanelResult.Confirmed or TeleportPanelResult.LeftMap)
             {
                 return result;
             }
@@ -2757,6 +2797,7 @@ public class TpTask
             }
 
             using var retryCapture = CaptureToRectArea();
+            RequireTeleportMapForMarkedRoute(retryCapture);
             candidate = await TryClickMapChooseCandidate(retryCapture, targetTp);
             if (candidate == null)
             {
@@ -2778,11 +2819,12 @@ public class TpTask
 
             var screen = CaptureToRectArea();
             using var ownedScreen = screen;
+            RequireTeleportMapForMarkedRoute(screen);
             var isInBigMapUi = Bv.IsInBigMapUi(screen);
 
             if (!isInBigMapUi)
             {
-                return TeleportPanelResult.Confirmed;
+                return TeleportPanelResult.LeftMap;
             }
 
             // 点完候选后出现传送按钮，或选项本身就是可传送点。

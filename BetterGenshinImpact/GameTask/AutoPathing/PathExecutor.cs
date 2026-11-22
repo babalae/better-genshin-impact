@@ -345,7 +345,7 @@ public partial class PathExecutor
             Logger.LogInformation("复苏完成");
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
-            await TpStatueOfTheSeven();
+            await TpStatueOfTheSeven(quest);
             quest = null;
         }
 
@@ -430,8 +430,8 @@ public partial class PathExecutor
 
             if (forceTp) // 强制传送模式
             {
+                await new TpTask(ct).TpToStatueOfTheSeven(quest);
                 quest = null;
-                await new TpTask(ct).TpToStatueOfTheSeven(); // fix typos
                 success = await new SwitchPartyTask().Start(partyName, ct);
             }
             else // 优先原地切换模式
@@ -442,8 +442,8 @@ public partial class PathExecutor
                 }
                 catch (PartySetupFailedException)
                 {
+                    await new TpTask(ct).TpToStatueOfTheSeven(quest);
                     quest = null;
-                    await new TpTask(ct).TpToStatueOfTheSeven();
                     success = await new SwitchPartyTask().Start(partyName, ct);
                 }
             }
@@ -588,21 +588,22 @@ public partial class PathExecutor
     /// <summary>
     /// 尝试队伍回血，如果单人回血，由于记录检查时是哪位残血，则当作行走位处理。
     /// </summary>
-    private async Task<bool> TryPartyHealing()
+    private async Task<bool> TryPartyHealing(WaypointForTrack waypoint)
     {
         if (_combatScenes is null) return false;
         foreach (var avatar in _combatScenes.GetAvatars())
         {
             if (avatar.Name == "白术")
             {
-                if (avatar.TrySwitch())
+                if (await TrySwitchWaypointAvatar(avatar, waypoint))
                 {
                     //1命白术能两次
                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                     await Delay(800, ct);
+                    if (!await ConfirmWaypointAvatar(avatar, waypoint)) return false;
                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                     await Delay(800, ct);
-                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex, waypoint);
                     await Delay(4000, ct);
                     return true;
                 }
@@ -611,11 +612,11 @@ public partial class PathExecutor
             }
             else if (avatar.Name == "希格雯")
             {
-                if (avatar.TrySwitch())
+                if (await TrySwitchWaypointAvatar(avatar, waypoint))
                 {
                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                     await Delay(11000, ct);
-                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex, waypoint);
                     return true;
                 }
 
@@ -623,14 +624,15 @@ public partial class PathExecutor
             }
             else if (avatar.Name == "珊瑚宫心海")
             {
-                if (avatar.TrySwitch())
+                if (await TrySwitchWaypointAvatar(avatar, waypoint))
                 {
                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                     await Delay(500, ct);
                     //尝试Q全队回血
+                    if (!await ConfirmWaypointAvatar(avatar, waypoint)) return false;
                     InputHub.Foreground.SimulateAction(GIActions.ElementalBurst);
                     //单人血只给行走位加血
-                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex, waypoint);
                     await Delay(5000, ct);
                     return true;
                 }
@@ -655,10 +657,10 @@ public partial class PathExecutor
         }
 
         using var region = CaptureToRectArea();
-        if (Bv.CurrentAvatarIsLowHp(region) && !(await TryPartyHealing() && Bv.CurrentAvatarIsLowHp(region)))
+        if (Bv.CurrentAvatarIsLowHp(region) && !(await TryPartyHealing(waypoint) && Bv.CurrentAvatarIsLowHp(region)))
         {
             Logger.LogInformation("当前角色血量过低，去七天神像恢复");
-            await TpStatueOfTheSeven();
+            await TpStatueOfTheSeven(waypoint.InstrumentQuest);
             throw new RetryException("回血完成后重试路线");
         }
         else if (Bv.ClickIfInReviveModal(region))
@@ -667,16 +669,16 @@ public partial class PathExecutor
             Logger.LogInformation("复苏完成");
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
-            await TpStatueOfTheSeven();
+            await TpStatueOfTheSeven(waypoint.InstrumentQuest);
             throw new RetryException("回血完成后重试路线");
         }
     }
 
-    private async Task TpStatueOfTheSeven()
+    private async Task TpStatueOfTheSeven(InstrumentQuestRecovery? departureQuest)
     {
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
-        await RunnerContext.Instance.StopAutoPickRunTask(async () => await tpTask.TpToStatueOfTheSeven(), 5);
+        await RunnerContext.Instance.StopAutoPickRunTask(async () => await tpTask.TpToStatueOfTheSeven(departureQuest), 5);
         Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
     }
 
@@ -765,7 +767,7 @@ public partial class PathExecutor
     public async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
-        await SwitchAvatar(PartyConfig.MainAvatarIndex);
+        await SwitchAvatar(PartyConfig.MainAvatarIndex, waypoint);
         // 切人完成时刻：切人后有约1秒CD，期间无法切换到其他角色（用于生存位）
         var switchAvatarTime = DateTime.UtcNow;
 
@@ -1045,8 +1047,9 @@ public partial class PathExecutor
                             await Delay(800, ct); // 总共1s
                         }
 
-                        await UseElementalSkill();
+                        await UseElementalSkill(waypoint);
                         _elementalSkillLastUseTime = DateTime.UtcNow;
+                        if (VerifyMovementScreen(waypoint)) continue;
                     }
                 }
 
@@ -1078,7 +1081,7 @@ public partial class PathExecutor
         InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
     }
 
-    private async Task UseElementalSkill()
+    private async Task UseElementalSkill(WaypointForTrack waypoint)
     {
         if (string.IsNullOrEmpty(PartyConfig.GuardianAvatarIndex))
         {
@@ -1089,7 +1092,7 @@ public partial class PathExecutor
 
         // 切人
         Logger.LogInformation("切换盾、回血角色，使用元素战技");
-        var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex, true);
+        var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex, waypoint, true);
         if (avatar == null)
         {
             return;
@@ -1100,14 +1103,16 @@ public partial class PathExecutor
         {
             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
             await Delay(50, ct);
+            if (!await ConfirmWaypointAvatar(avatar, waypoint)) return;
             InputHub.Foreground.SimulateAction(GIActions.MoveBackward);
             await Delay(200, ct);
         }
 
+        if (!await ConfirmWaypointAvatar(avatar, waypoint)) return;
         avatar.UseSkill(PartyConfig.GuardianElementalSkillLongPress);
 
         // 钟离往身后放柱子 后继续走路
-        if (avatar.Name == "钟离")
+        if (avatar.Name == "钟离" && !VerifyMovementScreen(waypoint))
         {
             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         }
@@ -1168,6 +1173,8 @@ public partial class PathExecutor
     {
         if (waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
         {
+            if (VerifyMovementScreen(waypoint))
+                await RunnerContext.EnsureWaypointActionWorldAsync(ct, waypoint.InstrumentQuest);
             InputHub.Foreground.Mouse.MiddleButtonClick();
             await Delay(300, ct);
             using var screen = CaptureToRectArea();
@@ -1214,7 +1221,14 @@ public partial class PathExecutor
         }
     }
 
-    private async Task<Avatar?> SwitchAvatar(string index, bool needSkill = false)
+    private Task<bool> TrySwitchWaypointAvatar(Avatar avatar, WaypointForTrack waypoint, int tries = 4) =>
+        RunnerContext.TrySwitchWaypointAvatarAsync(avatar, tries, ct, waypoint.InstrumentQuest, VerifyMovementScreen(waypoint));
+
+    private async Task<bool> ConfirmWaypointAvatar(Avatar avatar, WaypointForTrack waypoint) =>
+        !VerifyMovementScreen(waypoint) || !await RunnerContext.EnsureWaypointActionWorldAsync(ct, waypoint.InstrumentQuest)
+        || await TrySwitchWaypointAvatar(avatar, waypoint);
+
+    private async Task<Avatar?> SwitchAvatar(string index, WaypointForTrack waypoint, bool needSkill = false)
     {
         if (string.IsNullOrEmpty(index))
         {
@@ -1229,7 +1243,7 @@ public partial class PathExecutor
             return null;
         }
 
-        var success = avatar.TrySwitch(5);//多切换一次，否则如果切人纠正要等下一个循环
+        var success = await TrySwitchWaypointAvatar(avatar, waypoint, 5);
         if (success)
         {
             await Delay(100, ct);
