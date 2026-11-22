@@ -47,6 +47,8 @@ public class TpTask
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
 
     private readonly CancellationToken ct;
+    private bool IsTimedTeleportAttempt { get; init; }
+    internal InstrumentQuestRecovery? InstrumentQuest { get; set; }
     private readonly CultureInfo cultureInfo;
     private readonly IStringLocalizer stringLocalizer;
 
@@ -1157,7 +1159,7 @@ public class TpTask
         // 尝试打开地图失败后，先回到主界面后再次尝试打开地图
         if (!await TryToOpenBigMapUi(mapName))
         {
-            await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask().Start(ct, waitForWorld: !IsTimedTeleportAttempt, quest: InstrumentQuest);
             await Delay(500, ct);
             if (!await TryToOpenBigMapUi(mapName))
             {
@@ -1177,7 +1179,7 @@ public class TpTask
                 return true;
 
             // 默认地图键 M 在演奏页也是琴键，先处理已经打开的演奏页。
-            await InstrumentExitRecovery.TryExitAsync(capture, ct);
+            await InstrumentExitRecovery.TryExitAsync(capture, ct, waitForWorld: !IsTimedTeleportAttempt, quest: InstrumentQuest);
         }
 
         InputHub.Foreground.SimulateAction(GIActions.OpenMap);
@@ -1214,15 +1216,30 @@ public class TpTask
 
     public async Task<(double, double)> Tp(double tpX, double tpY, string mapName = "Teyvat", bool force = false)
     {
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeoutCts.CancelAfter(TeleportTimeoutMs);
-        try
+        var runtime = TaskContext.Instance().Runtime;
+        while (true)
         {
-            return await new TpTask(timeoutCts.Token).TpWithRetries(tpX, tpY, mapName, force);
-        }
-        catch (OperationCanceledException e) when (!ct.IsCancellationRequested && timeoutCts.IsCancellationRequested)
-        {
-            throw new TimeoutException($"单次传送超过 {TeleportTimeoutMs / 1000} 秒", e);
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeoutCts.CancelAfter(TeleportTimeoutMs);
+                try
+                {
+                    return await new TpTask(timeoutCts.Token) { IsTimedTeleportAttempt = true, InstrumentQuest = InstrumentQuest }
+                        .TpWithRetries(tpX, tpY, mapName, force);
+                }
+                catch (OperationCanceledException e) when (!ct.IsCancellationRequested && timeoutCts.IsCancellationRequested)
+                {
+                    throw new TimeoutException($"单次传送超过 {TeleportTimeoutMs / 1000} 秒", e);
+                }
+            }
+            catch (InstrumentExitRecoveryException e)
+            {
+                // 等待期间不消耗传送本身的时限。确认回到大世界后重新开始同一次传送。
+                await InstrumentExitRecovery.WaitForWorldAsync(runtime, e.Message, ct,
+                    playDurin: InstrumentQuest != null && e.AllowPerformance);
+            }
         }
     }
 

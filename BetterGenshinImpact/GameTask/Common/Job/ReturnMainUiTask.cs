@@ -12,11 +12,13 @@ public class ReturnMainUiTask
 {
     public string Name => "返回主界面";
 
-    public async Task Start(CancellationToken ct)
+    public Task Start(CancellationToken ct) => Start(ct, waitForWorld: true);
+
+    internal async Task Start(CancellationToken ct, bool waitForWorld, InstrumentQuestRecovery? quest = null)
     {
         using (var initialCapture = CaptureToRectArea())
         {
-            if (await InstrumentExitRecovery.TryExitAsync(initialCapture, ct))
+            if (await InstrumentExitRecovery.TryExitAsync(initialCapture, ct, waitForWorld, quest: quest))
                 return;
         }
 
@@ -29,7 +31,7 @@ public class ReturnMainUiTask
 
             try
             {
-                if (await InstrumentExitRecovery.TryExitAsync(region, ct))
+                if (await InstrumentExitRecovery.TryExitAsync(region, ct, waitForWorld, quest: quest))
                     return;
 
                 using var exitDoor = region.Find(ElementRecognition.Get("BtnExitDoor", region));
@@ -39,7 +41,7 @@ public class ReturnMainUiTask
                     await Delay(5000, ct);
                     region.Dispose();
                     region = CaptureToRectArea();
-                    if (await InstrumentExitRecovery.TryExitAsync(region, ct))
+                    if (await InstrumentExitRecovery.TryExitAsync(region, ct, waitForWorld, quest: quest))
                         return;
                 }
             }
@@ -51,14 +53,14 @@ public class ReturnMainUiTask
         await Delay(500, ct);
         using (var beforeEnter = CaptureToRectArea())
         {
-            if (await InstrumentExitRecovery.TryExitAsync(beforeEnter, ct))
+            if (await InstrumentExitRecovery.TryExitAsync(beforeEnter, ct, waitForWorld, quest: quest))
                 return;
         }
 
         InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_RETURN);
         await Delay(500, ct);
         using var beforeEscape = CaptureToRectArea();
-        if (!await InstrumentExitRecovery.TryExitAsync(beforeEscape, ct))
+        if (!await InstrumentExitRecovery.TryExitAsync(beforeEscape, ct, waitForWorld, quest: quest))
             InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
     }
 }

@@ -3,12 +3,14 @@ using System;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.Common.Job;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 
 [Serializable]
 public class WaypointForTrack : Waypoint
 {
+    internal InstrumentQuestRecovery? InstrumentQuest { get; }
     // 原神坐标系
     public double GameX { get; set; }
 
@@ -43,6 +45,8 @@ public class WaypointForTrack : Waypoint
 
     public WaypointForTrack(Waypoint waypoint, string mapName, string? mapMatchMethod)
     {
+        if (waypoint.PointExtParams?.RequiredInstrumentQuest == "来自过去的预言")
+            InstrumentQuest = new InstrumentQuestRecovery();
         Type = waypoint.Type;
         MoveMode = waypoint.MoveMode;
         Action = waypoint.Action;

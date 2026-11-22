@@ -175,7 +175,7 @@ public partial class PathExecutor
             {
                 try
                 {
-                    await ResolveAnomalies(); // 异常场景处理
+                    await ResolveAnomalies(waypoints[0]); // 异常场景处理
 
                     // 如果首个点是非TP点位，强制设置在这个点位附近优先做局部匹配
                     if (waypoints[0].Type != WaypointType.Teleport.Code)
@@ -255,7 +255,7 @@ public partial class PathExecutor
                     SuccessEnd = true;
                     break;
                 }
-                catch (NormalEndException normalEndException)
+                catch (NormalEndException normalEndException) when (normalEndException is not InstrumentExitRecoveryException)
                 {
                     if (!ct.IsCancellationRequested)
                     {
@@ -707,7 +707,7 @@ public partial class PathExecutor
                         5);
                     Logger.LogInformation("自动领取派遣结束，回归原任务！");
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is not InstrumentExitRecoveryException)
                 {
                     Logger.LogInformation("未知原因，发生异常，尝试继续执行任务！");
                 }
@@ -727,6 +727,7 @@ public partial class PathExecutor
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
         TpTask tpTask = new TpTask(ct);
         await TryGetExpeditionRewardsDispatch(tpTask);
+        tpTask.InstrumentQuest = waypoint.InstrumentQuest;
         var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
         var (tprX, tprY) = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod)
             .ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)tpX, (float)tpY));
@@ -743,7 +744,7 @@ public partial class PathExecutor
         }
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogDebug("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        await WaitUntilRotatedTo(targetOrientation, 2);
+        await WaitUntilRotatedTo(waypoint, targetOrientation, 2);
         await Delay(500, ct);
     }
 
@@ -760,11 +761,11 @@ public partial class PathExecutor
         int additionalTimeInMs;
         using (var initialScreen = CaptureToRectArea())
         {
-            (position, additionalTimeInMs) = await GetPositionAndTime(initialScreen, waypoint);
+            (position, additionalTimeInMs, _) = await GetPositionAndTime(initialScreen, waypoint);
         }
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        await WaitUntilRotatedTo(targetOrientation, 5);
+        await WaitUntilRotatedTo(waypoint, targetOrientation, 5);
         moveToStartTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
         var fastMode = false;
@@ -801,7 +802,18 @@ public partial class PathExecutor
             EndJudgment(screen);
 
             // position = await GetPosition(screen, waypoint);
-             (position, additionalTimeInMs) = await GetPositionAndTime(screen, waypoint);
+             bool recoveredInstrument;
+             (position, additionalTimeInMs, recoveredInstrument) = await GetPositionAndTime(screen, waypoint);
+             if (recoveredInstrument)
+             {
+                 moveToStartTime = moveToStartTime.AddMilliseconds(additionalTimeInMs);
+                 lastPositionRecord = DateTime.UtcNow;
+                 prevPositions.Clear();
+                 distanceTooFarRetryCount = 0;
+                 consecutiveRotationCountBeyondAngle = 0;
+                 beyondAngleStartTime = DateTime.MinValue;
+                 continue;
+             }
              if (additionalTimeInMs>0)
              {
                  if (!InputHub.Foreground.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
@@ -850,7 +862,17 @@ public partial class PathExecutor
                         // 取余减少判断频率
                         if (distanceTooFarRetryCount % 10 == 0)
                         {
-                            await ResolveAnomalies(screen);
+                            if (await ResolveAnomalies(waypoint, screen))
+                            {
+                                await WaitForInstrumentPosition(waypoint);
+                                moveToStartTime = DateTime.UtcNow;
+                                lastPositionRecord = moveToStartTime;
+                                prevPositions.Clear();
+                                distanceTooFarRetryCount = 0;
+                                consecutiveRotationCountBeyondAngle = 0;
+                                beyondAngleStartTime = DateTime.MinValue;
+                                continue;
+                            }
                             Logger.LogInformation($"重置到上次正确识别的坐标 ({prevNotTooFarPosition.X},{prevNotTooFarPosition.Y})");
                             Navigation.SetPrevPosition(prevNotTooFarPosition.X, prevNotTooFarPosition.Y);
                             // 淡入淡出特效
@@ -923,7 +945,7 @@ public partial class PathExecutor
                 {
                     // 松W键，站定好转向，转完重新按下W继续走
                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                    await WaitUntilRotatedTo(targetOrientation, 2);
+                    await WaitUntilRotatedTo(waypoint, targetOrientation, 2);
                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                 }
             }
@@ -1108,7 +1130,7 @@ public partial class PathExecutor
             }
 
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            await WaitUntilRotatedTo(targetOrientation, 2);
+            await WaitUntilRotatedTo(waypoint, targetOrientation, 2);
             // 小碎步接近
             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             Thread.Sleep(60);
@@ -1140,7 +1162,7 @@ public partial class PathExecutor
             using var screen = CaptureToRectArea();
             var position = await GetPosition(screen, waypoint);
             var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            await WaitUntilRotatedTo(targetOrientation, 10);
+            await WaitUntilRotatedTo(waypoint, targetOrientation, 10);
             var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
             await handler.RunAsync(ct, waypoint);
         }
@@ -1270,7 +1292,8 @@ public partial class PathExecutor
     }
     //
     public bool GetPositionAndTimeSuspendFlag = false;
-    private async Task<(Point2f point,int additionalTimeInMs)> GetPositionAndTime(ImageRegion imageRegion, WaypointForTrack waypoint)
+    private async Task<(Point2f point, int additionalTimeInMs, bool recoveredInstrument)> GetPositionAndTime(
+        ImageRegion imageRegion, WaypointForTrack waypoint)
     {
         
         var position = Navigation.GetPosition(imageRegion, waypoint.MapName, waypoint.MapMatchMethod);
@@ -1280,7 +1303,13 @@ public partial class PathExecutor
             if (!Bv.IsInMainUi(imageRegion))
             {
                 Logger.LogDebug("小地图位置定位失败，且当前不是主界面，进入异常处理");
-                await ResolveAnomalies(imageRegion);
+                var recoveryStarted = Stopwatch.GetTimestamp();
+                if (await ResolveAnomalies(waypoint, imageRegion))
+                {
+                    var recoveredPosition = await WaitForInstrumentPosition(waypoint);
+                    var elapsed = (int)Math.Min(int.MaxValue, Stopwatch.GetElapsedTime(recoveryStarted).TotalMilliseconds);
+                    return (recoveredPosition, elapsed, true);
+                }
             }
         }
 
@@ -1341,16 +1370,34 @@ public partial class PathExecutor
         }
 
         //Logger.LogDebug("识别到路径："+position.X+","+position.Y);
-        return (position,time);
+        return (position, time, false);
     }
 
-    private async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff)
+    private async Task<Point2f> WaitForInstrumentPosition(WaypointForTrack waypoint)
+    {
+        Point2f position = default;
+        await InstrumentExitRecovery.WaitForWorldAsync(TaskContext.Instance().Runtime, "等待恢复当前路径点定位", ct,
+            region =>
+            {
+                position = Navigation.GetPosition(region, waypoint.MapName, waypoint.MapMatchMethod);
+                return position != default;
+            }, reentry: waypoint.InstrumentQuest);
+        return position;
+    }
+
+    private async Task WaitUntilRotatedTo(WaypointForTrack waypoint, int targetOrientation, int maxDiff)
     {
         if (await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff))
         {
             return;
         }
-        await ResolveAnomalies();
+        var recoveryStarted = Stopwatch.GetTimestamp();
+        if (await ResolveAnomalies(waypoint))
+        {
+            targetOrientation = Navigation.GetTargetOrientation(waypoint, await WaitForInstrumentPosition(waypoint));
+            if (moveToStartTime != default)
+                moveToStartTime += Stopwatch.GetElapsedTime(recoveryStarted);
+        }
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff);
     }
 
@@ -1358,10 +1405,13 @@ public partial class PathExecutor
      * 处理各种异常场景
      * 需要保证耗时不能太高
      */
-    private async Task ResolveAnomalies(ImageRegion? imageRegion = null)
+    private async Task<bool> ResolveAnomalies(WaypointForTrack waypoint, ImageRegion? imageRegion = null)
     {
         using var ownedImageRegion = imageRegion == null ? CaptureToRectArea() : null;
         imageRegion ??= ownedImageRegion!;
+
+        if (await InstrumentExitRecovery.TryExitAsync(imageRegion, ct, instrumentOnly: true, quest: waypoint.InstrumentQuest))
+            return true;
 
         // 一些异常界面处理
         var cookRa = imageRegion.Find(GetAutoSkipRecognitionObject("Cook", imageRegion));
@@ -1373,7 +1423,7 @@ public partial class PathExecutor
             // 排除大地图
             if (Bv.IsInBigMapUi(imageRegion))
             {
-                return;
+                return false;
             }
 
             Logger.LogInformation("检测到其他界面，使用ESC关闭界面");
@@ -1390,6 +1440,7 @@ public partial class PathExecutor
             // 判断是否进入剧情
             await AutoSkip();
         }
+        return false;
     }
 
     private async Task AutoSkip()
