@@ -141,6 +141,7 @@ public class RunnerContext : Singleton<RunnerContext>
             using var screen = CaptureToRectArea();
             if (recoverRevivePrompt && Bv.IsInRevivePrompt(screen))
             {
+                interrupted = true;
                 using var fresh = await InstrumentExitRecovery.CaptureFreshForInputAsync(runtime, ct);
                 if (fresh != null && Bv.IsInRevivePrompt(fresh.CaptureRectArea)
                     && InstrumentExitRecovery.CanUseInputFrame(runtime, fresh.CaptureRectArea))
