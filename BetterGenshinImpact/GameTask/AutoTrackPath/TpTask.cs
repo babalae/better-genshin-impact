@@ -49,6 +49,7 @@ public class TpTask
 
     private readonly CancellationToken ct;
     private bool IsTimedTeleportAttempt { get; init; }
+    private CancellationToken? RouteCancellation { get; init; }
     internal InstrumentQuestRecovery? InstrumentQuest { get; set; }
     private readonly CultureInfo cultureInfo;
     private readonly IStringLocalizer stringLocalizer;
@@ -1021,7 +1022,21 @@ public class TpTask
 
             var capture = CaptureToRectArea();
             using var ownedCapture = capture;
-            var isInMainUi = Bv.IsInMainUi(capture);
+            InstrumentExitScreen? markedScreen = null;
+            if (InstrumentQuest != null)
+            {
+                markedScreen = InstrumentExitRecovery.ReadScreen(capture, true, out var target,
+                    durinKeyboard: DurinScoreVision.HasKeyboard(capture.SrcMat));
+                target?.Dispose();
+                if (markedScreen == InstrumentExitScreen.BlockedPrompt)
+                {
+                    // 传送已经点击：暂停完成判断，不再重复发起传送。用户取消仍能打断等待。
+                    await InstrumentExitRecovery.WaitForWorldAsync(TaskContext.Instance().Runtime,
+                        "已请求传送，等待弹窗关闭并确认回到大世界", RouteCancellation ?? ct, reentry: InstrumentQuest);
+                    return;
+                }
+            }
+            var isInMainUi = markedScreen.HasValue ? markedScreen == InstrumentExitScreen.World : Bv.IsInMainUi(capture);
 
             if (isInMainUi)
             {
@@ -1041,8 +1056,8 @@ public class TpTask
                 if (!isInBigMapUi)
                 {
                     // 加载中只观察；明确看到演奏界面才由外层在传送时限之外处理。
-                    var view = InstrumentExitRecovery.ReadScreen(capture, true, out var target,
-                        durinKeyboard: InstrumentQuest != null && DurinScoreVision.HasKeyboard(capture.SrcMat));
+                    Region? target = null;
+                    var view = markedScreen ?? InstrumentExitRecovery.ReadScreen(capture, true, out target);
                     using (target)
                     {
                         if (view is InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
@@ -1269,7 +1284,7 @@ public class TpTask
                 timeoutCts.CancelAfter(TeleportTimeoutMs);
                 try
                 {
-                    return await new TpTask(timeoutCts.Token) { IsTimedTeleportAttempt = true, InstrumentQuest = InstrumentQuest }
+                    return await new TpTask(timeoutCts.Token) { IsTimedTeleportAttempt = true, InstrumentQuest = InstrumentQuest, RouteCancellation = ct }
                         .TpWithRetries(tpX, tpY, mapName, force);
                 }
                 catch (OperationCanceledException e) when (!ct.IsCancellationRequested && timeoutCts.IsCancellationRequested)
