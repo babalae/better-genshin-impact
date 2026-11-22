@@ -439,6 +439,22 @@ internal static class InstrumentExitRecovery
         frame.Frame.Cols == viewport.Width && frame.Frame.Rows == viewport.Height
         && (frame.CaptureRect is not { } bounds || bounds.Width == viewport.Width && bounds.Height == viewport.Height);
 
+    internal static async Task<CaptureContent?> CaptureFreshForInputAsync(GameRuntime? runtime, CancellationToken ct)
+    {
+        if (!CanUseInputFrame(runtime)) return null;
+        var viewport = runtime!.Window.Viewport.ScreenRect;
+        using var frame = await CaptureNewerThanAsync(runtime.Capture, Stopwatch.GetElapsedTime(0), ct);
+        if (frame == null || !CanUseInputFrame(runtime) || viewport != runtime.Window.Viewport.ScreenRect
+            || !CaptureFitsViewport(frame, viewport))
+            return null;
+        // WGC V2 会在源帧释放时回收缓冲区，返回的识别画面必须拥有独立像素。
+        return new CaptureContent(frame.Frame.Clone(), 0, 0);
+    }
+
+    internal static bool CanUseInputFrame(GameRuntime? runtime, ImageRegion? screen = null) =>
+        runtime != null && ReferenceEquals(TaskContext.Instance().Runtime, runtime) && runtime.Window.IsAlive
+        && CanObserve(runtime.Window) && (screen == null || HasCaptureGeometry(screen, runtime.Window));
+
     private static void ClickVerifiedButton(InstrumentExitAction action, GameCaptureFrame? frame, RECT viewport,
         GameRuntime runtime, CancellationToken ct, bool declaredQuest)
     {
@@ -467,16 +483,19 @@ internal static class InstrumentExitRecovery
 
     private static void EnsureCaptureGeometry(ImageRegion screen, IGameWindow window)
     {
+        if (!HasCaptureGeometry(screen, window))
+            throw new InstrumentExitRecoveryException("截图后游戏窗口位置或大小已改变，等待画面恢复");
+    }
+
+    private static bool HasCaptureGeometry(ImageRegion screen, IGameWindow window)
+    {
         Region? capture = screen;
         while (capture is not null and not GameCaptureRegion)
             capture = capture.Prev;
 
         var viewport = window.Viewport.ScreenRect;
-        if (capture == null || capture.X != viewport.X || capture.Y != viewport.Y
-                            || capture.Width != viewport.Width || capture.Height != viewport.Height)
-        {
-            throw new InstrumentExitRecoveryException("截图后游戏窗口位置或大小已改变，等待画面恢复");
-        }
+        return capture != null && capture.X == viewport.X && capture.Y == viewport.Y
+            && capture.Width == viewport.Width && capture.Height == viewport.Height;
     }
 
     private static void EnsureTargetWindow(GameRuntime? runtime)

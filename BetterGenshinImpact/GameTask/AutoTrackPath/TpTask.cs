@@ -3357,16 +3357,23 @@ public class TpTask
             return null;
         }
 
+        var runtime = TaskContext.Instance().Runtime;
         var time = TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay;
         await Delay(Math.Max(time, 200), ct);
-        using var latest = InstrumentQuest == null ? null : CaptureToRectArea();
-        if (latest != null)
+        using var fresh = InstrumentQuest == null ? null : await InstrumentExitRecovery.CaptureFreshForInputAsync(runtime, ct);
+        var latest = fresh?.CaptureRectArea;
+        if (InstrumentQuest != null)
         {
+            if (latest == null)
+                throw new InstrumentExitRecoveryException("候选动画后未取得绑定窗口的新画面", allowOrdinaryMenu: true);
             RequireTeleportMapForMarkedRoute(latest);
             var current = GetPreferredMapChooseCandidate(latest, targetTp);
             if (current == null || current.IconType != candidate.IconType || current.Text != candidate.Text)
                 return null;
             candidate = current;
+            ct.ThrowIfCancellationRequested();
+            if (!InstrumentExitRecovery.CanUseInputFrame(runtime, latest))
+                throw new InstrumentExitRecoveryException("点击候选前游戏窗口已变化", allowOrdinaryMenu: true);
         }
         Logger.LogInformation("点击候选列表：{Text}", candidate.Text);
         (latest ?? imageRegion).ClickTo(candidate.ClickRect.X, candidate.ClickRect.Y, candidate.ClickRect.Width, candidate.ClickRect.Height);

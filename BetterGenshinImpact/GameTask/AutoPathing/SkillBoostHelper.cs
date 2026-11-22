@@ -17,6 +17,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
@@ -955,13 +956,13 @@ public partial class PathExecutor
                             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                             await Delay(50, ct);
-                            if (!CanContinueWandererTakeoff(waypoint, forwardHeld: false)) return true;
+                            if (!await CanContinueWandererTakeoffAsync(waypoint, forwardHeld: false)) return true;
                             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                             await Delay(100, ct);
-                            if (!CanContinueWandererTakeoff(waypoint, forwardHeld: true)) return true;
+                            if (!await CanContinueWandererTakeoffAsync(waypoint, forwardHeld: true)) return true;
                             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                             await Delay(50, ct);
-                            if (!CanContinueWandererTakeoff(waypoint, forwardHeld: true)) return true;
+                            if (!await CanContinueWandererTakeoffAsync(waypoint, forwardHeld: true)) return true;
                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
 
                             avatar.LastSkillTime = DateTime.UtcNow;
@@ -1641,11 +1642,17 @@ public partial class PathExecutor
         return pixels;
     }
 
-    private bool CanContinueWandererTakeoff(WaypointForTrack waypoint, bool forwardHeld)
+    private async Task<bool> CanContinueWandererTakeoffAsync(WaypointForTrack waypoint, bool forwardHeld)
     {
         if (!VerifyMovementScreen(waypoint)) return true;
-        using var screen = CaptureToRectArea();
-        if (IsMovementWorld(screen)) return true;
+        var runtime = TaskContext.Instance().Runtime;
+        using var fresh = await InstrumentExitRecovery.CaptureFreshForInputAsync(runtime, ct);
+        if (fresh != null && IsMovementWorld(fresh.CaptureRectArea)
+            && InstrumentExitRecovery.CanUseInputFrame(runtime, fresh.CaptureRectArea))
+        {
+            ct.ThrowIfCancellationRequested();
+            return true;
+        }
         if (forwardHeld) InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
         return false;
     }
