@@ -1244,7 +1244,8 @@ public class TpTask
                         continue;
                 }
                 await InstrumentExitRecovery.WaitForWorldAsync(runtime, e.Message, ct,
-                    playDurin: InstrumentQuest != null && e.AllowPerformance);
+                    playDurin: InstrumentQuest != null && e.AllowPerformance,
+                    reentry: e.AllowPerformance ? null : InstrumentQuest);
             }
         }
     }

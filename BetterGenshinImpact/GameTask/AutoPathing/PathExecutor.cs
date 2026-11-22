@@ -74,6 +74,7 @@ public partial class PathExecutor
     public Func<ImageRegion, bool>? EndAction { get; set; }
 
     private CombatScenes? _combatScenes;
+    private WaypointForTrack? _interruptedInstrumentWaypoint;
     // private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
 
     private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
@@ -737,9 +738,8 @@ public partial class PathExecutor
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)
     {
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
-        TpTask tpTask = new TpTask(ct);
+        var tpTask = new TpTask(ct) { InstrumentQuest = waypoint.InstrumentQuest };
         await TryGetExpeditionRewardsDispatch(tpTask);
-        tpTask.InstrumentQuest = waypoint.InstrumentQuest;
         var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
         var (tprX, tprY) = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod)
             .ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)tpX, (float)tpY));
@@ -789,19 +789,12 @@ public partial class PathExecutor
         DateTime beyondAngleStartTime = DateTime.MinValue;
         var hurryOnState = new HurryOnState();
 
-        // 按下w，一直走
-        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         // 赶路帧间隔：始终使用配置值（5-150 钳制），不依赖是否配置赶路角色（空选也可用）
         // 选瓦雷莎时钳制上限 50ms：夜魂疾冲的 E 窗口检测依赖高频帧，间隔再大也不生效
         var hurryFrameIntervalUpper = _hurryOnAvatar == "瓦雷莎" ? 50 : 150;
         var hurryFrameInterval = Math.Clamp(PartyConfig.HurryOnFrameInterval, 5, hurryFrameIntervalUpper);
         while (!ct.IsCancellationRequested)
         {
-            if (!InputHub.Foreground.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
-            {
-                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-            }
-
             num++;
             if ((DateTime.UtcNow - moveToStartTime).TotalSeconds > 240)
             {
@@ -813,28 +806,27 @@ public partial class PathExecutor
 
             EndJudgment(screen);
 
-            // position = await GetPosition(screen, waypoint);
-             bool recoveredInstrument;
-             (position, additionalTimeInMs, recoveredInstrument) = await GetPositionAndTime(screen, waypoint);
-             if (recoveredInstrument)
-             {
-                 moveToStartTime = moveToStartTime.AddMilliseconds(additionalTimeInMs);
-                 lastPositionRecord = DateTime.UtcNow;
-                 prevPositions.Clear();
-                 distanceTooFarRetryCount = 0;
-                 consecutiveRotationCountBeyondAngle = 0;
-                 beyondAngleStartTime = DateTime.MinValue;
-                 continue;
-             }
-             if (additionalTimeInMs>0)
-             {
-                 if (!InputHub.Foreground.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
-                 {
-                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                 }
-
-                 additionalTimeInMs = additionalTimeInMs + 1000;//当做起步补偿
-             }
+            bool recoveredInstrument;
+            (position, additionalTimeInMs, recoveredInstrument) = await GetPositionAndTime(screen, waypoint);
+            if (recoveredInstrument)
+            {
+                moveToStartTime = moveToStartTime.AddMilliseconds(additionalTimeInMs);
+                lastPositionRecord = DateTime.UtcNow;
+                prevPositions.Clear();
+                distanceTooFarRetryCount = 0;
+                consecutiveRotationCountBeyondAngle = 0;
+                beyondAngleStartTime = DateTime.MinValue;
+                continue;
+            }
+            // 恢复后的下一帧仍可能再次进入演奏，先检查当前画面再按 W。
+            if (!InputHub.Foreground.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
+            {
+                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            }
+            if (additionalTimeInMs > 0)
+            {
+                additionalTimeInMs += 1000; // 起步补偿
+            }
             var distance = Navigation.GetDistance(waypoint, position);
             Debug.WriteLine($"接近目标点中，距离为{distance}");
             if (distance < 4)
@@ -958,6 +950,7 @@ public partial class PathExecutor
                     // 松W键，站定好转向，转完重新按下W继续走
                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                     await WaitUntilRotatedTo(waypoint, targetOrientation, 2);
+                    if (VerifyMovementScreen(waypoint)) continue; // 下一轮用转向后的新画面决定是否按 W
                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                 }
             }
@@ -1307,7 +1300,13 @@ public partial class PathExecutor
     private async Task<(Point2f point, int additionalTimeInMs, bool recoveredInstrument)> GetPositionAndTime(
         ImageRegion imageRegion, WaypointForTrack waypoint)
     {
-        
+        if (VerifyMovementScreen(waypoint) && !IsMovementWorld(imageRegion))
+        {
+            var started = Stopwatch.GetTimestamp();
+            await TryRecoverInstrument(waypoint, imageRegion);
+            return await RelocateAfterInstrument(waypoint, started);
+        }
+
         var position = Navigation.GetPosition(imageRegion, waypoint.MapName, waypoint.MapMatchMethod);
         int time = 0;
         if (position == new Point2f())
@@ -1318,9 +1317,7 @@ public partial class PathExecutor
                 var recoveryStarted = Stopwatch.GetTimestamp();
                 if (await ResolveAnomalies(waypoint, imageRegion))
                 {
-                    var recoveredPosition = await WaitForInstrumentPosition(waypoint);
-                    var elapsed = (int)Math.Min(int.MaxValue, Stopwatch.GetElapsedTime(recoveryStarted).TotalMilliseconds);
-                    return (recoveredPosition, elapsed, true);
+                    return await RelocateAfterInstrument(waypoint, recoveryStarted);
                 }
             }
         }
@@ -1345,6 +1342,7 @@ public partial class PathExecutor
             }else if (waypoint.Misidentification.HandlingMode == "mapRecognition"){
                 //大地图识别坐标
                 DateTime start = DateTime.Now;
+                var mapStarted = Stopwatch.GetTimestamp();
                 var tpTask = new TpTask(ct) { InstrumentQuest = waypoint.InstrumentQuest };
                 await tpTask.OpenBigMapUi(mapName: waypoint.MapName);
                 try
@@ -1356,9 +1354,31 @@ public partial class PathExecutor
                     Logger.LogInformation(@$"地图中心点识别失败！");
                 }
                
-                InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                //Bv.IsInMainUi(imageRegion);
-                await WaitForCloseMap(10,200);
+                var closeMap = true;
+                if (VerifyMovementScreen(waypoint))
+                {
+                    using var beforeClose = CaptureToRectArea();
+                    closeMap = Bv.IsInBigMapUi(beforeClose);
+                    if (!closeMap && !IsMovementWorld(beforeClose))
+                    {
+                        await TryRecoverInstrument(waypoint, beforeClose);
+                        return await RelocateAfterInstrument(waypoint, mapStarted);
+                    }
+                }
+                if (closeMap)
+                {
+                    InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                    await WaitForCloseMap(10,200);
+                }
+                if (VerifyMovementScreen(waypoint))
+                {
+                    using var afterMap = CaptureToRectArea();
+                    if (!IsMovementWorld(afterMap))
+                    {
+                        await TryRecoverInstrument(waypoint, afterMap);
+                        return await RelocateAfterInstrument(waypoint, mapStarted);
+                    }
+                }
                 DateTime end = DateTime.Now;
                 time=(int)(end - start).TotalMilliseconds;
                 Logger.LogInformation(@$"未识别到具体路径，打开地图计算中心点({position.X},{position.Y})");
@@ -1385,6 +1405,30 @@ public partial class PathExecutor
         return (position, time, false);
     }
 
+    private async Task<(Point2f, int, bool)> RelocateAfterInstrument(WaypointForTrack waypoint, long started)
+    {
+        var position = await WaitForInstrumentPosition(waypoint);
+        var elapsed = (int)Math.Min(int.MaxValue, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+        return (position, elapsed, true);
+    }
+
+    private bool VerifyMovementScreen(WaypointForTrack waypoint) =>
+        waypoint.InstrumentQuest != null || ReferenceEquals(waypoint, _interruptedInstrumentWaypoint);
+
+    private static bool IsMovementWorld(ImageRegion screen)
+    {
+        var view = InstrumentExitRecovery.ReadScreen(screen, true, out var target);
+        using (target) return view == InstrumentExitScreen.World;
+    }
+
+    private async Task<bool> TryRecoverInstrument(WaypointForTrack waypoint, ImageRegion screen)
+    {
+        if (!await InstrumentExitRecovery.TryExitAsync(screen, ct, instrumentOnly: true, quest: waypoint.InstrumentQuest))
+            return false;
+        _interruptedInstrumentWaypoint = waypoint;
+        return true;
+    }
+
     private async Task<Point2f> WaitForInstrumentPosition(WaypointForTrack waypoint)
     {
         Point2f position = default;
@@ -1399,22 +1443,48 @@ public partial class PathExecutor
 
     private async Task WaitUntilRotatedTo(WaypointForTrack waypoint, int targetOrientation, int maxDiff)
     {
-        var ordinaryFailures = 0;
-        while (!await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff))
+        var secondAttempt = false;
+        while (true)
         {
+            var guarded = VerifyMovementScreen(waypoint);
+            bool interrupted = false;
+            bool CanRotate(ImageRegion screen)
+            {
+                interrupted = !IsMovementWorld(screen);
+                return !interrupted;
+            }
+            if (await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff, guarded ? CanRotate : null))
+                return;
+
             ct.ThrowIfCancellationRequested();
             var recoveryStarted = Stopwatch.GetTimestamp();
-            if (await ResolveAnomalies(waypoint))
+            using var current = CaptureToRectArea();
+            if (guarded)
             {
-                targetOrientation = Navigation.GetTargetOrientation(waypoint, await WaitForInstrumentPosition(waypoint));
-                if (moveToStartTime != default)
-                    moveToStartTime += Stopwatch.GetElapsedTime(recoveryStarted);
-                ordinaryFailures = 0;
+                bool world = IsMovementWorld(current);
+                if (world && !interrupted)
+                {
+                    if (secondAttempt) return;
+                    secondAttempt = true;
+                    continue;
+                }
+                if (!world) await TryRecoverInstrument(waypoint, current);
             }
-            else if (++ordinaryFailures >= 2)
+            else if (secondAttempt)
             {
-                throw new RetryException("连续两次无法转到目标方向，重试路线");
+                // 普通转向仍按原有的两轮尝试结束；第二轮中途进入演奏则继续恢复这个点。
+                if (!await TryRecoverInstrument(waypoint, current)) return;
             }
+            else if (!await ResolveAnomalies(waypoint, current))
+            {
+                secondAttempt = true;
+                continue;
+            }
+
+            targetOrientation = Navigation.GetTargetOrientation(waypoint, await WaitForInstrumentPosition(waypoint));
+            secondAttempt = false;
+            if (moveToStartTime != default)
+                moveToStartTime += Stopwatch.GetElapsedTime(recoveryStarted);
         }
     }
 
@@ -1427,7 +1497,7 @@ public partial class PathExecutor
         using var ownedImageRegion = imageRegion == null ? CaptureToRectArea() : null;
         imageRegion ??= ownedImageRegion!;
 
-        if (await InstrumentExitRecovery.TryExitAsync(imageRegion, ct, instrumentOnly: true, quest: waypoint.InstrumentQuest))
+        if (await TryRecoverInstrument(waypoint, imageRegion))
             return true;
 
         // 一些异常界面处理

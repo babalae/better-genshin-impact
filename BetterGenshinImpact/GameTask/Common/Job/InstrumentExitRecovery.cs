@@ -31,7 +31,8 @@ internal static class InstrumentExitRecovery
                 using (target)
                 {
                     if (afterExit != InstrumentExitScreen.World)
-                        throw new InstrumentExitRecoveryException("核对同一路线点退出演奏后的画面", true);
+                        throw new InstrumentExitRecoveryException("核对同一路线点退出演奏后的画面",
+                            afterExit == InstrumentExitScreen.InstrumentPage && quest.IsReentry(runtime));
                     return !instrumentOnly;
                 }
             }
@@ -52,7 +53,8 @@ internal static class InstrumentExitRecovery
         }
         catch (InstrumentExitRecoveryException e) when (waitForWorld)
         {
-            await WaitForWorldAsync(runtime, e.Message, ct, playDurin: e.AllowPerformance && quest != null);
+            await WaitForWorldAsync(runtime, e.Message, ct, playDurin: e.AllowPerformance && quest != null,
+                reentry: e.AllowPerformance ? null : quest);
             return true;
         }
     }
