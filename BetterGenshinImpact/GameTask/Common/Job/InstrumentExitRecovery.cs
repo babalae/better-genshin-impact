@@ -22,7 +22,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 internal static class InstrumentExitRecovery
 {
     internal static async Task<bool> TryExitAsync(ImageRegion screen, CancellationToken ct, bool waitForWorld = true,
-        bool instrumentOnly = false, InstrumentQuestRecovery? quest = null)
+        bool instrumentOnly = false, InstrumentQuestRecovery? quest = null, bool returnOnRevivePrompt = false)
     {
         var runtime = TaskContext.Instance().Runtime;
         try
@@ -53,21 +53,21 @@ internal static class InstrumentExitRecovery
                     return !instrumentOnly && view == InstrumentExitScreen.World;
                 }
             }
-            return await TryExitOnceAsync(screen, runtime, ct, instrumentOnly, quest);
+            return await TryExitOnceAsync(screen, runtime, ct, instrumentOnly, quest, returnOnRevivePrompt);
         }
         catch (InstrumentExitRecoveryException e) when (waitForWorld)
         {
             if (e.AllowOrdinaryMenu)
-                return await WaitForWorldOrMenuAsync(runtime, e.Message, ct, quest);
-            await WaitForWorldAsync(runtime, e.Message, ct, playDurin: e.AllowPerformance && quest != null,
-                reentry: e.AllowPerformance ? null : quest);
-            if (e.ExitClicked) quest?.RecordExit(runtime!);
-            return true;
+                return await WaitForWorldOrMenuAsync(runtime, e.Message, ct, quest, returnOnRevivePrompt: returnOnRevivePrompt);
+            var recovered = await WaitForRecoveryAsync(runtime, e.Message, ct, null, e.AllowPerformance && quest != null,
+                e.AllowPerformance ? null : quest, false, returnOnRevivePrompt: returnOnRevivePrompt);
+            if (recovered && e.ExitClicked) quest?.RecordExit(runtime!);
+            return recovered;
         }
     }
 
     private static async Task<bool> TryExitOnceAsync(ImageRegion screen, GameRuntime? runtime, CancellationToken ct,
-        bool instrumentOnly, InstrumentQuestRecovery? quest)
+        bool instrumentOnly, InstrumentQuestRecovery? quest, bool returnOnRevivePrompt)
     {
         var flow = new InstrumentExitFlow();
         var hasPreviousWorld = false;
@@ -105,6 +105,7 @@ internal static class InstrumentExitRecovery
                 }
 
                 using var current = new CaptureContent(image, 0, 0);
+                if (returnOnRevivePrompt && Bv.IsInRevivePrompt(current.CaptureRectArea)) return false;
                 result = ReadExitAction(flow, current.CaptureRectArea, ct, ref hasPreviousWorld, previousWorld, quest != null);
                 if (result is InstrumentExitAction.Close or InstrumentExitAction.Confirm)
                 {
@@ -145,8 +146,8 @@ internal static class InstrumentExitRecovery
         => WaitForRecoveryAsync(runtime, reason, ct, additionalCheck, playDurin, reentry, false);
 
     internal static Task<bool> WaitForWorldOrMenuAsync(GameRuntime? runtime, string reason, CancellationToken ct,
-        InstrumentQuestRecovery? reentry, bool retryInitialInstrument = false)
-        => WaitForRecoveryAsync(runtime, reason, ct, null, false, reentry, true, retryInitialInstrument);
+        InstrumentQuestRecovery? reentry, bool retryInitialInstrument = false, bool returnOnRevivePrompt = false)
+        => WaitForRecoveryAsync(runtime, reason, ct, null, false, reentry, true, retryInitialInstrument, returnOnRevivePrompt);
 
     internal static Task WaitForMapInputAsync(GameRuntime? runtime, string reason, CancellationToken ct,
         InstrumentQuestRecovery? reentry)
@@ -158,7 +159,7 @@ internal static class InstrumentExitRecovery
 
     private static async Task<bool> WaitForRecoveryAsync(GameRuntime? runtime, string reason, CancellationToken ct,
         Func<ImageRegion, bool>? additionalCheck, bool playDurin, InstrumentQuestRecovery? reentry, bool allowOrdinaryMenu,
-        bool retryInitialInstrument = false)
+        bool retryInitialInstrument = false, bool returnOnRevivePrompt = false)
     {
         EnsureSameRuntime(runtime, ct);
         using var pausedTriggers = TaskTriggerDispatcher.Instance().PauseForInference();
@@ -211,6 +212,7 @@ internal static class InstrumentExitRecovery
                 var capturedAt = frame.SystemRelativeTime ?? captureStart;
                 if (capturedAt <= acceptAfter || !session.CanObserveCapture(capturedAt)) continue;
                 var region = current.CaptureRectArea;
+                if (returnOnRevivePrompt && Bv.IsInRevivePrompt(region)) return false;
                 bool samePointReopened = reentry?.IsReentry(runtime) == true;
                 bool canRetryExit = retryInitialInstrument && session.Playback == null && !samePointReopened;
                 bool awaitingWelkinReward = captureStart <= welkinFollowUpUntil && capturedAt <= welkinFollowUpUntil;

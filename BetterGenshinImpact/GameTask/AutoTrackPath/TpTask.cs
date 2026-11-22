@@ -107,6 +107,7 @@ public class TpTask
         public required Rect IconRect { get; init; }
         public required Rect TextRect { get; init; }
         public required Rect ClickRect { get; init; }
+        public bool MatchesTarget { get; set; }
     }
 
     private sealed class NearbyMapIcon
@@ -154,7 +155,7 @@ public class TpTask
         public required double MeanError { get; init; }
     }
 
-    private readonly record struct AbsoluteMapClickCandidate(double ClickX, double ClickY);
+    private readonly record struct AbsoluteMapClickCandidate(double ClickX, double ClickY, GiTpPosition? Anchor);
 
     private enum AbsoluteMapClickFailure
     {
@@ -175,6 +176,7 @@ public class TpTask
         public double RequestX { get; init; }
         public double RequestY { get; init; }
         public required GiTpPosition TargetTp { get; init; }
+        public GiTpPosition? SelectedAnchor { get; set; }
         public required GiTpPosition NearTp { get; init; }
         public double X { get; init; }
         public double Y { get; init; }
@@ -873,8 +875,10 @@ public class TpTask
                 out var clickX,
                 out var clickY,
                 out var failureReason,
-                out var failure))
+                out var failure,
+                out var alignment))
         {
+            target.SelectedAnchor = ReadForcedClickAnchor(target, alignment, clickX, clickY);
             clickCapture.ClickTo(clickX, clickY);
             return null;
         }
@@ -883,8 +887,9 @@ public class TpTask
         // 若面板未出现，调用方会在不移动地图的前提下回退到本次已算出的候选校正点。
         if (failure == AbsoluteMapClickFailure.NeighborSafetyDistance)
         {
+            target.SelectedAnchor = ReadForcedClickAnchor(target, alignment, clickView.ClickX, clickView.ClickY);
             clickCapture.ClickTo(clickView.ClickX, clickView.ClickY);
-            return new AbsoluteMapClickCandidate(clickX, clickY);
+            return new AbsoluteMapClickCandidate(clickX, clickY, ReadForcedClickAnchor(target, alignment, clickX, clickY));
         }
 
         Logger.LogWarning("目标传送点绝对坐标定位失败：{Reason}", failureReason);
@@ -928,7 +933,7 @@ public class TpTask
         AbsoluteMapClickCandidate? fallbackCandidate)
     {
         // 点完地图后等右侧面板：传送按钮、候选列表，或未激活点/标点详情。
-        if (await WaitForTeleportPanelAndConfirm(target.TargetTp))
+        if (await WaitForTeleportPanelAndConfirm(target))
         {
             return;
         }
@@ -937,7 +942,8 @@ public class TpTask
         {
             // 原始点和候选点不同，允许回退一次；不再重新计算并重复点击同一点。
             ClickAbsoluteMapCandidate(candidate);
-            if (await WaitForTeleportPanelAndConfirm(target.TargetTp))
+            target.SelectedAnchor = candidate.Anchor;
+            if (await WaitForTeleportPanelAndConfirm(target))
             {
                 return;
             }
@@ -948,7 +954,7 @@ public class TpTask
         throw new TeleportPanelNotOpenedException("点击传送点后未出现交互面板，可能是传送点未激活");
     }
 
-    private async Task<bool> WaitForTeleportPanelAndConfirm(GiTpPosition? targetTp)
+    private async Task<bool> WaitForTeleportPanelAndConfirm(TeleportTargetContext target)
     {
         var configuredDelay = TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay;
         var configuredWait = Math.Clamp(configuredDelay <= 0 ? 50 : configuredDelay, 50, 300);
@@ -964,7 +970,7 @@ public class TpTask
         for (var attempt = 0; attempt < maxAttemptCount; attempt++)
         {
             using var teleportCapture = CaptureToRectArea();
-            var result = await HandleTeleportPanel(teleportCapture, targetTp);
+            var result = await HandleTeleportPanel(teleportCapture, target);
             switch (result)
             {
                 case TeleportPanelResult.Confirmed:
@@ -1130,12 +1136,10 @@ public class TpTask
         if (position is not { } current || !IsFinite(current.X) || !IsFinite(current.Y))
             return false;
 
-        // 强制指定锚点图标时也使用它记录的落点。没有对应锚点的强制坐标以路线为准。
-        var anchor = destination.TargetTp;
-        var hasAnchor = !destination.Force || GetDistance(destination.X, destination.Y, anchor.X, anchor.Y) <= 1d;
-        var (x, y) = hasAnchor && anchor.TranPosition is { Length: >= 3 } spawn && spawn.Any(value => value != 0)
-            ? (anchor.TranX, anchor.TranY)
-            : (destination.X, destination.Y);
+        var anchor = destination.Force ? destination.SelectedAnchor : destination.TargetTp;
+        var (x, y) = anchor == null ? (destination.X, destination.Y) : (anchor.X, anchor.Y);
+        if (anchor?.TranPosition is { Length: >= 3 } spawn && spawn.Any(value => value != 0))
+            (x, y) = (anchor.TranX, anchor.TranY);
         return GetDistance(current.X, current.Y, x, y) <= TeleportArrivalTolerance;
     }
 
@@ -2776,8 +2780,9 @@ public class TpTask
 
     private async Task<TeleportPanelResult> HandleTeleportPanel(
         ImageRegion imageRegion,
-        GiTpPosition? targetTp)
+        TeleportTargetContext target)
     {
+        var targetTp = target.TargetTp;
         // 标记路线必须实际发送确认键，其他传送沿用原有的离图处理。
         RequireTeleportMapForMarkedRoute(imageRegion);
         var isInBigMapUi = Bv.IsInBigMapUi(imageRegion);
@@ -2807,7 +2812,12 @@ public class TpTask
         // 4. 已点选项列表中的传送点（未激活点位也会出现在列表里），等待传送按钮。
         for (var clickAttempt = 1; clickAttempt <= MapChooseCandidateClickRetryCount; clickAttempt++)
         {
+            var selectedAnchor = target.Force && InstrumentQuest != null
+                ? ReadForcedCandidateAnchor(target, candidate)
+                : null;
             var result = await WaitAndPressTeleportConfirm(targetTp);
+            if (result == TeleportPanelResult.Confirmed && target.Force && InstrumentQuest != null)
+                target.SelectedAnchor = selectedAnchor;
             if (result is TeleportPanelResult.Confirmed or TeleportPanelResult.LeftMap)
             {
                 return result;
@@ -2988,7 +2998,8 @@ public class TpTask
         out double clickX,
         out double clickY,
         out string failureReason,
-        out AbsoluteMapClickFailure failure)
+        out AbsoluteMapClickFailure failure,
+        out AbsoluteMapIconAlignment alignment)
     {
         var expectedIcons = GetVisibleExpectedMapIcons(target.MapName, clickView.BigMapInAllMapRect);
         var observedIcons = GetVisibleMapIcons(
@@ -2996,7 +3007,7 @@ public class TpTask
             clickView.ClickX,
             clickView.ClickY,
             expectedIcons);
-        var alignment = EstimateAbsoluteMapIconAlignment(expectedIcons, observedIcons);
+        alignment = EstimateAbsoluteMapIconAlignment(expectedIcons, observedIcons);
         (clickX, clickY) = alignment.Transform.Apply(clickView.ClickX, clickView.ClickY);
 
         var uncertainty = GetAbsoluteMapClickUncertainty(alignment);
@@ -3029,6 +3040,29 @@ public class TpTask
         }
 
         return failureReason.Length == 0;
+    }
+
+    private GiTpPosition? ReadForcedClickAnchor(TeleportTargetContext target, AbsoluteMapIconAlignment alignment,
+        double clickX, double clickY)
+    {
+        if (!target.Force || InstrumentQuest == null) return null;
+        var hits = alignment.Pairs
+            .Where(pair => pair.Observed.Rect.Contains((int)Math.Round(clickX), (int)Math.Round(clickY)))
+            .Take(2).ToArray();
+        return hits.Length == 1 && hits[0].Expected.Tp == target.TargetTp ? target.TargetTp : null;
+    }
+
+    private static GiTpPosition? ReadForcedCandidateAnchor(TeleportTargetContext target, MapChooseCandidate candidate)
+    {
+        if (!candidate.MatchesTarget) return null;
+
+        // 重叠图标打开的是整个候选列表。点选的行要独立证明锚点身份。
+        var name = NormalizeCandidateText(target.TargetTp.Name ?? string.Empty);
+        var scene = MapLazyAssets.Get().ScenesDic[target.MapName];
+        return scene.Points.Count(point => NormalizeCandidateText(point.Name ?? string.Empty) == name
+            && (string.IsNullOrEmpty(candidate.IconType) || IsMapChooseIconTypeMatch(candidate.IconType, point.Type ?? string.Empty))) == 1
+            ? target.TargetTp
+            : null;
     }
 
     private List<ExpectedVisibleMapIcon> GetVisibleExpectedMapIcons(string mapName, Rect bigMapInAllMapRect)
@@ -3408,7 +3442,16 @@ public class TpTask
         var candidates = GetMapChooseCandidates(imageRegion);
         if (candidates.Count > 0)
         {
-            return ChooseMapCandidate(candidates, targetTp);
+            var chosen = ChooseMapCandidate(candidates, targetTp);
+            if (chosen != null && targetTp != null)
+            {
+                var targetName = NormalizeCandidateText(targetTp.Name ?? string.Empty);
+                bool IsTarget(MapChooseCandidate candidate) => targetName.Length > 0
+                    && NormalizeCandidateText(candidate.Text) == targetName
+                    && IsMapChooseIconTypeMatch(candidate.IconType, targetTp.Type ?? string.Empty);
+                chosen.MatchesTarget = IsTarget(chosen) && candidates.Count(IsTarget) == 1;
+            }
+            return chosen;
         }
 
         return GetMapChooseCandidateByTargetText(imageRegion, targetTp);
@@ -3474,6 +3517,7 @@ public class TpTask
                 IconFileName = string.Empty,
                 IconType = string.Empty,
                 Text = CleanCandidateText(matchedRegion.Text),
+                MatchesTarget = NormalizeCandidateText(matchedRegion.Text) == targetName,
                 IconRect = new Rect(
                     _assets.MapChooseIconRoi.X,
                     clickRect.Y,

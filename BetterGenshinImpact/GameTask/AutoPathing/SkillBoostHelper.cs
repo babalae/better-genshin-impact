@@ -199,7 +199,7 @@ public partial class PathExecutor
     {
         if (Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
         {
-            await SwitchAvatar(avatar.Index.ToString(), waypoint);
+            await SwitchAvatar(avatar.Index.ToString(), waypoint, excludeRecoveryWait: true);
         }
 
         if (num % HurryOnLogFrameInterval == 0)
@@ -382,7 +382,7 @@ public partial class PathExecutor
                         InputHub.ReleaseAll();
                         var nextIdx = GetSwitchToWalkIndex();
                         Logger.LogInformation("自动赶路：玛薇卡接近节点，切人步行 {t}", nextIdx);
-                        var nextAvatar = await SwitchAvatar(nextIdx, waypoint);
+                        var nextAvatar = await SwitchAvatar(nextIdx, waypoint, excludeRecoveryWait: true);
                         // 切人成功才认为下车成功，失败时保留 PendingApproach 以便后续帧重试
                         if (nextAvatar != null)
                         {
@@ -478,7 +478,7 @@ public partial class PathExecutor
                             var nextIdx = GetSwitchToWalkIndex();
                             Logger.LogInformation("自动赶路：瓦雷莎接近节点，切人步行 {t}", nextIdx);
                             state.VaresaWalkSwitchAttempts++;
-                            var nextAvatar = await SwitchAvatar(nextIdx, waypoint);
+                            var nextAvatar = await SwitchAvatar(nextIdx, waypoint, excludeRecoveryWait: true);
                             if (nextAvatar != null)
                             {
                                 // 切人成功才结束接近态，失败保留 PendingApproach 下帧重试（与玛薇卡一致）
@@ -607,9 +607,7 @@ public partial class PathExecutor
                             Logger.LogInformation("自动赶路：希诺宁接近节点，切人步行 {t}", nextIdx);
                             if (VerifyMovementScreen(waypoint))
                             {
-                                var started = System.Diagnostics.Stopwatch.GetTimestamp();
-                                await SwitchAvatar(nextIdx, waypoint);
-                                moveToStartTime += System.Diagnostics.Stopwatch.GetElapsedTime(started);
+                                await SwitchAvatar(nextIdx, waypoint, excludeRecoveryWait: true);
                                 return true; // 切人可能等待演奏恢复，下一轮重新定位。
                             }
                             _ = Task.Run(() => SwitchAvatar(nextIdx, null), ct);

@@ -144,13 +144,13 @@ public class Avatar
     {
         if (Bv.IsInRevivePrompt(region))
         {
-            Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
-            // 先打开地图
-            InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
+            DismissRevivePrompt(InputHub.Foreground.Keyboard, ct);
             Sleep(600, ct);
-            TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
+            RecoverFromRevivePrompt(ct);
+            return;
         }
-        else if (AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
+
+        if (AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
         {
             if (AutoFightTask.FightWaypoint is not null)
             {
@@ -224,6 +224,16 @@ public class Avatar
             TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
         }
     }
+
+    internal static void DismissRevivePrompt(IKeyboardInput keyboard, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
+        keyboard.KeyPress(User32.VK.VK_ESCAPE);
+    }
+
+    internal static void RecoverFromRevivePrompt(CancellationToken ct) =>
+        TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
 
     /// <summary>
     /// 游泳检测（色块连通性检测）

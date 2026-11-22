@@ -42,18 +42,7 @@ public class NahidaCollectHandler : IActionHandler
         int i = 60;
         while (true)
         {
-            bool blocked = false;
-            bool switched = quest == null ? nahida.TrySwitch() : nahida.TrySwitch(4, screen =>
-            {
-                blocked = !RunnerContext.IsWaypointActionWorld(screen);
-                return !blocked;
-            });
-            if (!switched)
-            {
-                if (!blocked) return;
-                await RunnerContext.EnsureWaypointActionWorldAsync(ct, quest);
-                continue;
-            }
+            if (!await RunnerContext.TrySwitchWaypointAvatarAsync(nahida, 4, ct, quest)) return;
             await nahida.WaitSkillCd(ct);
             if (quest != null && await RunnerContext.EnsureWaypointActionWorldAsync(ct, quest)) continue;
 

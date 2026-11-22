@@ -53,7 +53,7 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
     public void Resume()
     {
         //暂定恢复时，重置移动时的时间，防止因暂停而导致超时
-        pathExecutor.moveToStartTime = DateTime.UtcNow;
+        pathExecutor.ResetMovementTimeout();
         _isSuspended = false;
         _resuming = true;
     }
