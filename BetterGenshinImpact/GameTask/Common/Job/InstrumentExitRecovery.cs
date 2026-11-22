@@ -209,10 +209,22 @@ internal static class InstrumentExitRecovery
                 bool canRetryMap = retryInitialInstrument && session.Playback == null && !samePointReopened;
                 Region? target;
                 var view = canRetryMap
-                    ? ReadScreen(region, true, out target, durinKeyboard: DurinScoreVision.HasKeyboard(region.SrcMat), classifyMenu: true)
-                    : ReadRecoveryScreen(region, session.CanPlay || samePointReopened, out target);
+                    ? ReadScreen(region, true, out target, durinKeyboard: DurinScoreVision.HasKeyboard(region.SrcMat),
+                        classifyMenu: true, classifyWelkin: true)
+                    : ReadRecoveryScreen(region, session.CanPlay || samePointReopened, out target, classifyWelkin: true);
                 using (target)
                 {
+                    // 保留凌晨的月卡领取。每张新画面都重新识别，奖励页切走后不再点击。
+                    if (view == InstrumentExitScreen.WelkinReward && !note.Held)
+                    {
+                        ResetObservation();
+                        ct.ThrowIfCancellationRequested();
+                        EnsureTargetWindow(runtime);
+                        EnsureCaptureGeometry(region, window);
+                        GameCaptureRegion.GameRegion1080PPosClick(100, 100);
+                        acceptAfter = Stopwatch.GetElapsedTime(0) + TimeSpan.FromMilliseconds(60);
+                        continue;
+                    }
                     if (canRetryMap && view is InstrumentExitScreen.OrdinaryMenu or InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
                         return false;
                     if (allowOrdinaryMenu && session.Playback == null && view == InstrumentExitScreen.Other
@@ -318,7 +330,8 @@ internal static class InstrumentExitRecovery
     }
 
     // 收缩光圈只持续数帧。每帧核对琴键和 X，实际发键前再执行完整的弹窗排除。
-    internal static InstrumentExitScreen ReadRecoveryScreen(ImageRegion screen, bool canPlay, out Region? target)
+    internal static InstrumentExitScreen ReadRecoveryScreen(ImageRegion screen, bool canPlay, out Region? target,
+        bool classifyWelkin = false)
     {
         if (canPlay && DurinScoreVision.HasKeyboard(screen.SrcMat))
         {
@@ -329,7 +342,7 @@ internal static class InstrumentExitRecovery
                 return InstrumentExitScreen.InstrumentPage;
             }
         }
-        return ReadScreen(screen, true, out target);
+        return ReadScreen(screen, true, out target, classifyWelkin: classifyWelkin);
     }
 
     private static bool CanObserve(IGameWindow window) =>
@@ -462,7 +475,8 @@ internal static class InstrumentExitRecovery
     }
 
     internal static InstrumentExitScreen ReadScreen(ImageRegion screen, bool exiting, out Region? target,
-        Func<Mat, string>? readPrompt = null, bool durinKeyboard = false, bool classifyMenu = false)
+        Func<Mat, string>? readPrompt = null, bool durinKeyboard = false, bool classifyMenu = false,
+        bool classifyWelkin = false)
     {
         target = null;
         using var confirm = FindDialogButton(screen, confirm: true);
@@ -509,6 +523,8 @@ internal static class InstrumentExitRecovery
                 using var cook = screen.Find(RecognitionAssets.Get("AutoSkip", "Cook", screen.Width, screen.Height));
                 if (partyList.IsExist() || paimon.IsExist() || cook.IsExist()) return InstrumentExitScreen.OrdinaryMenu;
             }
+            if (classifyWelkin && BlessingOfTheWelkinMoonTask.IsClaimTime()
+                && BlessingOfTheWelkinMoonTask.IsClaimScreen(screen)) return InstrumentExitScreen.WelkinReward;
             return InstrumentExitScreen.Other;
         }
 

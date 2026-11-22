@@ -7,7 +7,8 @@ internal enum InstrumentExitScreen
     InstrumentPage,
     ExitPrompt,
     BlockedPrompt,
-    OrdinaryMenu
+    OrdinaryMenu,
+    WelkinReward
 }
 
 internal enum InstrumentExitAction

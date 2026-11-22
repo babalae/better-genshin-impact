@@ -995,6 +995,8 @@ public partial class PathExecutor
             // 只有设置为run才会一直疾跑
             if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             {
+                // 演奏恢复可能在定位或站定转向时抬起疾跑键。
+                fastMode = fastMode && InputHub.Foreground.IsKeyDown(GIActions.SprintMouse.ToActionKey().ToVK());
                 if (distance > 20 != fastMode) // 距离大于20时可以使用疾跑/自由泳
                 {
                     if (fastMode)
