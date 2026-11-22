@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -80,11 +81,12 @@ internal static class InstrumentExitRecovery
 
             pausedTriggers = TaskTriggerDispatcher.Instance().PauseForInference();
             EnsureTargetWindow(runtime);
-            ReleasePressedKeys(runtime!);
+            await ReleasePressedKeysAsync(runtime!, ct);
+            var viewport = runtime!.Window.Viewport.ScreenRect;
             var releasedAt = Stopwatch.GetElapsedTime(0);
             using (var frame = await CaptureAfterReleaseAsync(runtime!.Capture, releasedAt, ct))
             {
-                ClickVerifiedButton(result, frame, runtime, ct, quest != null);
+                ClickVerifiedButton(result, frame, viewport, runtime, ct, quest != null);
                 clicked = true;
             }
 
@@ -106,8 +108,9 @@ internal static class InstrumentExitRecovery
                 result = ReadExitAction(flow, current.CaptureRectArea, ct, ref hasPreviousWorld, previousWorld, quest != null);
                 if (result is InstrumentExitAction.Close or InstrumentExitAction.Confirm)
                 {
+                    var beforeCapture = runtime.Window.Viewport.ScreenRect;
                     using var fresh = await CaptureNewerThanAsync(runtime.Capture, Stopwatch.GetElapsedTime(0), ct);
-                    ClickVerifiedButton(result, fresh, runtime, ct, quest != null);
+                    ClickVerifiedButton(result, fresh, beforeCapture, runtime, ct, quest != null);
                 }
                 if (result == InstrumentExitAction.Complete)
                 {
@@ -145,12 +148,21 @@ internal static class InstrumentExitRecovery
         InstrumentQuestRecovery? reentry)
         => WaitForRecoveryAsync(runtime, reason, ct, null, false, reentry, true);
 
+    internal static Task WaitForMapInputAsync(GameRuntime? runtime, string reason, CancellationToken ct,
+        InstrumentQuestRecovery? reentry)
+        => WaitForRecoveryAsync(runtime, reason, ct, null, false, reentry, true, true);
+
     private static async Task<bool> WaitForRecoveryAsync(GameRuntime? runtime, string reason, CancellationToken ct,
-        Func<ImageRegion, bool>? additionalCheck, bool playDurin, InstrumentQuestRecovery? reentry, bool allowOrdinaryMenu)
+        Func<ImageRegion, bool>? additionalCheck, bool playDurin, InstrumentQuestRecovery? reentry, bool allowOrdinaryMenu,
+        bool retryInitialInstrument = false)
     {
         EnsureSameRuntime(runtime, ct);
         using var pausedTriggers = TaskTriggerDispatcher.Instance().PauseForInference();
-        ReleasePressedKeys(runtime!);
+        await ReleasePressedKeysAsync(runtime!, ct);
+        // Win32 SendInput 在调用返回前投递。Web SDK 是异步队列，无法取得实际发键时刻。
+        bool synchronousKeyboard = runtime!.Kind == GameRuntimeKind.Win32Window;
+        playDurin &= synchronousKeyboard;
+        if (!synchronousKeyboard) reentry = null;
         TaskControl.Logger.LogWarning("{Reason}，保留当前步骤，确认回到大世界后继续", reason);
         var session = new InstrumentRecoverySession(playDurin);
         bool awaitingFirstPage = playDurin;
@@ -159,14 +171,22 @@ internal static class InstrumentExitRecovery
         DurinScoreVision? score = null;
         bool sampling = false;
         using var note = new HeldInstrumentNote(runtime!.Input.Foreground.Keyboard);
+        var viewport = runtime.Window.Viewport.ScreenRect;
+        var acceptAfter = Stopwatch.GetElapsedTime(0);
         while (true)
         {
-            await Task.Delay(sampling ? 12 : 400, ct);
+            await Task.Delay(sampling || note.Held ? 12 : 400, ct);
             EnsureSameRuntime(runtime, ct);
             var window = runtime.Window;
             try
             {
                 note.ReleaseIfDue(session.CanPlay && session.Playback!.AwaitingHit, Stopwatch.GetElapsedTime(0));
+                if (viewport != window.Viewport.ScreenRect)
+                {
+                    viewport = window.Viewport.ScreenRect;
+                    acceptAfter = Stopwatch.GetElapsedTime(0);
+                    ResetObservation();
+                }
                 var captureStart = Stopwatch.GetElapsedTime(0);
                 var frame = CanObserve(window) ? runtime.Capture.Capture() : null;
                 if (frame == null)
@@ -174,20 +194,27 @@ internal static class InstrumentExitRecovery
                     ResetObservation();
                     continue;
                 }
-                using var current = new CaptureContent(frame.Frame, 0, 0);
-                if (frame.CaptureRect is { } bounds && bounds != window.Viewport.ScreenRect)
+                if (!CaptureFitsViewport(frame, viewport) || viewport != window.Viewport.ScreenRect)
                 {
+                    frame.Dispose();
                     ResetObservation();
                     continue;
                 }
+                using var current = new CaptureContent(frame.Frame, 0, 0);
                 // WGC 会在 KeyDown 之后交付此前缓存的画面。同步截图后端按采样起点判断。
                 var capturedAt = frame.SystemRelativeTime ?? captureStart;
-                if (!session.CanObserveCapture(capturedAt)) continue;
+                if (capturedAt <= acceptAfter || !session.CanObserveCapture(capturedAt)) continue;
                 var region = current.CaptureRectArea;
                 bool samePointReopened = reentry?.IsReentry(runtime) == true;
-                var view = ReadRecoveryScreen(region, session.CanPlay || samePointReopened, out var target);
+                bool canRetryMap = retryInitialInstrument && session.Playback == null && !samePointReopened;
+                Region? target;
+                var view = canRetryMap
+                    ? ReadScreen(region, true, out target, durinKeyboard: DurinScoreVision.HasKeyboard(region.SrcMat), classifyMenu: true)
+                    : ReadRecoveryScreen(region, session.CanPlay || samePointReopened, out target);
                 using (target)
                 {
+                    if (canRetryMap && view is InstrumentExitScreen.OrdinaryMenu or InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
+                        return false;
                     if (allowOrdinaryMenu && session.Playback == null && view == InstrumentExitScreen.Other
                         && IsKnownOrdinaryMenu(region)) return false;
                     if (view == InstrumentExitScreen.World && additionalCheck != null && !additionalCheck(region))
@@ -277,11 +304,17 @@ internal static class InstrumentExitRecovery
             && (reading.Hits >> slot) == 0 && rings == (1u << DurinPlayback.KeyLayout.IndexOf(key));
     }
 
-    private static void ReleasePressedKeys(GameRuntime runtime)
+    internal static async Task ReleasePressedKeysAsync(GameRuntime runtime, CancellationToken ct)
     {
-        runtime.Input.Foreground.ReleasePressedKeys();
-        if (!ReferenceEquals(runtime.Input.Foreground, runtime.Input.Background))
-            runtime.Input.Background.ReleasePressedKeys();
+        while (true)
+        {
+            EnsureSameRuntime(runtime, ct);
+            bool foreground = runtime.Input.Foreground.TryReleasePressedKeys();
+            bool background = ReferenceEquals(runtime.Input.Foreground, runtime.Input.Background)
+                || runtime.Input.Background.TryReleasePressedKeys();
+            if (foreground && background) return;
+            await Task.Delay(100, ct);
+        }
     }
 
     // 收缩光圈只持续数帧。每帧核对琴键和 X，实际发键前再执行完整的弹窗排除。
@@ -373,14 +406,18 @@ internal static class InstrumentExitRecovery
         return null;
     }
 
-    private static void ClickVerifiedButton(InstrumentExitAction action, GameCaptureFrame? frame,
+    internal static bool CaptureFitsViewport(GameCaptureFrame frame, RECT viewport) =>
+        frame.Frame.Cols == viewport.Width && frame.Frame.Rows == viewport.Height
+        && (frame.CaptureRect is not { } bounds || bounds.Width == viewport.Width && bounds.Height == viewport.Height);
+
+    private static void ClickVerifiedButton(InstrumentExitAction action, GameCaptureFrame? frame, RECT viewport,
         GameRuntime runtime, CancellationToken ct, bool declaredQuest)
     {
         ct.ThrowIfCancellationRequested();
         EnsureTargetWindow(runtime);
         if (frame == null) throw new InstrumentExitRecoveryException("操作前未能取得新的演奏画面");
-        var viewport = runtime.Window.Viewport.ScreenRect;
-        if (frame.CaptureRect is { } bounds && bounds != viewport)
+        // WGC 捕获的是窗口相对像素。仅平移时源矩形的原点可能沿用启动位置。
+        if (viewport != runtime.Window.Viewport.ScreenRect || !CaptureFitsViewport(frame, viewport))
             throw new InstrumentExitRecoveryException("截图后游戏窗口位置或大小已改变，等待画面恢复");
         // CaptureContent 接管 Mat。独立的 Mat 头与外层捕获帧各自管理自己的引用。
         using var fresh = new CaptureContent(new Mat(frame.Frame, new Rect(0, 0, frame.Frame.Cols, frame.Frame.Rows)), 0, 0);
@@ -495,21 +532,40 @@ internal static class InstrumentExitRecovery
         using (target) return view == InstrumentExitScreen.OrdinaryMenu;
     }
 
-    internal static async Task<bool> TryCloseOrdinaryMenuAsync(GameRuntime? runtime, CancellationToken ct)
+    internal static async Task<bool> TryCloseOrdinaryMenuAsync(GameRuntime? runtime, CancellationToken ct) =>
+        await ActOnFreshMenuAsync(runtime, ct, openMap: false) == MenuAction.Closed;
+
+    internal enum MenuAction { Wait, MapAlreadyOpen, MapRequested, Closed, Instrument }
+
+    internal static async Task<MenuAction> ActOnFreshMenuAsync(GameRuntime? runtime, CancellationToken ct, bool openMap)
     {
         EnsureSameRuntime(runtime, ct);
         EnsureTargetWindow(runtime);
+        var viewport = runtime!.Window.Viewport.ScreenRect;
         using var frame = await CaptureNewerThanAsync(runtime!.Capture, Stopwatch.GetElapsedTime(0), ct);
-        if (frame == null || frame.CaptureRect is { } bounds && bounds != runtime.Window.Viewport.ScreenRect)
-            return false;
+        if (frame == null || viewport != runtime.Window.Viewport.ScreenRect || !CaptureFitsViewport(frame, viewport))
+            return MenuAction.Wait;
         using var capture = new CaptureContent(frame.Frame.SubMat(new Rect(0, 0, frame.Frame.Cols, frame.Frame.Rows)), 0, 0);
         var screen = capture.CaptureRectArea;
-        if (!IsKnownOrdinaryMenu(screen)) return false;
+        var view = ReadScreen(screen, true, out var target,
+            durinKeyboard: openMap && DurinScoreVision.HasKeyboard(screen.SrcMat), classifyMenu: true);
+        target?.Dispose();
+        if (view is InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt) return MenuAction.Instrument;
+        bool sendMap = openMap && view == InstrumentExitScreen.World;
+        if (!sendMap && view != InstrumentExitScreen.OrdinaryMenu) return MenuAction.Wait;
+        bool mapAlreadyOpen = openMap && !sendMap && Bv.IsInBigMapUi(screen);
         EnsureTargetWindow(runtime);
+        if (viewport != runtime.Window.Viewport.ScreenRect) return MenuAction.Wait;
         EnsureCaptureGeometry(screen, runtime!.Window);
         ct.ThrowIfCancellationRequested();
+        if (sendMap)
+        {
+            runtime.Input.Foreground.SimulateAction(GIActions.OpenMap);
+            return MenuAction.MapRequested;
+        }
+        if (mapAlreadyOpen) return MenuAction.MapAlreadyOpen;
         runtime.Input.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-        return true;
+        return MenuAction.Closed;
     }
 
     private static Region? FindDialogButton(ImageRegion screen, bool confirm)

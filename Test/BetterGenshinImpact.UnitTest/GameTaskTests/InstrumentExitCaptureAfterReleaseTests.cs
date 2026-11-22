@@ -2,12 +2,21 @@ using System.Diagnostics;
 using BetterGenshinImpact.GameTask.Common.Job;
 using Fischless.GameCapture;
 using OpenCvSharp;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests;
 
 public class InstrumentExitCaptureAfterReleaseTests
 {
     private static readonly TimeSpan SettleAfterRelease = TimeSpan.FromMilliseconds(60);
+
+    [Fact]
+    public void WindowRelativeCaptureRemainsUsableAfterTranslationButNotResize()
+    {
+        using var frame = new GameCaptureFrame(new Mat(6, 8, MatType.CV_8UC3), new RECT(10, 20, 18, 26));
+        Assert.True(InstrumentExitRecovery.CaptureFitsViewport(frame, new RECT(15, 31, 23, 37)));
+        Assert.False(InstrumentExitRecovery.CaptureFitsViewport(frame, new RECT(10, 20, 19, 26)));
+    }
 
     [Fact]
     public async Task FramesOlderThanSixtyMillisecondsAfterRelease_AreDisposedAndReplacedByTheFirstSettledFrame()

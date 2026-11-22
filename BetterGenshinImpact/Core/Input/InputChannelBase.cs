@@ -121,9 +121,10 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
     /// </summary>
     public virtual void ReleaseAll() => ReleasePressedKeys();
 
-    public void ReleasePressedKeys() => ReleasePressedKeys(null);
+    public void ReleasePressedKeys() => TryReleasePressedKeys();
+    public bool TryReleasePressedKeys() => TryReleasePressedKeys(null);
 
-    internal void ReleasePressedKeys(ILogger? logger)
+    internal bool TryReleasePressedKeys(ILogger? logger)
     {
         lock (_pressedLock)
         {
@@ -139,6 +140,7 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
                     (logger ?? Logger).LogDebug(e, "释放按键 {Key} 失败", key);
                 }
             }
+            return _pressed.Count == 0;
         }
     }
 

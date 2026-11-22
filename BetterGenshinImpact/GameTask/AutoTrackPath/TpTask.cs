@@ -355,7 +355,10 @@ public class TpTask
             try
             {
                 // 打开地图前释放所有按键
-                InputHub.ReleaseAll();
+                if (InstrumentQuest == null)
+                    InputHub.ReleaseAll();
+                else
+                    await InstrumentExitRecovery.ReleasePressedKeysAsync(TaskContext.Instance().Runtime!, ct);
                 await Delay(GetTeleportOperationDelay(20), ct);
                 await CheckInBigMapUi(mapName);
                 return;
@@ -1170,7 +1173,8 @@ public class TpTask
         // 尝试打开地图失败后，先回到主界面后再次尝试打开地图
         if (!await TryToOpenBigMapUi(mapName))
         {
-            await new ReturnMainUiTask().Start(ct, waitForWorld: !IsTimedTeleportAttempt, quest: InstrumentQuest);
+            if (InstrumentQuest == null)
+                await new ReturnMainUiTask().Start(ct, waitForWorld: !IsTimedTeleportAttempt);
             await Delay(500, ct);
             if (!await TryToOpenBigMapUi(mapName))
             {
@@ -1184,16 +1188,44 @@ public class TpTask
     /// </summary>
     private async Task<bool> TryToOpenBigMapUi(string? mapName)
     {
-        using (var capture = CaptureToRectArea())
+        if (InstrumentQuest is { } quest)
         {
-            if (Bv.IsInBigMapUi(capture))
-                return true;
+            var runtime = TaskContext.Instance().Runtime;
+            var closedMenus = 0;
+            while (true)
+            {
+                var action = await InstrumentExitRecovery.ActOnFreshMenuAsync(runtime, ct, openMap: true);
+                if (action == InstrumentExitRecovery.MenuAction.MapAlreadyOpen) return true;
+                if (action == InstrumentExitRecovery.MenuAction.MapRequested) break;
+                if (action == InstrumentExitRecovery.MenuAction.Closed)
+                {
+                    await Delay(900, ct);
+                    if (++closedMenus >= 3) return false;
+                    continue;
+                }
 
-            // 默认地图键 M 在演奏页也是琴键，先处理已经打开的演奏页。
-            await InstrumentExitRecovery.TryExitAsync(capture, ct, waitForWorld: !IsTimedTeleportAttempt, quest: InstrumentQuest);
+                if (action == InstrumentExitRecovery.MenuAction.Instrument)
+                {
+                    if (IsTimedTeleportAttempt)
+                        throw new InstrumentExitRecoveryException("开图前遇到演奏，重新取帧处理退出", retryExit: true);
+                    using var instrument = CaptureToRectArea();
+                    if (await InstrumentExitRecovery.TryExitAsync(instrument, ct, instrumentOnly: true, quest: quest))
+                        continue;
+                }
+                const string reason = "开图前等待可确认的大世界、地图或演奏界面";
+                if (IsTimedTeleportAttempt)
+                    throw new InstrumentExitRecoveryException(reason, allowOrdinaryMenu: true);
+                await InstrumentExitRecovery.WaitForMapInputAsync(runtime, reason, ct, quest);
+            }
+        }
+        else
+        {
+            using var capture = CaptureToRectArea();
+            if (Bv.IsInBigMapUi(capture)) return true;
+            await InstrumentExitRecovery.TryExitAsync(capture, ct, waitForWorld: !IsTimedTeleportAttempt);
+            InputHub.Foreground.SimulateAction(GIActions.OpenMap);
         }
 
-        InputHub.Foreground.SimulateAction(GIActions.OpenMap);
         await Delay(100, ct);
         var opened = await WaitForBigMapUiAppear(
             string.Equals(mapName, MapTypes.MoonCanon.ToString(), StringComparison.Ordinal) ? 100 : 63);
@@ -1203,7 +1235,7 @@ public class TpTask
     private bool IsInBigMapUi()
     {
         using var capture = CaptureToRectArea();
-        return Bv.IsInBigMapUi(capture);
+        return Bv.IsInBigMapUi(capture) && (InstrumentQuest == null || InstrumentExitRecovery.IsKnownOrdinaryMenu(capture));
     }
 
     private async Task<bool> WaitForBigMapUiAppear(int maxAttemptCount)
@@ -1249,7 +1281,7 @@ public class TpTask
             {
                 if (e.AllowOrdinaryMenu)
                 {
-                    await InstrumentExitRecovery.WaitForWorldOrMenuAsync(runtime, e.Message, ct, InstrumentQuest);
+                    await InstrumentExitRecovery.WaitForMapInputAsync(runtime, e.Message, ct, InstrumentQuest);
                     continue;
                 }
                 // 等待期间不消耗传送本身的时限。确认回到大世界后重新开始同一次传送。
@@ -1258,6 +1290,11 @@ public class TpTask
                     using var fresh = CaptureToRectArea();
                     if (await InstrumentExitRecovery.TryExitAsync(fresh, ct, instrumentOnly: true, quest: InstrumentQuest))
                         continue;
+                    if (InstrumentQuest != null)
+                    {
+                        await InstrumentExitRecovery.WaitForMapInputAsync(runtime, e.Message, ct, InstrumentQuest);
+                        continue;
+                    }
                 }
                 await InstrumentExitRecovery.WaitForWorldAsync(runtime, e.Message, ct,
                     playDurin: InstrumentQuest != null && e.AllowPerformance,

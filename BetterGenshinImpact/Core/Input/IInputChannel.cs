@@ -31,4 +31,5 @@ public interface IInputChannel
 
     /// <summary>只释放通过本通道按下并记录的键。</summary>
     void ReleasePressedKeys();
+    bool TryReleasePressedKeys();
 }

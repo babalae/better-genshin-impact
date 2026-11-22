@@ -34,14 +34,14 @@ public class InstrumentInputReleaseTests
         channel.Keyboard.KeyDown(Note);
         channel.Mouse.LeftButtonDown();
         channel.FailNextRelease = failing;
-        channel.ReleasePressedKeys(NullLogger.Instance);
+        Assert.False(channel.TryReleasePressedKeys(NullLogger.Instance));
 
         Assert.True(channel.IsKeyDown(failing));
         Assert.False(channel.IsKeyDown(other));
         Assert.Contains(failing, channel.Releases);
         Assert.Contains(other, channel.Releases);
         channel.Releases.Clear();
-        channel.ReleasePressedKeys();
+        Assert.True(channel.TryReleasePressedKeys());
         channel.ReleasePressedKeys();
         Assert.False(channel.IsKeyDown(failing));
         Assert.Equal(new[] { failing }, channel.Releases);
