@@ -1228,7 +1228,7 @@ public partial class PathExecutor
         !VerifyMovementScreen(waypoint) || !await RunnerContext.EnsureWaypointActionWorldAsync(ct, waypoint.InstrumentQuest)
         || await TrySwitchWaypointAvatar(avatar, waypoint);
 
-    private async Task<Avatar?> SwitchAvatar(string index, WaypointForTrack waypoint, bool needSkill = false)
+    private async Task<Avatar?> SwitchAvatar(string index, WaypointForTrack? waypoint, bool needSkill = false)
     {
         if (string.IsNullOrEmpty(index))
         {
@@ -1243,7 +1243,7 @@ public partial class PathExecutor
             return null;
         }
 
-        var success = await TrySwitchWaypointAvatar(avatar, waypoint, 5);
+        var success = waypoint == null ? avatar.TrySwitch(5) : await TrySwitchWaypointAvatar(avatar, waypoint, 5);
         if (success)
         {
             await Delay(100, ct);

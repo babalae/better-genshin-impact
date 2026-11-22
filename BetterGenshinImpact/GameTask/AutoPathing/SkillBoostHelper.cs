@@ -604,10 +604,14 @@ public partial class PathExecutor
                         {
                             var nextIdx = GetSwitchToWalkIndex();
                             Logger.LogInformation("自动赶路：希诺宁接近节点，切人步行 {t}", nextIdx);
-                            Task.Run(async () =>
+                            if (VerifyMovementScreen(waypoint))
                             {
+                                var started = System.Diagnostics.Stopwatch.GetTimestamp();
                                 await SwitchAvatar(nextIdx, waypoint);
-                            }, ct);
+                                moveToStartTime += System.Diagnostics.Stopwatch.GetElapsedTime(started);
+                                return true; // 切人可能等待演奏恢复，下一轮重新定位。
+                            }
+                            _ = Task.Run(() => SwitchAvatar(nextIdx, null), ct);
                         }
                         else if (SpaceAtSecondPlaceExist(state))
                         {
@@ -951,10 +955,13 @@ public partial class PathExecutor
                             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                             await Delay(50, ct);
+                            if (!CanContinueWandererTakeoff(waypoint, forwardHeld: false)) return true;
                             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                             await Delay(100, ct);
+                            if (!CanContinueWandererTakeoff(waypoint, forwardHeld: true)) return true;
                             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                             await Delay(50, ct);
+                            if (!CanContinueWandererTakeoff(waypoint, forwardHeld: true)) return true;
                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
 
                             avatar.LastSkillTime = DateTime.UtcNow;
@@ -1632,6 +1639,15 @@ public partial class PathExecutor
         }
 
         return pixels;
+    }
+
+    private bool CanContinueWandererTakeoff(WaypointForTrack waypoint, bool forwardHeld)
+    {
+        if (!VerifyMovementScreen(waypoint)) return true;
+        using var screen = CaptureToRectArea();
+        if (IsMovementWorld(screen)) return true;
+        if (forwardHeld) InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+        return false;
     }
 
     private async Task SafeLanding(CancellationToken ct)

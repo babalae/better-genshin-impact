@@ -1049,8 +1049,7 @@ public class TpTask
                     if (markedScreen is (InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
                         && await InstrumentExitRecovery.TryExitAsync(capture, routeToken, instrumentOnly: true, quest: quest))
                         return;
-                    await InstrumentExitRecovery.WaitForWorldAsync(TaskContext.Instance().Runtime,
-                        "已请求传送，等待确认回到大世界", routeToken, reentry: quest);
+                    await RecoverConfirmedTeleportAsync(routeToken, quest);
                     return;
                 }
             }
@@ -1111,6 +1110,18 @@ public class TpTask
         }
 
         Logger.LogWarning("传送等待超时，换台电脑吧");
+    }
+
+    private static async Task RecoverConfirmedTeleportAsync(CancellationToken ct, InstrumentQuestRecovery? quest)
+    {
+        var runtime = TaskContext.Instance().Runtime;
+        while (!await InstrumentExitRecovery.WaitForWorldOrInstrumentAsync(runtime,
+                   "已请求传送，等待确认回到大世界", ct, quest))
+        {
+            using var screen = CaptureToRectArea();
+            if (await InstrumentExitRecovery.TryExitAsync(screen, ct, instrumentOnly: true, quest: quest))
+                return;
+        }
     }
 
     private bool IsGameRegionPointInClickableArea(double clickX, double clickY, double requiredVisibleRadius = 0)
@@ -3334,7 +3345,7 @@ public class TpTask
     }
 
     /// <summary>
-    /// 识别候选列表一次并点击；模板/OCR 对同一帧结果确定，不做稳定复检。
+    /// 等候列表动画，标记路线在点击前从新画面重新定位同一候选。
     /// </summary>
     private async Task<MapChooseCandidate?> TryClickMapChooseCandidate(
         ImageRegion imageRegion,
@@ -3346,7 +3357,20 @@ public class TpTask
             return null;
         }
 
-        await ClickMapChooseCandidate(imageRegion, candidate);
+        var time = TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay;
+        await Delay(Math.Max(time, 200), ct);
+        using var latest = InstrumentQuest == null ? null : CaptureToRectArea();
+        if (latest != null)
+        {
+            RequireTeleportMapForMarkedRoute(latest);
+            var current = GetPreferredMapChooseCandidate(latest, targetTp);
+            if (current == null || current.IconType != candidate.IconType || current.Text != candidate.Text)
+                return null;
+            candidate = current;
+        }
+        Logger.LogInformation("点击候选列表：{Text}", candidate.Text);
+        (latest ?? imageRegion).ClickTo(candidate.ClickRect.X, candidate.ClickRect.Y, candidate.ClickRect.Width, candidate.ClickRect.Height);
+        await Delay(150, ct);
         return candidate;
     }
 
@@ -3613,16 +3637,6 @@ public class TpTask
         return candidates.Any(candidate =>
             Math.Abs(candidate.IconRect.X - iconRect.X) <= 6 &&
             Math.Abs(candidate.IconRect.Y - iconRect.Y) <= 6);
-    }
-
-    private async Task ClickMapChooseCandidate(ImageRegion imageRegion, MapChooseCandidate candidate)
-    {
-        // 候选列表有个动画，识别到以后一定要再等一会点击
-        var time = TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay;
-        await Delay(time < 200 ? 200 : time, ct);
-        Logger.LogInformation("点击候选列表：{Text}", candidate.Text);
-        imageRegion.ClickTo(candidate.ClickRect.X, candidate.ClickRect.Y, candidate.ClickRect.Width, candidate.ClickRect.Height);
-        await Delay(150, ct);
     }
 
     private static double GetDistance(double x1, double y1, double x2, double y2)

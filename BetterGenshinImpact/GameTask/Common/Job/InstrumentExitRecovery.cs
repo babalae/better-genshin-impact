@@ -152,6 +152,10 @@ internal static class InstrumentExitRecovery
         InstrumentQuestRecovery? reentry)
         => WaitForWorldOrMenuAsync(runtime, reason, ct, reentry, retryInitialInstrument: true);
 
+    internal static Task<bool> WaitForWorldOrInstrumentAsync(GameRuntime? runtime, string reason, CancellationToken ct,
+        InstrumentQuestRecovery? reentry)
+        => WaitForRecoveryAsync(runtime, reason, ct, null, false, reentry, false, retryInitialInstrument: true);
+
     private static async Task<bool> WaitForRecoveryAsync(GameRuntime? runtime, string reason, CancellationToken ct,
         Func<ImageRegion, bool>? additionalCheck, bool playDurin, InstrumentQuestRecovery? reentry, bool allowOrdinaryMenu,
         bool retryInitialInstrument = false)
@@ -235,7 +239,7 @@ internal static class InstrumentExitRecovery
                         continue;
                     }
                     if (view != InstrumentExitScreen.Other) welkinFollowUpUntil = TimeSpan.Zero;
-                    if (canRetryExit && view is InstrumentExitScreen.OrdinaryMenu or InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
+                    if (canRetryExit && view is InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
                         return false;
                     if (allowOrdinaryMenu && session.Playback == null
                         && (view == InstrumentExitScreen.OrdinaryMenu
