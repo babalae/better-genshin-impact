@@ -21,6 +21,7 @@ internal sealed class DurinPlayback
     internal int NextNote { get; private set; }
     internal bool Completed => Sheet == Scores.Length;
     internal bool Stopped { get; private set; }
+    internal bool AwaitingHit => _pending;
     internal bool BetweenSheets => Sheet > 0 && !_armed && !_awaitingRestart && !Completed;
     internal void Stop()
     {
@@ -64,11 +65,12 @@ internal sealed class DurinPlayback
             if (_awaitingRestart)
             {
                 if (!_sawFirstSlotRed || rings != KeyBit(Scores[Sheet][0])) return;
-                _awaitingRestart = false;
-                _retried = true;
                 NextNote = 0;
             }
-            _armed = true;
+            else
+            {
+                _armed = true;
+            }
         }
 
         uint slot = 1u << NextNote;
@@ -108,6 +110,11 @@ internal sealed class DurinPlayback
         {
             if (verify != null && !verify(key)) return;
             send(key);
+            if (_awaitingRestart)
+            {
+                _awaitingRestart = false;
+                _retried = _armed = true;
+            }
             // 只有实际输入调用成功返回后，后续画面才占用确认帧数。
             _pending = true;
             _framesSinceSend = 0;

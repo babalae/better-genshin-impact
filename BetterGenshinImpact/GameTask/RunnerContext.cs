@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -73,13 +74,16 @@ public class RunnerContext : Singleton<RunnerContext>
 
     internal async Task<CombatScenes?> GetCombatScenes(CancellationToken ct, InstrumentQuestRecovery? quest)
     {
+        if (quest != null)
+            await EnsureWaypointActionWorldAsync(ct, quest);
+
         if (_combatScenes == null)
         {
-            // 返回主界面再识别
-            var returnMainUiTask = new ReturnMainUiTask();
-            await returnMainUiTask.Start(ct, waitForWorld: true, quest: quest);
-
-            await Delay(200, ct);
+            if (quest == null)
+            {
+                await new ReturnMainUiTask().Start(ct);
+                await Delay(200, ct);
+            }
 
             using var region = CaptureToRectArea();
             _combatScenes = new CombatScenes().InitializeTeam(region);
@@ -91,6 +95,39 @@ public class RunnerContext : Singleton<RunnerContext>
         }
 
         return _combatScenes;
+    }
+
+    internal static bool IsWaypointActionWorld(ImageRegion screen)
+    {
+        var view = InstrumentExitRecovery.ReadScreen(screen, true, out var target);
+        using (target) return view == InstrumentExitScreen.World;
+    }
+
+    /// <returns>等待期间是否离开过大世界，需要调用者重新确认角色或目标。</returns>
+    internal static async Task<bool> EnsureWaypointActionWorldAsync(CancellationToken ct, InstrumentQuestRecovery? quest)
+    {
+        var runtime = TaskContext.Instance().Runtime;
+        var interrupted = false;
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (runtime == null || !ReferenceEquals(runtime, TaskContext.Instance().Runtime))
+                throw new OperationCanceledException("路线动作绑定的游戏实例已更换", ct);
+            using var screen = CaptureToRectArea();
+            var view = InstrumentExitRecovery.ReadScreen(screen, true, out var target, classifyMenu: true);
+            target?.Dispose();
+            if (view == InstrumentExitScreen.World) return interrupted;
+            interrupted = true;
+            if (view == InstrumentExitScreen.OrdinaryMenu)
+            {
+                bool closed = await InstrumentExitRecovery.TryCloseOrdinaryMenuAsync(runtime, ct);
+                await Delay(closed ? 900 : 100, ct);
+                continue;
+            }
+            if (await InstrumentExitRecovery.TryExitAsync(screen, ct, instrumentOnly: true, quest: quest)) continue;
+            if (await InstrumentExitRecovery.WaitForWorldOrMenuAsync(runtime, "等待当前路线动作恢复", ct, quest))
+                return true;
+        }
     }
 
     /// <summary>

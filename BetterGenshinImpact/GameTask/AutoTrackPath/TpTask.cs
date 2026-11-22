@@ -16,6 +16,7 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Music.Service;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -1033,10 +1034,20 @@ public class TpTask
             else
             {
                 consecutiveMainUiChecks = 0;
+                var isInBigMapUi = Bv.IsInBigMapUi(capture);
+                if (!isInBigMapUi)
+                {
+                    // 加载中只观察；明确看到演奏界面才由外层在传送时限之外处理。
+                    var view = InstrumentExitRecovery.ReadScreen(capture, true, out var target,
+                        durinKeyboard: InstrumentQuest != null && DurinScoreVision.HasKeyboard(capture.SrcMat));
+                    using (target)
+                    {
+                        if (view is InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
+                            throw new InstrumentExitRecoveryException("等待传送完成时遇到演奏，重新取帧处理退出", retryExit: true);
+                    }
+                }
                 if (!observedLoadingState)
                 {
-                    var isInBigMapUi = Bv.IsInBigMapUi(capture);
-
                     // 地图关闭后出现的黑屏、白屏或加载界面均不属于大地图和主界面。
                     // 必须先观察到这个中间态，避免把传送尚未开始时短暂出现的主界面误判为完成。
                     consecutiveNonUiChecks = isInBigMapUi ? 0 : consecutiveNonUiChecks + 1;
@@ -1236,6 +1247,11 @@ public class TpTask
             }
             catch (InstrumentExitRecoveryException e)
             {
+                if (e.AllowOrdinaryMenu)
+                {
+                    await InstrumentExitRecovery.WaitForWorldOrMenuAsync(runtime, e.Message, ct, InstrumentQuest);
+                    continue;
+                }
                 // 等待期间不消耗传送本身的时限。确认回到大世界后重新开始同一次传送。
                 if (e.RetryExit)
                 {

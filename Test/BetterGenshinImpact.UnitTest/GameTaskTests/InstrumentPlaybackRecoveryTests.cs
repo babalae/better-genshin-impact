@@ -102,22 +102,30 @@ public class InstrumentPlaybackRecoveryTests
     {
         var recovery = new InstrumentRecoverySession(true);
         var sent = new List<char>();
-        var beforeSend = TimeSpan.FromMilliseconds(24);
         var dispatched = TimeSpan.FromMilliseconds(37);
         void Send(char key)
         {
             sent.Add(key);
             recovery.RecordKeyDown(dispatched);
         }
-        recovery.Observe(InstrumentExitScreen.InstrumentPage, false, Neutral, 0, Send);
-        for (int i = 0; i < 90; i++)
-            recovery.Observe(InstrumentExitScreen.InstrumentPage, false, Neutral, Key('H'), Send, _ => false);
+        void Capture(int ms, ScoreReading reading, uint cue, bool verify = true, bool same = false) =>
+            recovery.ObserveCapturedFrame(TimeSpan.FromMilliseconds(ms), InstrumentExitScreen.InstrumentPage,
+                same, reading, cue, Send, _ => verify);
+        Capture(5, Neutral, 0);
+        Capture(12, Neutral, Key('H'));
+        Capture(12, Neutral, Key('H')); // 相同的来源时刻
+        Capture(19, Neutral, Key('H'), same: true); // 同一画面的副本
+        Capture(24, Neutral, Key('H'), verify: false); // 最新页面的复核被否决
         Assert.Empty(sent);
-        recovery.Observe(InstrumentExitScreen.InstrumentPage, false, Neutral, Key('H'), Send, _ => true);
+        Capture(32, Neutral, Key('H'));
         Assert.Equal(new[] { 'H' }, sent);
-        Assert.False(recovery.IsAfterInput(beforeSend));
-        Assert.False(recovery.IsAfterInput(dispatched));
-        Assert.True(recovery.IsAfterInput(dispatched + TimeSpan.FromTicks(1)));
+        var hit = Neutral with { Hits = 1, PressedKeys = Key('H') };
+        Capture(35, hit, 0);
+        Capture(37, hit, 0);
+        Assert.Equal(0, recovery.Playback!.NextNote);
+        Capture(42, hit, 0);
+        Capture(42, hit, 0);
+        Assert.Equal(1, recovery.Playback.NextNote);
     }
 
     [Fact]

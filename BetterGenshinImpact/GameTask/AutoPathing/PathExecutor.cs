@@ -811,6 +811,8 @@ public partial class PathExecutor
             if (recoveredInstrument)
             {
                 moveToStartTime = moveToStartTime.AddMilliseconds(additionalTimeInMs);
+                targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+                await WaitUntilRotatedTo(waypoint, targetOrientation, 5);
                 lastPositionRecord = DateTime.UtcNow;
                 prevPositions.Clear();
                 distanceTooFarRetryCount = 0;
@@ -868,7 +870,9 @@ public partial class PathExecutor
                         {
                             if (await ResolveAnomalies(waypoint, screen))
                             {
-                                await WaitForInstrumentPosition(waypoint);
+                                var restored = await WaitForInstrumentPosition(waypoint);
+                                targetOrientation = Navigation.GetTargetOrientation(waypoint, restored);
+                                await WaitUntilRotatedTo(waypoint, targetOrientation, 5);
                                 moveToStartTime = DateTime.UtcNow;
                                 lastPositionRecord = moveToStartTime;
                                 prevPositions.Clear();
@@ -1303,7 +1307,7 @@ public partial class PathExecutor
         if (VerifyMovementScreen(waypoint) && !IsMovementWorld(imageRegion))
         {
             var started = Stopwatch.GetTimestamp();
-            await TryRecoverInstrument(waypoint, imageRegion);
+            await RestoreMovementWorld(waypoint, imageRegion);
             return await RelocateAfterInstrument(waypoint, started);
         }
 
@@ -1361,7 +1365,7 @@ public partial class PathExecutor
                     closeMap = Bv.IsInBigMapUi(beforeClose);
                     if (!closeMap && !IsMovementWorld(beforeClose))
                     {
-                        await TryRecoverInstrument(waypoint, beforeClose);
+                        await RestoreMovementWorld(waypoint, beforeClose);
                         return await RelocateAfterInstrument(waypoint, mapStarted);
                     }
                 }
@@ -1375,7 +1379,7 @@ public partial class PathExecutor
                     using var afterMap = CaptureToRectArea();
                     if (!IsMovementWorld(afterMap))
                     {
-                        await TryRecoverInstrument(waypoint, afterMap);
+                        await RestoreMovementWorld(waypoint, afterMap);
                         return await RelocateAfterInstrument(waypoint, mapStarted);
                     }
                 }
@@ -1415,10 +1419,12 @@ public partial class PathExecutor
     private bool VerifyMovementScreen(WaypointForTrack waypoint) =>
         waypoint.InstrumentQuest != null || ReferenceEquals(waypoint, _interruptedInstrumentWaypoint);
 
-    private static bool IsMovementWorld(ImageRegion screen)
+    private static bool IsMovementWorld(ImageRegion screen) => RunnerContext.IsWaypointActionWorld(screen);
+
+    private async Task RestoreMovementWorld(WaypointForTrack waypoint, ImageRegion screen)
     {
-        var view = InstrumentExitRecovery.ReadScreen(screen, true, out var target);
-        using (target) return view == InstrumentExitScreen.World;
+        if (!await TryRecoverInstrument(waypoint, screen))
+            await RunnerContext.EnsureWaypointActionWorldAsync(ct, waypoint.InstrumentQuest);
     }
 
     private async Task<bool> TryRecoverInstrument(WaypointForTrack waypoint, ImageRegion screen)
@@ -1468,7 +1474,7 @@ public partial class PathExecutor
                     secondAttempt = true;
                     continue;
                 }
-                if (!world) await TryRecoverInstrument(waypoint, current);
+                if (!world) await RestoreMovementWorld(waypoint, current);
             }
             else if (secondAttempt)
             {
@@ -1499,6 +1505,13 @@ public partial class PathExecutor
 
         if (await TryRecoverInstrument(waypoint, imageRegion))
             return true;
+
+        if (VerifyMovementScreen(waypoint))
+        {
+            if (IsMovementWorld(imageRegion)) return false;
+            await RunnerContext.EnsureWaypointActionWorldAsync(ct, waypoint.InstrumentQuest);
+            return true;
+        }
 
         // 一些异常界面处理
         var cookRa = imageRegion.Find(GetAutoSkipRecognitionObject("Cook", imageRegion));

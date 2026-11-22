@@ -322,10 +322,12 @@ public class Avatar
     /// <param name="tryTimes"></param>
     /// <param name="needLog"></param>
     /// <returns></returns>
-    public bool TrySwitch(int tryTimes = 4)
+    public bool TrySwitch(int tryTimes = 4) => TrySwitch(tryTimes, null);
+
+    internal bool TrySwitch(int tryTimes, Func<ImageRegion, bool>? canSwitch)
     {
         var context = new AvatarActiveCheckContext();
-        var shouldResendSwitchAction = CombatScenes.UpdateTrySwitchTarget(Index);
+        var shouldResendSwitchAction = false;
         for (var i = 0; i < tryTimes; i++)
         {
             if (Ct is { IsCancellationRequested: true })
@@ -334,7 +336,9 @@ public class Avatar
             }
 
             using var region = CaptureToRectArea();
+            if (canSwitch != null && !canSwitch(region)) return false;
             ThrowWhenDefeated(region, Ct);
+            if (i == 0) shouldResendSwitchAction = CombatScenes.UpdateTrySwitchTarget(Index);
 
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {

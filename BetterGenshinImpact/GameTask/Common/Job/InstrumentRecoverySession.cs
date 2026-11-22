@@ -10,9 +10,31 @@ internal sealed class InstrumentRecoverySession(bool playDurin)
     internal bool CanPlay => Playback is { Completed: false, Stopped: false };
     private bool _sawWorld;
     private TimeSpan _sentAt;
+    private TimeSpan _lastCapture;
+    private (int Sheet, int Slot, char Key)? _proposal;
 
     internal void RecordKeyDown(TimeSpan time) => _sentAt = time;
     internal bool IsAfterInput(TimeSpan capturedAt) => capturedAt > _sentAt;
+    internal bool CanObserveCapture(TimeSpan capturedAt) => IsAfterInput(capturedAt) && capturedAt > _lastCapture;
+
+    // 连续两张新画面必须独立读出同一谱位和唯一光圈。缓存和发键前的旧帧不参与判定。
+    internal bool ObserveCapturedFrame(TimeSpan capturedAt, InstrumentExitScreen screen, bool sameFrame,
+        ScoreReading reading, uint rings, Action<char> send, Func<char, bool> verify)
+    {
+        if (!CanObserveCapture(capturedAt)) return false;
+        _lastCapture = capturedAt;
+        if (sameFrame) return Observe(screen, true, reading, rings, send, verify);
+
+        var previous = _proposal;
+        _proposal = null;
+        return Observe(screen, false, reading, rings, send, key =>
+        {
+            var current = (Playback!.Sheet, Playback.NextNote, key);
+            if (previous == current && verify(key)) return true;
+            _proposal = current;
+            return false;
+        });
+    }
 
     internal bool Observe(InstrumentExitScreen screen, bool sameFrame, ScoreReading reading, uint rings,
         Action<char> send, Func<char, bool>? verify = null)
@@ -25,6 +47,7 @@ internal sealed class InstrumentRecoverySession(bool playDurin)
             return false;
         }
         _sawWorld = false;
+        if (screen != InstrumentExitScreen.InstrumentPage) _proposal = null;
         if (screen is (InstrumentExitScreen.BlockedPrompt or InstrumentExitScreen.ExitPrompt)
             && Playback is { BetweenSheets: false })
             Playback?.Stop();

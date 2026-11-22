@@ -6,7 +6,8 @@ internal enum InstrumentExitScreen
     World,
     InstrumentPage,
     ExitPrompt,
-    BlockedPrompt
+    BlockedPrompt,
+    OrdinaryMenu
 }
 
 internal enum InstrumentExitAction

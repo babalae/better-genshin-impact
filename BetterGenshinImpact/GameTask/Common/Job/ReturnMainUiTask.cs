@@ -16,6 +16,25 @@ public class ReturnMainUiTask
 
     internal async Task Start(CancellationToken ct, bool waitForWorld, InstrumentQuestRecovery? quest = null)
     {
+        if (quest != null)
+        {
+            if (waitForWorld)
+            {
+                await RunnerContext.EnsureWaypointActionWorldAsync(ct, quest);
+                return;
+            }
+            // 限时传送只接管已确认的普通菜单，演奏与未知过场交给外层在原步骤等待。
+            var runtime = TaskContext.Instance().Runtime;
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+                using var screen = CaptureToRectArea();
+                if (await InstrumentExitRecovery.TryExitAsync(screen, ct, waitForWorld: false, quest: quest)) return;
+                if (!await InstrumentExitRecovery.TryCloseOrdinaryMenuAsync(runtime, ct))
+                    throw new InstrumentExitRecoveryException("等待标记点的界面恢复", allowOrdinaryMenu: true);
+                await Delay(900, ct);
+            }
+        }
         using (var initialCapture = CaptureToRectArea())
         {
             if (await InstrumentExitRecovery.TryExitAsync(initialCapture, ct, waitForWorld, quest: quest))
