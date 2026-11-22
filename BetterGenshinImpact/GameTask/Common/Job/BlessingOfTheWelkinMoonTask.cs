@@ -25,7 +25,11 @@ public class BlessingOfTheWelkinMoonTask
 
     internal static bool IsClaimScreen(ImageRegion screen)
     {
-        if (Bv.IsInBlessingOfTheWelkinMoon(screen)) return true;
+        return Bv.IsInBlessingOfTheWelkinMoon(screen) || HasPrimogemReward(screen);
+    }
+
+    internal static bool HasPrimogemReward(ImageRegion screen)
+    {
         using var primogem = screen.Find(ElementRecognition.Get("Primogem", screen));
         return primogem.IsExist();
     }

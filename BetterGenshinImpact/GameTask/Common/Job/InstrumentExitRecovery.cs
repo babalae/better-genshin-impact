@@ -173,6 +173,7 @@ internal static class InstrumentExitRecovery
         using var note = new HeldInstrumentNote(runtime!.Input.Foreground.Keyboard);
         var viewport = runtime.Window.Viewport.ScreenRect;
         var acceptAfter = Stopwatch.GetElapsedTime(0);
+        var welkinFollowUpUntil = TimeSpan.Zero;
         while (true)
         {
             await Task.Delay(sampling || note.Held ? 12 : 400, ct);
@@ -185,6 +186,7 @@ internal static class InstrumentExitRecovery
                 {
                     viewport = window.Viewport.ScreenRect;
                     acceptAfter = Stopwatch.GetElapsedTime(0);
+                    welkinFollowUpUntil = TimeSpan.Zero;
                     ResetObservation();
                 }
                 var captureStart = Stopwatch.GetElapsedTime(0);
@@ -207,28 +209,37 @@ internal static class InstrumentExitRecovery
                 var region = current.CaptureRectArea;
                 bool samePointReopened = reentry?.IsReentry(runtime) == true;
                 bool canRetryMap = retryInitialInstrument && session.Playback == null && !samePointReopened;
+                bool awaitingWelkinReward = captureStart <= welkinFollowUpUntil && capturedAt <= welkinFollowUpUntil;
                 Region? target;
                 var view = canRetryMap
                     ? ReadScreen(region, true, out target, durinKeyboard: DurinScoreVision.HasKeyboard(region.SrcMat),
-                        classifyMenu: true, classifyWelkin: true)
-                    : ReadRecoveryScreen(region, session.CanPlay || samePointReopened, out target, classifyWelkin: true);
+                        classifyMenu: true, classifyWelkin: true, awaitingWelkinReward: awaitingWelkinReward)
+                    : ReadRecoveryScreen(region, session.CanPlay || samePointReopened, out target,
+                        classifyWelkin: true, awaitingWelkinReward: awaitingWelkinReward);
                 using (target)
                 {
                     // 保留凌晨的月卡领取。每张新画面都重新识别，奖励页切走后不再点击。
-                    if (view == InstrumentExitScreen.WelkinReward && !note.Held)
+                    var checkedAt = Stopwatch.GetElapsedTime(0);
+                    if (view == InstrumentExitScreen.WelkinReward && !note.Held
+                        && checkedAt - capturedAt <= TimeSpan.FromMilliseconds(200)
+                        && (!awaitingWelkinReward || checkedAt <= welkinFollowUpUntil))
                     {
                         ResetObservation();
                         ct.ThrowIfCancellationRequested();
                         EnsureTargetWindow(runtime);
                         EnsureCaptureGeometry(region, window);
                         GameCaptureRegion.GameRegion1080PPosClick(100, 100);
-                        acceptAfter = Stopwatch.GetElapsedTime(0) + TimeSpan.FromMilliseconds(60);
+                        var clickedAt = Stopwatch.GetElapsedTime(0);
+                        acceptAfter = clickedAt + TimeSpan.FromMilliseconds(60);
+                        if (!awaitingWelkinReward) welkinFollowUpUntil = clickedAt + TimeSpan.FromSeconds(3);
                         continue;
                     }
+                    if (view != InstrumentExitScreen.Other) welkinFollowUpUntil = TimeSpan.Zero;
                     if (canRetryMap && view is InstrumentExitScreen.OrdinaryMenu or InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt)
                         return false;
-                    if (allowOrdinaryMenu && session.Playback == null && view == InstrumentExitScreen.Other
-                        && IsKnownOrdinaryMenu(region)) return false;
+                    if (allowOrdinaryMenu && session.Playback == null
+                        && (view == InstrumentExitScreen.OrdinaryMenu
+                            || view == InstrumentExitScreen.Other && IsKnownOrdinaryMenu(region))) return false;
                     if (view == InstrumentExitScreen.World && additionalCheck != null && !additionalCheck(region))
                         view = InstrumentExitScreen.Other;
                     if (view == InstrumentExitScreen.InstrumentPage && region is not GameCaptureRegion { Width: 1920, Height: 1080 })
@@ -331,7 +342,7 @@ internal static class InstrumentExitRecovery
 
     // 收缩光圈只持续数帧。每帧核对琴键和 X，实际发键前再执行完整的弹窗排除。
     internal static InstrumentExitScreen ReadRecoveryScreen(ImageRegion screen, bool canPlay, out Region? target,
-        bool classifyWelkin = false)
+        bool classifyWelkin = false, bool awaitingWelkinReward = false)
     {
         if (canPlay && DurinScoreVision.HasKeyboard(screen.SrcMat))
         {
@@ -342,7 +353,8 @@ internal static class InstrumentExitRecovery
                 return InstrumentExitScreen.InstrumentPage;
             }
         }
-        return ReadScreen(screen, true, out target, classifyWelkin: classifyWelkin);
+        return ReadScreen(screen, true, out target, classifyMenu: awaitingWelkinReward,
+            classifyWelkin: classifyWelkin, awaitingWelkinReward: awaitingWelkinReward);
     }
 
     private static bool CanObserve(IGameWindow window) =>
@@ -476,7 +488,7 @@ internal static class InstrumentExitRecovery
 
     internal static InstrumentExitScreen ReadScreen(ImageRegion screen, bool exiting, out Region? target,
         Func<Mat, string>? readPrompt = null, bool durinKeyboard = false, bool classifyMenu = false,
-        bool classifyWelkin = false)
+        bool classifyWelkin = false, bool awaitingWelkinReward = false)
     {
         target = null;
         using var confirm = FindDialogButton(screen, confirm: true);
@@ -523,8 +535,15 @@ internal static class InstrumentExitRecovery
                 using var cook = screen.Find(RecognitionAssets.Get("AutoSkip", "Cook", screen.Width, screen.Height));
                 if (partyList.IsExist() || paimon.IsExist() || cook.IsExist()) return InstrumentExitScreen.OrdinaryMenu;
             }
-            if (classifyWelkin && BlessingOfTheWelkinMoonTask.IsClaimTime()
-                && BlessingOfTheWelkinMoonTask.IsClaimScreen(screen)) return InstrumentExitScreen.WelkinReward;
+            if (classifyWelkin && (awaitingWelkinReward || BlessingOfTheWelkinMoonTask.IsClaimTime())
+                && (Bv.IsInBlessingOfTheWelkinMoon(screen)
+                    || awaitingWelkinReward && BlessingOfTheWelkinMoonTask.HasPrimogemReward(screen)))
+            {
+                // 弹窗过渡时可能先出现取消按钮，确认和装饰尚未显现。
+                using var loneCancel = confirm == null && !ornament.IsExist()
+                    ? FindDialogButton(screen, confirm: false) : null;
+                if (loneCancel == null) return InstrumentExitScreen.WelkinReward;
+            }
             return InstrumentExitScreen.Other;
         }
 
