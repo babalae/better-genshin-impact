@@ -1034,8 +1034,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                     }
                 }
 
-                return new GameCaptureFrame(WgcBgrMat.CreateFrom(target, ReleaseBgrMat), rect)
-                    { SystemRelativeTime = TimeSpan.FromTicks(frameTs) };
+                return new GameCaptureFrame(WgcBgrMat.CreateFrom(target, ReleaseBgrMat), rect);
             }
             catch (SharpDXException e)
             {

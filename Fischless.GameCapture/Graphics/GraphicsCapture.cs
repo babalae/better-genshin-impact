@@ -46,7 +46,6 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
     private int _surfaceHeight;
 
     private long _lastFrameTime;
-    private TimeSpan _latestFrameTimestamp;
 
     private readonly Stopwatch _frameTimer = new();
 
@@ -255,7 +254,6 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
                 // 新帧构造成功后再替换，异常时保留上一帧
                 var oldFrame = _latestFrame;
                 _latestFrame = newFrame;
-                _latestFrameTimestamp = frame.SystemRelativeTime;
                 oldFrame?.Dispose();
             }
             catch (SharpDXException e)
@@ -279,7 +277,7 @@ public class GraphicsCapture(bool captureHdr = false) : IGameCapture
             var frame = _latestFrame?.Clone();
             return frame == null
                 ? null
-                : new GameCaptureFrame(frame, _captureRect) { SystemRelativeTime = _latestFrameTimestamp };
+                : new GameCaptureFrame(frame, _captureRect);
         }
         finally
         {

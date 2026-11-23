@@ -82,11 +82,6 @@ public sealed class MusicInstrumentSwitcher : IMusicInstrumentSwitcher
             keepInstrumentUiOpen = true;
             return true;
         }
-        catch (InstrumentExitRecoveryException)
-        {
-            uiInteractionStarted = false;
-            throw;
-        }
         catch (FileNotFoundException)
         {
             _logger.LogWarning("自动换乐器暂不支持该乐器档案：{InstrumentName}", instrumentName);

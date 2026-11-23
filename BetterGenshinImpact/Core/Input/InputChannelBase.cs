@@ -46,8 +46,8 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
     /// </summary>
     protected virtual void OnKeyPress(User32.VK key)
     {
-        KeyDown(key);
-        KeyUp(key);
+        OnKeyDown(key);
+        OnKeyUp(key);
     }
 
     protected abstract void OnMouseButton(InputMouseButton button, bool down);
@@ -57,8 +57,8 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
     /// </summary>
     protected virtual void OnMouseClick(InputMouseButton button)
     {
-        ButtonDown(button);
-        ButtonUp(button);
+        OnMouseButton(button, true);
+        OnMouseButton(button, false);
     }
 
     protected abstract void OnMoveBy(int dx, int dy);
@@ -119,28 +119,25 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
     /// <summary>
     /// 按记录逐个抬起。单个按键失败不影响其余按键
     /// </summary>
-    public virtual void ReleaseAll() => ReleasePressedKeys();
-
-    public void ReleasePressedKeys() => TryReleasePressedKeys();
-    public bool TryReleasePressedKeys() => TryReleasePressedKeys(null);
-
-    internal bool TryReleasePressedKeys(ILogger? logger)
+    public virtual void ReleaseAll()
     {
-        lock (_pressedLock)
+        foreach (var key in TakePressedKeys())
         {
-            // 快照用于迭代；只有后端抬起成功的键才会从记录中移除。
-            foreach (var key in _pressed.ToArray())
+            try
             {
-                try
+                if (TryGetMouseButton(key, out var button))
                 {
-                    KeyUp(key);
+                    OnMouseButton(button, false);
                 }
-                catch (Exception e)
+                else
                 {
-                    (logger ?? Logger).LogDebug(e, "释放按键 {Key} 失败", key);
+                    OnKeyUp(key);
                 }
             }
-            return _pressed.Count == 0;
+            catch (Exception e)
+            {
+                Logger.LogDebug(e, "释放按键 {Key} 失败", key);
+            }
         }
     }
 
@@ -156,11 +153,8 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
             return this;
         }
 
-        lock (_pressedLock)
-        {
-            OnKeyDown(key);
-            _pressed.Add(key);
-        }
+        OnKeyDown(key);
+        SetPressed(key, true);
         return this;
     }
 
@@ -172,11 +166,8 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
             return this;
         }
 
-        lock (_pressedLock)
-        {
-            OnKeyUp(key);
-            _pressed.Remove(key);
-        }
+        SetPressed(key, false);
+        OnKeyUp(key);
         return this;
     }
 
@@ -188,11 +179,8 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
             return this;
         }
 
-        lock (_pressedLock)
-        {
-            OnKeyPress(key);
-            _pressed.Remove(key);
-        }
+        SetPressed(key, false);
+        OnKeyPress(key);
         return this;
     }
 
@@ -341,32 +329,38 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
 
     private InputChannelBase ButtonDown(InputMouseButton button)
     {
-        lock (_pressedLock)
-        {
-            OnMouseButton(button, true);
-            _pressed.Add(ToVirtualKey(button));
-        }
+        OnMouseButton(button, true);
+        SetPressed(ToVirtualKey(button), true);
         return this;
     }
 
     private InputChannelBase ButtonUp(InputMouseButton button)
     {
-        lock (_pressedLock)
-        {
-            OnMouseButton(button, false);
-            _pressed.Remove(ToVirtualKey(button));
-        }
+        SetPressed(ToVirtualKey(button), false);
+        OnMouseButton(button, false);
         return this;
     }
 
     private InputChannelBase ButtonClick(InputMouseButton button)
     {
+        SetPressed(ToVirtualKey(button), false);
+        OnMouseClick(button);
+        return this;
+    }
+
+    private void SetPressed(User32.VK key, bool pressed)
+    {
         lock (_pressedLock)
         {
-            OnMouseClick(button);
-            _pressed.Remove(ToVirtualKey(button));
+            if (pressed)
+            {
+                _pressed.Add(key);
+            }
+            else
+            {
+                _pressed.Remove(key);
+            }
         }
-        return this;
     }
 
     #endregion

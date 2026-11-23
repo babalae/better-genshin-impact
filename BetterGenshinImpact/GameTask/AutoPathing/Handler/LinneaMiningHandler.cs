@@ -19,7 +19,7 @@ public class LinneaMiningHandler : IActionHandler
     {
         var (mineCount, scanRounds) = ParseParams(waypointForTrack?.ActionParams);
 
-        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct, waypointForTrack?.InstrumentQuest);
+        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)
         {
             Logger.LogError("队伍识别未初始化成功！");

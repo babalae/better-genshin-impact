@@ -20,8 +20,7 @@ public class NahidaCollectHandler : IActionHandler
     {
         Logger.LogInformation("执行 {Nhd} 长按E转圈拾取", "纳西妲");
 
-        var quest = waypointForTrack?.InstrumentQuest;
-        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct, quest);
+        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)
         {
             Logger.LogError("队伍识别未初始化成功！");
@@ -30,29 +29,27 @@ public class NahidaCollectHandler : IActionHandler
 
         // 切人
         var nahida = combatScenes.SelectAvatar("纳西妲");
-        if (nahida == null)
+        if (nahida is not null)
+        {
+            nahida.TrySwitch();
+        }
+        else
         {
             Logger.LogError("队伍中未找到纳西妲角色！");
             return;
         }
 
+        await nahida.WaitSkillCd(ct);
+
         var dpi = TaskContext.Instance().DpiScale;
 
         int x = (int)(400 * dpi), y = (int)(-30 * dpi);
         int i = 60;
-        while (true)
-        {
-            if (!await RunnerContext.TrySwitchWaypointAvatarAsync(nahida, 4, ct, quest)) return;
-            await nahida.WaitSkillCd(ct);
-            if (quest != null && await RunnerContext.EnsureWaypointActionWorldAsync(ct, quest)) continue;
-
-            InputHub.Foreground.Mouse.MoveMouseBy(0, 10000);
-            await Delay(200, ct);
-            if (quest == null || !await RunnerContext.EnsureWaypointActionWorldAsync(ct, quest)) break;
-        }
+        // 视角拉到最下面
+        InputHub.Foreground.Mouse.MoveMouseBy(0, 10000);
+        await Delay(200, ct);
 
         // 按住E技能 无死角扫码
-        ct.ThrowIfCancellationRequested();
         InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
         try
         {
@@ -93,7 +90,6 @@ public class NahidaCollectHandler : IActionHandler
 
         await Delay(800, ct);
         // 恢复视角
-        if (quest != null) await RunnerContext.EnsureWaypointActionWorldAsync(ct, quest);
         InputHub.Foreground.Mouse.MiddleButtonClick();
         await Delay(1000, ct);
     }

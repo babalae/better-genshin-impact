@@ -18,8 +18,7 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
 {
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        var quest = waypointForTrack?.InstrumentQuest;
-        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct, quest);
+        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)
         {
             Logger.LogError("队伍识别未初始化成功！");
@@ -38,23 +37,25 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
                 continue;
             }
 
-            while (await RunnerContext.TrySwitchWaypointAvatarAsync(combatScenesAvatar, 4, ct, quest))
+            // 切人
+            if (combatScenesAvatar.TrySwitch())
             {
-                if (!elementalCollectAvatar.NormalAttack && elementalCollectAvatar.ElementalSkill)
-                    await combatScenesAvatar.WaitSkillCd(ct);
-                // 等待冷却期间可能进入演奏，恢复后重新核实当前角色。
-                if (quest != null && await RunnerContext.EnsureWaypointActionWorldAsync(ct, quest)) continue;
                 if (elementalCollectAvatar.NormalAttack)
                 {
                     combatScenesAvatar.Attack(100);
                 }
                 else if (elementalCollectAvatar.ElementalSkill)
                 {
+
+                    await combatScenesAvatar.WaitSkillCd(ct);
                     combatScenesAvatar.UseSkill();
                 }
-                return;
             }
-            Logger.LogError("切人失败,无法进行{Element}元素采集", elementalType.ToChinese());
+            else
+            {
+                Logger.LogError("切人失败,无法进行{Element}元素采集", elementalType.ToChinese());
+            }
+
             break;
         }
     }

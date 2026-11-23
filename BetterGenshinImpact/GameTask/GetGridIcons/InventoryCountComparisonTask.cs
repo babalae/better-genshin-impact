@@ -102,7 +102,6 @@ internal sealed class InventoryCountComparisonTask : ISoloTask
             throw new InvalidOperationException($"无法打开识别目标：{target}");
         }
 
-        var restoreMainUi = true;
         try
         {
             // 分类目标才打开背包；GridScreen 后续每次翻页事件只保存一张对比截图。
@@ -129,15 +128,9 @@ internal sealed class InventoryCountComparisonTask : ISoloTask
             logger.LogInformation("{Category} 数量 OCR 对比完成，共输出 {PageCount} 页",
                 GetTargetName(target), pageNumber);
         }
-        catch (InstrumentExitRecoveryException)
-        {
-            restoreMainUi = false;
-            throw;
-        }
         finally
         {
-            if (restoreMainUi)
-                await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask().Start(ct);
         }
     }
 

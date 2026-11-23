@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -72,23 +69,17 @@ public class RunnerContext : Singleton<RunnerContext>
     /// </summary>
     private CombatScenes? _combatScenes;
 
-    public Task<CombatScenes?> GetCombatScenes(CancellationToken ct) => GetCombatScenes(ct, null);
-
-    internal async Task<CombatScenes?> GetCombatScenes(CancellationToken ct, InstrumentQuestRecovery? quest)
+    public async Task<CombatScenes?> GetCombatScenes(CancellationToken ct)
     {
-        if (quest != null)
-            await EnsureWaypointActionWorldAsync(ct, quest);
-
         if (_combatScenes == null)
         {
-            if (quest == null)
-            {
-                await new ReturnMainUiTask().Start(ct);
-                await Delay(200, ct);
-            }
+            // 返回主界面再识别
+            var returnMainUiTask = new ReturnMainUiTask();
+            await returnMainUiTask.Start(ct);
 
-            using var region = CaptureToRectArea();
-            _combatScenes = new CombatScenes().InitializeTeam(region);
+            await Delay(200, ct);
+
+            _combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
             if (!_combatScenes.CheckTeamInitialized())
             {
                 Logger.LogError("队伍角色识别失败");
@@ -97,84 +88,6 @@ public class RunnerContext : Singleton<RunnerContext>
         }
 
         return _combatScenes;
-    }
-
-    internal static async Task<bool> TrySwitchWaypointAvatarAsync(Avatar avatar, int tries, CancellationToken ct,
-        InstrumentQuestRecovery? quest, bool guardWorld = false, Action<long>? onRecoveryCompleted = null)
-    {
-        if (quest == null && !guardWorld) return avatar.TrySwitch(tries);
-        while (true)
-        {
-            ct.ThrowIfCancellationRequested();
-            bool interrupted = false;
-            bool CanSwitch(ImageRegion screen)
-            {
-                ct.ThrowIfCancellationRequested();
-                interrupted = !IsWaypointActionWorld(screen);
-                return !interrupted;
-            }
-            bool switched = avatar.TrySwitch(tries, CanSwitch);
-            if (!interrupted) return switched;
-            var started = Stopwatch.GetTimestamp();
-            if (await EnsureWaypointActionWorldAsync(ct, quest, recoverRevivePrompt: true))
-                onRecoveryCompleted?.Invoke(started);
-        }
-    }
-
-    internal static bool IsWaypointActionWorld(ImageRegion screen)
-    {
-        var view = InstrumentExitRecovery.ReadScreen(screen, true, out var target);
-        using (target) return view == InstrumentExitScreen.World;
-    }
-
-    /// <returns>等待期间是否离开过大世界，需要调用者重新确认角色或目标。</returns>
-    internal static async Task<bool> EnsureWaypointActionWorldAsync(CancellationToken ct, InstrumentQuestRecovery? quest,
-        bool recoverRevivePrompt = false)
-    {
-        var runtime = TaskContext.Instance().Runtime;
-        var interrupted = false;
-        while (true)
-        {
-            ct.ThrowIfCancellationRequested();
-            if (runtime == null || !ReferenceEquals(runtime, TaskContext.Instance().Runtime))
-                throw new OperationCanceledException("路线动作绑定的游戏实例已更换", ct);
-            using var screen = CaptureToRectArea();
-            if (recoverRevivePrompt && Bv.IsInRevivePrompt(screen))
-            {
-                interrupted = true;
-                using var fresh = await InstrumentExitRecovery.CaptureFreshForInputAsync(runtime, ct);
-                if (fresh != null && Bv.IsInRevivePrompt(fresh.CaptureRectArea)
-                    && InstrumentExitRecovery.CanUseInputFrame(runtime, fresh.CaptureRectArea))
-                {
-                    Avatar.DismissRevivePrompt(runtime.Input.Foreground.Keyboard, ct);
-                    await Task.Delay(600, ct);
-                    while (!InstrumentExitRecovery.CanUseInputFrame(runtime))
-                    {
-                        if (!ReferenceEquals(runtime, TaskContext.Instance().Runtime) || !runtime.Window.IsAlive)
-                            throw new OperationCanceledException("复苏恢复绑定的游戏实例已更换或关闭", ct);
-                        await Task.Delay(100, ct);
-                    }
-                    Avatar.RecoverFromRevivePrompt(ct);
-                }
-                await Task.Delay(100, ct);
-                continue;
-            }
-            var view = InstrumentExitRecovery.ReadScreen(screen, true, out var target, classifyMenu: true);
-            target?.Dispose();
-            if (view == InstrumentExitScreen.World) return interrupted;
-            interrupted = true;
-            if (view == InstrumentExitScreen.OrdinaryMenu)
-            {
-                bool closed = await InstrumentExitRecovery.TryCloseOrdinaryMenuAsync(runtime, ct);
-                await Delay(closed ? 900 : 100, ct);
-                continue;
-            }
-            if (await InstrumentExitRecovery.TryExitAsync(screen, ct, instrumentOnly: true, quest: quest,
-                    returnOnRevivePrompt: recoverRevivePrompt)) continue;
-            if (await InstrumentExitRecovery.WaitForWorldOrMenuAsync(runtime, "等待当前路线动作恢复", ct, quest,
-                    retryInitialInstrument: true, returnOnRevivePrompt: recoverRevivePrompt))
-                return true;
-        }
     }
 
     /// <summary>

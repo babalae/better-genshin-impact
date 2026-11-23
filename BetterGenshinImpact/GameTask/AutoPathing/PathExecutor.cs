@@ -74,7 +74,6 @@ public partial class PathExecutor
     public Func<ImageRegion, bool>? EndAction { get; set; }
 
     private CombatScenes? _combatScenes;
-    private WaypointForTrack? _interruptedInstrumentWaypoint;
     // private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
 
     private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
@@ -150,28 +149,21 @@ public partial class PathExecutor
         }
 
 
-        var waypointsList = ConvertWaypointsForTrack(task.Positions, task);
-        var firstQuest = waypointsList[0][0].InstrumentQuest;
-        if (firstQuest != null)
-        {
-            using var beforeSetup = CaptureToRectArea();
-            await InstrumentExitRecovery.TryExitAsync(beforeSetup, ct, instrumentOnly: true, quest: firstQuest);
-        }
-
-        // 切换队伍。如果先去神像，后续队伍识别发生在异地。
-        var (ready, localQuest) = await SwitchPartyBefore(task, firstQuest);
-        if (!ready)
+        // 切换队伍
+        if (!await SwitchPartyBefore(task))
         {
             return;
         }
 
         // 校验路径是否可以执行
-        if (!await ValidateGameWithTask(task, localQuest))
+        if (!await ValidateGameWithTask(task))
         {
             return;
         }
 
         InitializePathing(task);
+        // 转换、按传送点分割路径
+        var waypointsList = ConvertWaypointsForTrack(task.Positions, task);
 
         await Delay(100, ct);
         Navigation.WarmUp(task.Info.MapMatchMethod); // 提前加载地图特征点
@@ -183,7 +175,7 @@ public partial class PathExecutor
             {
                 try
                 {
-                    await ResolveAnomalies(waypoints[0]); // 异常场景处理
+                    await ResolveAnomalies(); // 异常场景处理
 
                     // 如果首个点是非TP点位，强制设置在这个点位附近优先做局部匹配
                     if (waypoints[0].Type != WaypointType.Teleport.Code)
@@ -263,7 +255,7 @@ public partial class PathExecutor
                     SuccessEnd = true;
                     break;
                 }
-                catch (NormalEndException normalEndException) when (normalEndException is not InstrumentExitRecoveryException)
+                catch (NormalEndException normalEndException)
                 {
                     if (!ct.IsCancellationRequested)
                     {
@@ -334,7 +326,7 @@ public partial class PathExecutor
         return waypoint.Type == WaypointType.Target.Code;
     }
 
-    private async Task<(bool Ready, InstrumentQuestRecovery? LocalQuest)> SwitchPartyBefore(PathingTask task, InstrumentQuestRecovery? quest)
+    private async Task<bool> SwitchPartyBefore(PathingTask task)
     {
         using var ra = CaptureToRectArea();
 
@@ -345,13 +337,12 @@ public partial class PathExecutor
             Logger.LogInformation("复苏完成");
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
-            await TpStatueOfTheSeven(quest);
-            quest = null;
+            await TpStatueOfTheSeven();
         }
 
         if (PartyConfig.SkipPartySwitch)
         {
-            return (true, quest);
+            return true;
         }
 
         var pRaList = ra.FindMulti(RecognitionAssets.Get("AutoFight", "P", ra)); // 判断是否联机
@@ -365,25 +356,23 @@ public partial class PathExecutor
             {
                 // 调度器未配置的情况下，根据地图追踪条件配置切换队伍
                 var partyName = FilterPartyNameByConditionConfig(task);
-                var result = await SwitchParty(partyName, false, quest);
-                if (!result.Ready)
+                if (!await SwitchParty(partyName, false))
                 {
                     Logger.LogError("切换队伍失败，无法执行此路径！请检查地图追踪设置！");
+                    return false;
                 }
-                return result;
             }
             else if (!string.IsNullOrEmpty(PartyConfig.PartyName))
             {
-                var result = await SwitchParty(PartyConfig.PartyName, PartyConfig.IsVisitStatueBeforeSwitchParty, quest);
-                if (!result.Ready)
+                if (!await SwitchParty(PartyConfig.PartyName, PartyConfig.IsVisitStatueBeforeSwitchParty))
                 {
                     Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的地图追踪配置！");
+                    return false;
                 }
-                return result;
             }
         }
 
-        return (true, quest);
+        return true;
     }
 
     private void InitializePathing(PathingTask task)
@@ -418,32 +407,30 @@ public partial class PathExecutor
     /// <param name="partyName"></param>
     /// <param name="forceTp">切换前是否前往七天神像</param>
     /// <returns></returns>
-    private async Task<(bool Ready, InstrumentQuestRecovery? LocalQuest)> SwitchParty(string? partyName, bool forceTp, InstrumentQuestRecovery? quest)
+    private async Task<bool> SwitchParty(string? partyName, bool forceTp)
     {
         bool success = true;
         if (!string.IsNullOrEmpty(partyName))
         {
             if (RunnerContext.Instance.PartyName == partyName)
             {
-                return (success, quest);
+                return success;
             }
 
             if (forceTp) // 强制传送模式
             {
-                await new TpTask(ct).TpToStatueOfTheSeven(quest);
-                quest = null;
+                await new TpTask(ct).TpToStatueOfTheSeven(); // fix typos
                 success = await new SwitchPartyTask().Start(partyName, ct);
             }
             else // 优先原地切换模式
             {
                 try
                 {
-                    success = await new SwitchPartyTask().Start(partyName, ct, quest);
+                    success = await new SwitchPartyTask().Start(partyName, ct);
                 }
                 catch (PartySetupFailedException)
                 {
-                    await new TpTask(ct).TpToStatueOfTheSeven(quest);
-                    quest = null;
+                    await new TpTask(ct).TpToStatueOfTheSeven();
                     success = await new SwitchPartyTask().Start(partyName, ct);
                 }
             }
@@ -455,7 +442,7 @@ public partial class PathExecutor
             }
         }
 
-        return (success, quest);
+        return success;
     }
 
 
@@ -477,9 +464,9 @@ public partial class PathExecutor
     /// </summary>
     /// <param name="task"></param>
     /// <returns></returns>
-    private async Task<bool> ValidateGameWithTask(PathingTask task, InstrumentQuestRecovery? quest)
+    private async Task<bool> ValidateGameWithTask(PathingTask task)
     {
-        _combatScenes = await RunnerContext.Instance.GetCombatScenes(ct, quest);
+        _combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (_combatScenes == null)
         {
             return false;
@@ -588,22 +575,21 @@ public partial class PathExecutor
     /// <summary>
     /// 尝试队伍回血，如果单人回血，由于记录检查时是哪位残血，则当作行走位处理。
     /// </summary>
-    private async Task<bool> TryPartyHealing(WaypointForTrack waypoint)
+    private async Task<bool> TryPartyHealing()
     {
         if (_combatScenes is null) return false;
         foreach (var avatar in _combatScenes.GetAvatars())
         {
             if (avatar.Name == "白术")
             {
-                if (await TrySwitchWaypointAvatar(avatar, waypoint))
+                if (avatar.TrySwitch())
                 {
                     //1命白术能两次
                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                     await Delay(800, ct);
-                    if (!await ConfirmWaypointAvatar(avatar, waypoint)) return false;
                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                     await Delay(800, ct);
-                    await SwitchAvatar(PartyConfig.MainAvatarIndex, waypoint);
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
                     await Delay(4000, ct);
                     return true;
                 }
@@ -612,11 +598,11 @@ public partial class PathExecutor
             }
             else if (avatar.Name == "希格雯")
             {
-                if (await TrySwitchWaypointAvatar(avatar, waypoint))
+                if (avatar.TrySwitch())
                 {
                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                     await Delay(11000, ct);
-                    await SwitchAvatar(PartyConfig.MainAvatarIndex, waypoint);
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
                     return true;
                 }
 
@@ -624,15 +610,14 @@ public partial class PathExecutor
             }
             else if (avatar.Name == "珊瑚宫心海")
             {
-                if (await TrySwitchWaypointAvatar(avatar, waypoint))
+                if (avatar.TrySwitch())
                 {
                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                     await Delay(500, ct);
                     //尝试Q全队回血
-                    if (!await ConfirmWaypointAvatar(avatar, waypoint)) return false;
                     InputHub.Foreground.SimulateAction(GIActions.ElementalBurst);
                     //单人血只给行走位加血
-                    await SwitchAvatar(PartyConfig.MainAvatarIndex, waypoint);
+                    await SwitchAvatar(PartyConfig.MainAvatarIndex);
                     await Delay(5000, ct);
                     return true;
                 }
@@ -657,10 +642,10 @@ public partial class PathExecutor
         }
 
         using var region = CaptureToRectArea();
-        if (Bv.CurrentAvatarIsLowHp(region) && !(await TryPartyHealing(waypoint) && Bv.CurrentAvatarIsLowHp(region)))
+        if (Bv.CurrentAvatarIsLowHp(region) && !(await TryPartyHealing() && Bv.CurrentAvatarIsLowHp(region)))
         {
             Logger.LogInformation("当前角色血量过低，去七天神像恢复");
-            await TpStatueOfTheSeven(waypoint.InstrumentQuest);
+            await TpStatueOfTheSeven();
             throw new RetryException("回血完成后重试路线");
         }
         else if (Bv.ClickIfInReviveModal(region))
@@ -669,25 +654,30 @@ public partial class PathExecutor
             Logger.LogInformation("复苏完成");
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
-            await TpStatueOfTheSeven(waypoint.InstrumentQuest);
+            await TpStatueOfTheSeven();
             throw new RetryException("回血完成后重试路线");
         }
     }
 
-    private async Task TpStatueOfTheSeven(InstrumentQuestRecovery? departureQuest)
+    private async Task TpStatueOfTheSeven()
     {
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
-        await RunnerContext.Instance.StopAutoPickRunTask(async () => await tpTask.TpToStatueOfTheSeven(departureQuest), 5);
+        await RunnerContext.Instance.StopAutoPickRunTask(async () => await tpTask.TpToStatueOfTheSeven(), 5);
         Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
     }
 
     /// <summary>
     /// 尝试自动领取派遣奖励，
     /// </summary>
-    /// <returns>是否执行过派遣路线</returns>
-    private async Task<bool> TryGetExpeditionRewardsDispatch(Func<Task> openMap)
+    /// <returns>是否可以领取派遣奖励</returns>
+    private async Task<bool> TryGetExpeditionRewardsDispatch(TpTask? tpTask = null)
     {
+        if (tpTask == null)
+        {
+            tpTask = new TpTask(ct);
+        }
+        
         // 最小5分钟间隔
         if ( _combatScenes?.CurrentMultiGameStatus?.IsInMultiGame == true || (DateTime.UtcNow - _lastGetExpeditionRewardsTime).TotalMinutes < 5)
         {
@@ -695,7 +685,7 @@ public partial class PathExecutor
         }
 
         //打开大地图操作
-        await openMap();
+        await tpTask.OpenBigMapUi();
         bool changeBigMap = false;
         string adventurersGuildCountry =
             TaskContext.Instance().Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry;
@@ -717,7 +707,7 @@ public partial class PathExecutor
                         5);
                     Logger.LogInformation("自动领取派遣结束，回归原任务！");
                 }
-                catch (Exception e) when (e is not InstrumentExitRecoveryException)
+                catch (Exception e)
                 {
                     Logger.LogInformation("未知原因，发生异常，尝试继续执行任务！");
                 }
@@ -735,13 +725,9 @@ public partial class PathExecutor
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)
     {
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
-        var tpTask = new TpTask(ct)
-        {
-            InstrumentQuest = waypoint.InstrumentQuest,
-            ArrivalMapMatchMethod = waypoint.MapMatchMethod
-        };
-        var (tpX, tpY) = await tpTask.TpWaypoint(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp,
-            TryGetExpeditionRewardsDispatch);
+        TpTask tpTask = new TpTask(ct);
+        await TryGetExpeditionRewardsDispatch(tpTask);
+        var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
         var (tprX, tprY) = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod)
             .ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)tpX, (float)tpY));
         Navigation.SetPrevPosition(tprX, tprY); // 通过上一个位置直接进行局部特征匹配
@@ -757,41 +743,16 @@ public partial class PathExecutor
         }
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogDebug("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        await WaitUntilRotatedTo(waypoint, targetOrientation, 2);
+        await WaitUntilRotatedTo(targetOrientation, 2);
         await Delay(500, ct);
     }
 
     public DateTime moveToStartTime;
-    private readonly object _movementTimingLock = new();
-    private long _movementTimeoutResetAt;
-    private TimeSpan _switchRecoveryWait;
-
-    internal void ResetMovementTimeout()
-    {
-        lock (_movementTimingLock)
-        {
-            moveToStartTime = DateTime.UtcNow;
-            _movementTimeoutResetAt = Stopwatch.GetTimestamp();
-            _switchRecoveryWait = TimeSpan.Zero;
-        }
-    }
-
-    private bool HasMovementTimedOut()
-    {
-        lock (_movementTimingLock)
-            return DateTime.UtcNow - moveToStartTime - _switchRecoveryWait > TimeSpan.FromSeconds(240);
-    }
-
-    private void ExcludeSwitchRecoveryWait(long started)
-    {
-        lock (_movementTimingLock)
-            _switchRecoveryWait += Stopwatch.GetElapsedTime(Math.Max(started, _movementTimeoutResetAt));
-    }
 
     public async Task MoveTo(WaypointForTrack waypoint)
     {
         // 切人
-        await SwitchAvatar(PartyConfig.MainAvatarIndex, waypoint);
+        await SwitchAvatar(PartyConfig.MainAvatarIndex);
         // 切人完成时刻：切人后有约1秒CD，期间无法切换到其他角色（用于生存位）
         var switchAvatarTime = DateTime.UtcNow;
 
@@ -799,12 +760,12 @@ public partial class PathExecutor
         int additionalTimeInMs;
         using (var initialScreen = CaptureToRectArea())
         {
-            (position, additionalTimeInMs, _) = await GetPositionAndTime(initialScreen, waypoint);
+            (position, additionalTimeInMs) = await GetPositionAndTime(initialScreen, waypoint);
         }
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        await WaitUntilRotatedTo(waypoint, targetOrientation, 5);
-        ResetMovementTimeout();
+        await WaitUntilRotatedTo(targetOrientation, 5);
+        moveToStartTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
         var fastMode = false;
         var prevPositions = new List<Point2f>();
@@ -815,14 +776,21 @@ public partial class PathExecutor
         DateTime beyondAngleStartTime = DateTime.MinValue;
         var hurryOnState = new HurryOnState();
 
+        // 按下w，一直走
+        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         // 赶路帧间隔：始终使用配置值（5-150 钳制），不依赖是否配置赶路角色（空选也可用）
         // 选瓦雷莎时钳制上限 50ms：夜魂疾冲的 E 窗口检测依赖高频帧，间隔再大也不生效
         var hurryFrameIntervalUpper = _hurryOnAvatar == "瓦雷莎" ? 50 : 150;
         var hurryFrameInterval = Math.Clamp(PartyConfig.HurryOnFrameInterval, 5, hurryFrameIntervalUpper);
         while (!ct.IsCancellationRequested)
         {
+            if (!InputHub.Foreground.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
+            {
+                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            }
+
             num++;
-            if (HasMovementTimedOut())
+            if ((DateTime.UtcNow - moveToStartTime).TotalSeconds > 240)
             {
                 Logger.LogWarning("执行超时，放弃此次追踪");
                 throw new RetryException("路径点执行超时，放弃整条路径");
@@ -832,29 +800,17 @@ public partial class PathExecutor
 
             EndJudgment(screen);
 
-            bool recoveredInstrument;
-            (position, additionalTimeInMs, recoveredInstrument) = await GetPositionAndTime(screen, waypoint);
-            if (recoveredInstrument)
-            {
-                moveToStartTime = moveToStartTime.AddMilliseconds(additionalTimeInMs);
-                targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-                await WaitUntilRotatedTo(waypoint, targetOrientation, 5);
-                lastPositionRecord = DateTime.UtcNow;
-                prevPositions.Clear();
-                distanceTooFarRetryCount = 0;
-                consecutiveRotationCountBeyondAngle = 0;
-                beyondAngleStartTime = DateTime.MinValue;
-                continue;
-            }
-            // 恢复后的下一帧仍可能再次进入演奏，先检查当前画面再按 W。
-            if (!InputHub.Foreground.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
-            {
-                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-            }
-            if (additionalTimeInMs > 0)
-            {
-                additionalTimeInMs += 1000; // 起步补偿
-            }
+            // position = await GetPosition(screen, waypoint);
+             (position, additionalTimeInMs) = await GetPositionAndTime(screen, waypoint);
+             if (additionalTimeInMs>0)
+             {
+                 if (!InputHub.Foreground.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
+                 {
+                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                 }
+
+                 additionalTimeInMs = additionalTimeInMs + 1000;//当做起步补偿
+             }
             var distance = Navigation.GetDistance(waypoint, position);
             Debug.WriteLine($"接近目标点中，距离为{distance}");
             if (distance < 4)
@@ -894,19 +850,7 @@ public partial class PathExecutor
                         // 取余减少判断频率
                         if (distanceTooFarRetryCount % 10 == 0)
                         {
-                            if (await ResolveAnomalies(waypoint, screen))
-                            {
-                                var restored = await WaitForInstrumentPosition(waypoint);
-                                targetOrientation = Navigation.GetTargetOrientation(waypoint, restored);
-                                await WaitUntilRotatedTo(waypoint, targetOrientation, 5);
-                                ResetMovementTimeout();
-                                lastPositionRecord = moveToStartTime;
-                                prevPositions.Clear();
-                                distanceTooFarRetryCount = 0;
-                                consecutiveRotationCountBeyondAngle = 0;
-                                beyondAngleStartTime = DateTime.MinValue;
-                                continue;
-                            }
+                            await ResolveAnomalies(screen);
                             Logger.LogInformation($"重置到上次正确识别的坐标 ({prevNotTooFarPosition.X},{prevNotTooFarPosition.Y})");
                             Navigation.SetPrevPosition(prevNotTooFarPosition.X, prevNotTooFarPosition.Y);
                             // 淡入淡出特效
@@ -979,8 +923,7 @@ public partial class PathExecutor
                 {
                     // 松W键，站定好转向，转完重新按下W继续走
                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                    await WaitUntilRotatedTo(waypoint, targetOrientation, 2);
-                    if (VerifyMovementScreen(waypoint)) continue; // 下一轮用转向后的新画面决定是否按 W
+                    await WaitUntilRotatedTo(targetOrientation, 2);
                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                 }
             }
@@ -1021,8 +964,6 @@ public partial class PathExecutor
             // 只有设置为run才会一直疾跑
             if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             {
-                // 演奏恢复可能在定位或站定转向时抬起疾跑键。
-                fastMode = fastMode && InputHub.Foreground.IsKeyDown(GIActions.SprintMouse.ToActionKey().ToVK());
                 if (distance > 20 != fastMode) // 距离大于20时可以使用疾跑/自由泳
                 {
                     if (fastMode)
@@ -1071,9 +1012,8 @@ public partial class PathExecutor
                             await Delay(800, ct); // 总共1s
                         }
 
-                        await UseElementalSkill(waypoint);
+                        await UseElementalSkill();
                         _elementalSkillLastUseTime = DateTime.UtcNow;
-                        if (VerifyMovementScreen(waypoint)) continue;
                     }
                 }
 
@@ -1105,7 +1045,7 @@ public partial class PathExecutor
         InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
     }
 
-    private async Task UseElementalSkill(WaypointForTrack waypoint)
+    private async Task UseElementalSkill()
     {
         if (string.IsNullOrEmpty(PartyConfig.GuardianAvatarIndex))
         {
@@ -1116,7 +1056,7 @@ public partial class PathExecutor
 
         // 切人
         Logger.LogInformation("切换盾、回血角色，使用元素战技");
-        var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex, waypoint, needSkill: true, excludeRecoveryWait: true);
+        var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex, true);
         if (avatar == null)
         {
             return;
@@ -1127,16 +1067,14 @@ public partial class PathExecutor
         {
             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
             await Delay(50, ct);
-            if (!await ConfirmWaypointAvatar(avatar, waypoint, excludeRecoveryWait: true)) return;
             InputHub.Foreground.SimulateAction(GIActions.MoveBackward);
             await Delay(200, ct);
         }
 
-        if (!await ConfirmWaypointAvatar(avatar, waypoint, excludeRecoveryWait: true)) return;
         avatar.UseSkill(PartyConfig.GuardianElementalSkillLongPress);
 
         // 钟离往身后放柱子 后继续走路
-        if (avatar.Name == "钟离" && !VerifyMovementScreen(waypoint))
+        if (avatar.Name == "钟离")
         {
             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         }
@@ -1170,7 +1108,7 @@ public partial class PathExecutor
             }
 
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            await WaitUntilRotatedTo(waypoint, targetOrientation, 2);
+            await WaitUntilRotatedTo(targetOrientation, 2);
             // 小碎步接近
             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             Thread.Sleep(60);
@@ -1197,14 +1135,12 @@ public partial class PathExecutor
     {
         if (waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
         {
-            if (VerifyMovementScreen(waypoint))
-                await RunnerContext.EnsureWaypointActionWorldAsync(ct, waypoint.InstrumentQuest);
             InputHub.Foreground.Mouse.MiddleButtonClick();
             await Delay(300, ct);
             using var screen = CaptureToRectArea();
             var position = await GetPosition(screen, waypoint);
             var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            await WaitUntilRotatedTo(waypoint, targetOrientation, 10);
+            await WaitUntilRotatedTo(targetOrientation, 10);
             var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
             await handler.RunAsync(ct, waypoint);
         }
@@ -1245,24 +1181,7 @@ public partial class PathExecutor
         }
     }
 
-    private Task<bool> TrySwitchWaypointAvatar(Avatar avatar, WaypointForTrack waypoint, int tries = 4,
-        bool excludeRecoveryWait = false) =>
-        RunnerContext.TrySwitchWaypointAvatarAsync(avatar, tries, ct, waypoint.InstrumentQuest,
-            VerifyMovementScreen(waypoint), excludeRecoveryWait ? ExcludeSwitchRecoveryWait : null);
-
-    private async Task<bool> ConfirmWaypointAvatar(Avatar avatar, WaypointForTrack waypoint, bool excludeRecoveryWait = false)
-    {
-        if (!VerifyMovementScreen(waypoint)) return true;
-        var started = Stopwatch.GetTimestamp();
-        if (!await RunnerContext.EnsureWaypointActionWorldAsync(ct, waypoint.InstrumentQuest, recoverRevivePrompt: true))
-            return true;
-
-        if (excludeRecoveryWait) ExcludeSwitchRecoveryWait(started);
-        return await TrySwitchWaypointAvatar(avatar, waypoint, excludeRecoveryWait: excludeRecoveryWait);
-    }
-
-    private async Task<Avatar?> SwitchAvatar(string index, WaypointForTrack? waypoint, bool needSkill = false,
-        bool excludeRecoveryWait = false)
+    private async Task<Avatar?> SwitchAvatar(string index, bool needSkill = false)
     {
         if (string.IsNullOrEmpty(index))
         {
@@ -1277,9 +1196,7 @@ public partial class PathExecutor
             return null;
         }
 
-        var success = waypoint == null
-            ? avatar.TrySwitch(5)
-            : await TrySwitchWaypointAvatar(avatar, waypoint, 5, excludeRecoveryWait);
+        var success = avatar.TrySwitch(5);//多切换一次，否则如果切人纠正要等下一个循环
         if (success)
         {
             await Delay(100, ct);
@@ -1353,16 +1270,9 @@ public partial class PathExecutor
     }
     //
     public bool GetPositionAndTimeSuspendFlag = false;
-    private async Task<(Point2f point, int additionalTimeInMs, bool recoveredInstrument)> GetPositionAndTime(
-        ImageRegion imageRegion, WaypointForTrack waypoint)
+    private async Task<(Point2f point,int additionalTimeInMs)> GetPositionAndTime(ImageRegion imageRegion, WaypointForTrack waypoint)
     {
-        if (VerifyMovementScreen(waypoint) && !IsMovementWorld(imageRegion))
-        {
-            var started = Stopwatch.GetTimestamp();
-            await RestoreMovementWorld(waypoint, imageRegion);
-            return await RelocateAfterInstrument(waypoint, started);
-        }
-
+        
         var position = Navigation.GetPosition(imageRegion, waypoint.MapName, waypoint.MapMatchMethod);
         int time = 0;
         if (position == new Point2f())
@@ -1370,11 +1280,7 @@ public partial class PathExecutor
             if (!Bv.IsInMainUi(imageRegion))
             {
                 Logger.LogDebug("小地图位置定位失败，且当前不是主界面，进入异常处理");
-                var recoveryStarted = Stopwatch.GetTimestamp();
-                if (await ResolveAnomalies(waypoint, imageRegion))
-                {
-                    return await RelocateAfterInstrument(waypoint, recoveryStarted);
-                }
+                await ResolveAnomalies(imageRegion);
             }
         }
 
@@ -1398,8 +1304,7 @@ public partial class PathExecutor
             }else if (waypoint.Misidentification.HandlingMode == "mapRecognition"){
                 //大地图识别坐标
                 DateTime start = DateTime.Now;
-                var mapStarted = Stopwatch.GetTimestamp();
-                var tpTask = new TpTask(ct) { InstrumentQuest = waypoint.InstrumentQuest };
+                TpTask tpTask = new TpTask(ct);
                 await tpTask.OpenBigMapUi(mapName: waypoint.MapName);
                 try
                 {
@@ -1410,31 +1315,9 @@ public partial class PathExecutor
                     Logger.LogInformation(@$"地图中心点识别失败！");
                 }
                
-                var closeMap = true;
-                if (VerifyMovementScreen(waypoint))
-                {
-                    using var beforeClose = CaptureToRectArea();
-                    closeMap = Bv.IsInBigMapUi(beforeClose);
-                    if (!closeMap && !IsMovementWorld(beforeClose))
-                    {
-                        await RestoreMovementWorld(waypoint, beforeClose);
-                        return await RelocateAfterInstrument(waypoint, mapStarted);
-                    }
-                }
-                if (closeMap)
-                {
-                    InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                    await WaitForCloseMap(10,200);
-                }
-                if (VerifyMovementScreen(waypoint))
-                {
-                    using var afterMap = CaptureToRectArea();
-                    if (!IsMovementWorld(afterMap))
-                    {
-                        await RestoreMovementWorld(waypoint, afterMap);
-                        return await RelocateAfterInstrument(waypoint, mapStarted);
-                    }
-                }
+                InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                //Bv.IsInMainUi(imageRegion);
+                await WaitForCloseMap(10,200);
                 DateTime end = DateTime.Now;
                 time=(int)(end - start).TotalMilliseconds;
                 Logger.LogInformation(@$"未识别到具体路径，打开地图计算中心点({position.X},{position.Y})");
@@ -1458,112 +1341,27 @@ public partial class PathExecutor
         }
 
         //Logger.LogDebug("识别到路径："+position.X+","+position.Y);
-        return (position, time, false);
+        return (position,time);
     }
 
-    private async Task<(Point2f, int, bool)> RelocateAfterInstrument(WaypointForTrack waypoint, long started)
+    private async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff)
     {
-        var position = await WaitForInstrumentPosition(waypoint);
-        var elapsed = (int)Math.Min(int.MaxValue, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
-        return (position, elapsed, true);
-    }
-
-    private bool VerifyMovementScreen(WaypointForTrack waypoint) =>
-        waypoint.InstrumentQuest != null || ReferenceEquals(waypoint, _interruptedInstrumentWaypoint);
-
-    private static bool IsMovementWorld(ImageRegion screen) => RunnerContext.IsWaypointActionWorld(screen);
-
-    private async Task RestoreMovementWorld(WaypointForTrack waypoint, ImageRegion screen)
-    {
-        if (!await TryRecoverInstrument(waypoint, screen))
-            await RunnerContext.EnsureWaypointActionWorldAsync(ct, waypoint.InstrumentQuest);
-    }
-
-    private async Task<bool> TryRecoverInstrument(WaypointForTrack waypoint, ImageRegion screen)
-    {
-        if (!await InstrumentExitRecovery.TryExitAsync(screen, ct, instrumentOnly: true, quest: waypoint.InstrumentQuest))
-            return false;
-        _interruptedInstrumentWaypoint = waypoint;
-        return true;
-    }
-
-    private async Task<Point2f> WaitForInstrumentPosition(WaypointForTrack waypoint)
-    {
-        Point2f position = default;
-        await InstrumentExitRecovery.WaitForWorldAsync(TaskContext.Instance().Runtime, "等待恢复当前路径点定位", ct,
-            region =>
-            {
-                position = Navigation.GetPosition(region, waypoint.MapName, waypoint.MapMatchMethod);
-                return position != default;
-            }, reentry: waypoint.InstrumentQuest);
-        return position;
-    }
-
-    private async Task WaitUntilRotatedTo(WaypointForTrack waypoint, int targetOrientation, int maxDiff)
-    {
-        var secondAttempt = false;
-        while (true)
+        if (await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff))
         {
-            var guarded = VerifyMovementScreen(waypoint);
-            bool interrupted = false;
-            bool CanRotate(ImageRegion screen)
-            {
-                interrupted = !IsMovementWorld(screen);
-                return !interrupted;
-            }
-            if (await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff, guarded ? CanRotate : null))
-                return;
-
-            ct.ThrowIfCancellationRequested();
-            var recoveryStarted = Stopwatch.GetTimestamp();
-            using var current = CaptureToRectArea();
-            if (guarded)
-            {
-                bool world = IsMovementWorld(current);
-                if (world && !interrupted)
-                {
-                    if (secondAttempt) return;
-                    secondAttempt = true;
-                    continue;
-                }
-                if (!world) await RestoreMovementWorld(waypoint, current);
-            }
-            else if (secondAttempt)
-            {
-                // 普通转向仍按原有的两轮尝试结束；第二轮中途进入演奏则继续恢复这个点。
-                if (!await TryRecoverInstrument(waypoint, current)) return;
-            }
-            else if (!await ResolveAnomalies(waypoint, current))
-            {
-                secondAttempt = true;
-                continue;
-            }
-
-            targetOrientation = Navigation.GetTargetOrientation(waypoint, await WaitForInstrumentPosition(waypoint));
-            secondAttempt = false;
-            if (moveToStartTime != default)
-                moveToStartTime += Stopwatch.GetElapsedTime(recoveryStarted);
+            return;
         }
+        await ResolveAnomalies();
+        await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff);
     }
 
     /**
      * 处理各种异常场景
      * 需要保证耗时不能太高
      */
-    private async Task<bool> ResolveAnomalies(WaypointForTrack waypoint, ImageRegion? imageRegion = null)
+    private async Task ResolveAnomalies(ImageRegion? imageRegion = null)
     {
         using var ownedImageRegion = imageRegion == null ? CaptureToRectArea() : null;
         imageRegion ??= ownedImageRegion!;
-
-        if (await TryRecoverInstrument(waypoint, imageRegion))
-            return true;
-
-        if (VerifyMovementScreen(waypoint))
-        {
-            if (IsMovementWorld(imageRegion)) return false;
-            await RunnerContext.EnsureWaypointActionWorldAsync(ct, waypoint.InstrumentQuest);
-            return true;
-        }
 
         // 一些异常界面处理
         var cookRa = imageRegion.Find(GetAutoSkipRecognitionObject("Cook", imageRegion));
@@ -1575,7 +1373,7 @@ public partial class PathExecutor
             // 排除大地图
             if (Bv.IsInBigMapUi(imageRegion))
             {
-                return false;
+                return;
             }
 
             Logger.LogInformation("检测到其他界面，使用ESC关闭界面");
@@ -1592,7 +1390,6 @@ public partial class PathExecutor
             // 判断是否进入剧情
             await AutoSkip();
         }
-        return false;
     }
 
     private async Task AutoSkip()

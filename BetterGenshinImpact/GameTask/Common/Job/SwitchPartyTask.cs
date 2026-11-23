@@ -25,9 +25,7 @@ public class SwitchPartyTask
 
     private readonly ReturnMainUiTask _returnMainUiTask = new();
 
-    public Task<bool> Start(string partyName, CancellationToken ct) => Start(partyName, ct, null);
-
-    internal async Task<bool> Start(string partyName, CancellationToken ct, InstrumentQuestRecovery? quest)
+    public async Task<bool> Start(string partyName, CancellationToken ct)
     {
         bool isInPartyViewUi = false;
 
@@ -40,7 +38,7 @@ public class SwitchPartyTask
             // 如果不在主界面，则返回主界面
             if (!Bv.IsInMainUi(ra1))
             {
-                await _returnMainUiTask.Start(ct, waitForWorld: true, quest: quest);
+                await _returnMainUiTask.Start(ct);
                 await Delay(200, ct);
                 using var raAfterMain = CaptureToRectArea();
                 if (!Bv.IsInMainUi(raAfterMain))
@@ -117,7 +115,7 @@ public class SwitchPartyTask
             {
                 InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                 await Delay(500, ct);
-                await _returnMainUiTask.Start(ct, waitForWorld: true, quest: quest);
+                await _returnMainUiTask.Start(ct);
             }
 
             return true;
@@ -193,7 +191,7 @@ public class SwitchPartyTask
                         page.ClickTo(textRegion.Right + 100 * _assetScale, textRegion.Bottom);
                         await Delay(200, ct);
                         Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
-                        await ConfirmParty(page, ct, isInPartyViewUi, quest);
+                        await ConfirmParty(page, ct, isInPartyViewUi);
 
                         RunnerContext.Instance.ClearCombatScenes();
                         return true;
@@ -234,11 +232,11 @@ public class SwitchPartyTask
         // 未找到
         Logger.LogError("未找到队伍: {Name}，返回主界面", partyName);
         Logger.LogInformation("如果找不到设定的队伍名，有可能是文字识别效果不佳，请尝试正则表达式");
-        await _returnMainUiTask.Start(ct, waitForWorld: true, quest: quest);
+        await _returnMainUiTask.Start(ct);
         return false;
     }
 
-    private async Task ConfirmParty(ImageRegion page, CancellationToken ct, bool isInPartyViewUi, InstrumentQuestRecovery? quest)
+    private async Task ConfirmParty(ImageRegion page, CancellationToken ct, bool isInPartyViewUi = false)
     {
         var r1 = Bv.ClickWhiteConfirmButton(page, new Rect(0, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
         var partyChooseUiClosed = await NewRetry.WaitForAction(() =>
@@ -254,6 +252,6 @@ public class SwitchPartyTask
         using var ra = CaptureToRectArea();
         var r2 = Bv.ClickWhiteConfirmButton(ra, new Rect(page.Width - page.Width / 4, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
         await Delay(500, ct);
-        if (isInPartyViewUi) await _returnMainUiTask.Start(ct, waitForWorld: true, quest: quest);
+        if (isInPartyViewUi) await _returnMainUiTask.Start(ct);
     }
 }

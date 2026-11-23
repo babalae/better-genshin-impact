@@ -1,4 +1,4 @@
-using BetterGenshinImpact.Core.Input;
+﻿using BetterGenshinImpact.Core.Input;
 using System;
 using System.Globalization;
 using System.Linq;
@@ -119,7 +119,6 @@ public class CheckRewardsTask
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
         Mat? resinStrip = null;
         Mat? commissionStrip = null;
-        var restoreMainUi = true;
         try
         {
             // 体力：打开大地图识别顶栏原粹树脂并截取图标+数字条
@@ -164,11 +163,6 @@ public class CheckRewardsTask
                     Logger.LogWarning("汇总通知：大地图原粹树脂识别失败");
                 }
             }
-            catch (InstrumentExitRecoveryException)
-            {
-                restoreMainUi = false;
-                throw;
-            }
             catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
             {
                 Logger.LogDebug(e, "汇总通知：读取体力异常");
@@ -176,8 +170,7 @@ public class CheckRewardsTask
             }
             finally
             {
-                if (restoreMainUi)
-                    await SafeReturnMainUiAsync(ct);
+                await SafeReturnMainUiAsync(ct);
             }
 
             // 委托：打开冒险之证委托页识别奖励领取状态并截取左侧页签+奖励区域
@@ -217,11 +210,6 @@ public class CheckRewardsTask
                     commissionStrip = commissionStripRegion.SrcMat.Clone();
                 }
             }
-            catch (InstrumentExitRecoveryException)
-            {
-                restoreMainUi = false;
-                throw;
-            }
             catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
             {
                 Logger.LogDebug(e, "汇总通知：读取委托状态异常");
@@ -229,8 +217,7 @@ public class CheckRewardsTask
             }
             finally
             {
-                if (restoreMainUi)
-                    await SafeReturnMainUiAsync(ct);
+                await SafeReturnMainUiAsync(ct);
             }
 
             // 拼接两块截图：上下排列、等宽白底补齐、中间灰色分隔线

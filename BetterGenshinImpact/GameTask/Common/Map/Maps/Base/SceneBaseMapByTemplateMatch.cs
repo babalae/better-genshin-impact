@@ -72,24 +72,14 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
     }
     
     public override Point2f GetMiniMapPosition(Mat colorMiniMapMat)
-        => UpdateResult(MatchMiniMapGlobally(colorMiniMapMat), 2);
-
-    // 抵达验证独立定位，不更新后续寻路所用的上一次匹配结果。
-    internal Point2f VerifyMiniMapPosition(Mat colorMiniMapMat)
     {
-        var result = MatchMiniMapGlobally(colorMiniMapMat);
-        return result.IsSuccess(2) ? ConvertGenshinMapCoordinatesToImageCoordinates(result.MapPos) : default;
-    }
-
-    private MatchResult MatchMiniMapGlobally(Mat colorMiniMapMat)
-    {
-        var result = new MatchResult();
-        var (miniMap, mask) = PrepareMiniMap(colorMiniMapMat);
+        var result= new MatchResult();
+        var (miniMap, mask) = _miniMapPreprocessor.GetMiniMapAndMask(colorMiniMapMat);
         using (miniMap)
         using (mask)
         {
             GlobalMatch(miniMap, mask, ref result);
-            return result;
+            return UpdateResult(result, 2);
         }
     }
 
@@ -112,7 +102,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
             return GetMiniMapPosition(colorMiniMapMat);
         }
         var curResult = new MatchResult();
-        var (miniMap, mask) = PrepareMiniMap(colorMiniMapMat);
+        var (miniMap, mask) = _miniMapPreprocessor.GetMiniMapAndMask(colorMiniMapMat);
         using (miniMap)
         using (mask)
         {
@@ -121,13 +111,6 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
         }
     }
     
-    private (Mat, Mat) PrepareMiniMap(Mat colorMiniMapMat)
-    {
-        // 地图遮罩的后台计算可能与落点验证重叠，预处理的中间 Mat 需要独占。
-        lock (_miniMapPreprocessor)
-            return _miniMapPreprocessor.GetMiniMapAndMask(colorMiniMapMat);
-    }
-
     private Point2f UpdateResult(in MatchResult result, int rank)
     {
         if (!result.IsSuccess(rank)) return default;

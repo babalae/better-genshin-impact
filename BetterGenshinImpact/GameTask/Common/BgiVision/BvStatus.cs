@@ -254,16 +254,12 @@ public static partial class Bv
                 RegionOfInterest = new Rect(0, 0, region.Width, region.Height / 2)
             });
 
-            try
+            CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+            IStringLocalizer stringLocalizer = App.GetService<IStringLocalizer<BvResxHelper>>() ?? throw new Exception();
+            string revival = stringLocalizer.WithCultureGet(cultureInfo, "复苏");
+            if (list.Any(r => r.Text.Contains(revival)))
             {
-                CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-                IStringLocalizer stringLocalizer = App.GetService<IStringLocalizer<BvResxHelper>>() ?? throw new Exception();
-                string revival = stringLocalizer.WithCultureGet(cultureInfo, "复苏");
-                return list.Any(r => r.Text.Contains(revival));
-            }
-            finally
-            {
-                list.ForEach(result => result.Dispose());
+                return true;
             }
         }
 

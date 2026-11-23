@@ -144,13 +144,13 @@ public class Avatar
     {
         if (Bv.IsInRevivePrompt(region))
         {
-            DismissRevivePrompt(InputHub.Foreground.Keyboard, ct);
+            Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
+            // 先打开地图
+            InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
             Sleep(600, ct);
-            RecoverFromRevivePrompt(ct);
-            return;
+            TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
         }
-
-        if (AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
+        else if (AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
         {
             if (AutoFightTask.FightWaypoint is not null)
             {
@@ -224,16 +224,6 @@ public class Avatar
             TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
         }
     }
-
-    internal static void DismissRevivePrompt(IKeyboardInput keyboard, CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
-        keyboard.KeyPress(User32.VK.VK_ESCAPE);
-    }
-
-    internal static void RecoverFromRevivePrompt(CancellationToken ct) =>
-        TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
 
     /// <summary>
     /// 游泳检测（色块连通性检测）
@@ -332,12 +322,10 @@ public class Avatar
     /// <param name="tryTimes"></param>
     /// <param name="needLog"></param>
     /// <returns></returns>
-    public bool TrySwitch(int tryTimes = 4) => TrySwitch(tryTimes, null);
-
-    internal bool TrySwitch(int tryTimes, Func<ImageRegion, bool>? canSwitch)
+    public bool TrySwitch(int tryTimes = 4)
     {
         var context = new AvatarActiveCheckContext();
-        var shouldResendSwitchAction = false;
+        var shouldResendSwitchAction = CombatScenes.UpdateTrySwitchTarget(Index);
         for (var i = 0; i < tryTimes; i++)
         {
             if (Ct is { IsCancellationRequested: true })
@@ -346,9 +334,7 @@ public class Avatar
             }
 
             using var region = CaptureToRectArea();
-            if (canSwitch != null && !canSwitch(region)) return false;
             ThrowWhenDefeated(region, Ct);
-            if (i == 0) shouldResendSwitchAction = CombatScenes.UpdateTrySwitchTarget(Index);
 
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {

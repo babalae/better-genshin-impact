@@ -234,7 +234,6 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <returns>树脂足够或预检失败需要交由领奖弹窗兜底时返回 true；确认不足且无法补充时返回 false。</returns>
     private async Task<bool> EnsureResinBeforeRound()
     {
-        var restoreMainUi = true;
         try
         {
             await _returnMainUiTask.Start(_ct);
@@ -244,7 +243,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             {
                 originalResin = await RecognizeOriginalResinInfoFromBigMap();
             }
-            catch (Exception e) when (e is not (OperationCanceledException or InstrumentExitRecoveryException))
+            catch (Exception e) when (e is not OperationCanceledException)
             {
                 _logger.LogWarning("{Name}：战前原粹树脂预检失败，将继续通过领奖界面兜底，原因：{Reason}", Name, e.Message);
                 return true;
@@ -275,15 +274,9 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             _logger.LogInformation("{Name}：补充树脂未成功，停止讨伐", Name);
             return false;
         }
-        catch (InstrumentExitRecoveryException)
-        {
-            restoreMainUi = false;
-            throw;
-        }
         finally
         {
-            if (restoreMainUi)
-                await _returnMainUiTask.Start(_ct);
+            await _returnMainUiTask.Start(_ct);
         }
     }
 

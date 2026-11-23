@@ -26,9 +26,6 @@ public class Waypoint
     }
     public class ExtParams
     {
-        /// <summary>此点必须完成的演奏任务。当前支持「来自过去的预言」。</summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string? RequiredInstrumentQuest { get; set; }
         public Misidentification Misidentification { get; set; } = new();
         public string Description { get; set; } = "";
         //normal 小怪,elite 精英,legendary 传奇

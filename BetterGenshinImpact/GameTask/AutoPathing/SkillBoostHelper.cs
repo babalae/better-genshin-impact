@@ -17,7 +17,6 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
@@ -195,11 +194,11 @@ public partial class PathExecutor
         return ((currentIdx % 4) + 1).ToString();
     }
 
-    private async Task SwitchToHurryAvatarAsync(ImageRegion screen2, Avatar avatar, double distance, int num, WaypointForTrack waypoint)
+    private async Task SwitchToHurryAvatarAsync(ImageRegion screen2, Avatar avatar, double distance, int num, CancellationToken ct)
     {
         if (Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
         {
-            await SwitchAvatar(avatar.Index.ToString(), waypoint, excludeRecoveryWait: true);
+            await SwitchAvatar(avatar.Index.ToString());
         }
 
         if (num % HurryOnLogFrameInterval == 0)
@@ -259,7 +258,7 @@ public partial class PathExecutor
                 //满足条件时，尝试上车
                 if (distance > PartyConfig.Distance)
                 {
-                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, waypoint);
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
                     var boardIconState = GetMavikaESkillIconState(screen2);
                     // 内置冷却：玛薇卡上/下车动作后有约1秒无法再次上/下车，与E技能冷却无关（放宽至2秒防抖）
@@ -382,7 +381,7 @@ public partial class PathExecutor
                         InputHub.ReleaseAll();
                         var nextIdx = GetSwitchToWalkIndex();
                         Logger.LogInformation("自动赶路：玛薇卡接近节点，切人步行 {t}", nextIdx);
-                        var nextAvatar = await SwitchAvatar(nextIdx, waypoint, excludeRecoveryWait: true);
+                        var nextAvatar = await SwitchAvatar(nextIdx);
                         // 切人成功才认为下车成功，失败时保留 PendingApproach 以便后续帧重试
                         if (nextAvatar != null)
                         {
@@ -478,7 +477,7 @@ public partial class PathExecutor
                             var nextIdx = GetSwitchToWalkIndex();
                             Logger.LogInformation("自动赶路：瓦雷莎接近节点，切人步行 {t}", nextIdx);
                             state.VaresaWalkSwitchAttempts++;
-                            var nextAvatar = await SwitchAvatar(nextIdx, waypoint, excludeRecoveryWait: true);
+                            var nextAvatar = await SwitchAvatar(nextIdx);
                             if (nextAvatar != null)
                             {
                                 // 切人成功才结束接近态，失败保留 PendingApproach 下帧重试（与玛薇卡一致）
@@ -539,7 +538,7 @@ public partial class PathExecutor
                 // 因此离航点 50 以内不再进技能赶路，交还通用逻辑用普通速度跑完并正常刹车。
                 if (distance > Math.Max(PartyConfig.Distance, HurryOnMinEntryDistance))
                 {
-                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, waypoint);
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
                     waypoint.MoveMode = MoveModeEnum.Run.Code;
 
@@ -605,12 +604,10 @@ public partial class PathExecutor
                         {
                             var nextIdx = GetSwitchToWalkIndex();
                             Logger.LogInformation("自动赶路：希诺宁接近节点，切人步行 {t}", nextIdx);
-                            if (VerifyMovementScreen(waypoint))
+                            Task.Run(async () =>
                             {
-                                await SwitchAvatar(nextIdx, waypoint, excludeRecoveryWait: true);
-                                return true; // 切人可能等待演奏恢复，下一轮重新定位。
-                            }
-                            _ = Task.Run(() => SwitchAvatar(nextIdx, null), ct);
+                                await SwitchAvatar(nextIdx);
+                            }, ct);
                         }
                         else if (SpaceAtSecondPlaceExist(state))
                         {
@@ -630,7 +627,7 @@ public partial class PathExecutor
                 if (distance > PartyConfig.Distance
                     && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
                 {
-                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, waypoint);
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
                     if ((DateTime.UtcNow - _lastSkillCheckTime).TotalSeconds < 1)
                         return false;
@@ -658,7 +655,7 @@ public partial class PathExecutor
                 if (distance > PartyConfig.Distance
                     && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
                 {
-                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, waypoint);
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
                     // C1 闲云有两次 E 可用，直接尝试施放；E 不可用时按键无副作用，不需要 OCR 检测 CD
                     // 使用非阻塞时间间隔（复用 _lastJumpFlyTime，类似火神跳飞），避免阻塞期间无法转向
@@ -721,7 +718,7 @@ public partial class PathExecutor
                         && distance > PartyConfig.Distance
                         && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
                     {
-                        await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, waypoint);
+                        await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
                         if (!DashAtSecondPlaceExist())
                         {
@@ -840,7 +837,7 @@ public partial class PathExecutor
                     if (distance > PartyConfig.Distance
                         && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
                     {
-                        await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, waypoint);
+                        await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
                         if ((DateTime.UtcNow - _lastSkillCheckTime).TotalSeconds < 0.5)
                             return false;
@@ -935,7 +932,7 @@ public partial class PathExecutor
                 if (distance > PartyConfig.Distance
                     && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
                 {
-                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, waypoint);
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
                     if ((DateTime.UtcNow - _lastSkillCheckTime).TotalSeconds < 0.5)
                         return false;
@@ -954,13 +951,10 @@ public partial class PathExecutor
                             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                             await Delay(50, ct);
-                            if (!await CanContinueWandererTakeoffAsync(waypoint, forwardHeld: false)) return true;
                             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                             await Delay(100, ct);
-                            if (!await CanContinueWandererTakeoffAsync(waypoint, forwardHeld: true)) return true;
                             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                             await Delay(50, ct);
-                            if (!await CanContinueWandererTakeoffAsync(waypoint, forwardHeld: true)) return true;
                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
 
                             avatar.LastSkillTime = DateTime.UtcNow;
@@ -980,7 +974,7 @@ public partial class PathExecutor
                 if (distance > PartyConfig.Distance
                     && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
                 {
-                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, waypoint);
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
                     // 法尔伽不在场时E技能CD识别无效，跳过检测（等上场后再检测记录）
                     if (!avatar.IsActive(screen2))
@@ -1100,7 +1094,7 @@ public partial class PathExecutor
                     if (distance > PartyConfig.Distance
                         && (waypoint?.MoveMode == MoveModeEnum.Run.Code || waypoint?.MoveMode == MoveModeEnum.Dash.Code))
                     {
-                        await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, waypoint);
+                        await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
 
                         if (!avatar.IsActive(screen2))
                         {
@@ -1638,21 +1632,6 @@ public partial class PathExecutor
         }
 
         return pixels;
-    }
-
-    private async Task<bool> CanContinueWandererTakeoffAsync(WaypointForTrack waypoint, bool forwardHeld)
-    {
-        if (!VerifyMovementScreen(waypoint)) return true;
-        var runtime = TaskContext.Instance().Runtime;
-        using var fresh = await InstrumentExitRecovery.CaptureFreshForInputAsync(runtime, ct);
-        if (fresh != null && IsMovementWorld(fresh.CaptureRectArea)
-            && InstrumentExitRecovery.CanUseInputFrame(runtime, fresh.CaptureRectArea))
-        {
-            ct.ThrowIfCancellationRequested();
-            return true;
-        }
-        if (forwardHeld) InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-        return false;
     }
 
     private async Task SafeLanding(CancellationToken ct)

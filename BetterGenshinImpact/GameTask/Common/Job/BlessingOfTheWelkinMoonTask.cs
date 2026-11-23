@@ -17,31 +17,15 @@ public class BlessingOfTheWelkinMoonTask
 {
     public string Name => "自动点击空月祝福";
 
-    internal static bool IsClaimTime()
-    {
-        var time = ServerTimeHelper.GetServerTimeNow().AddMinutes(5);
-        return time.Hour == 4 && time.Minute < 10;
-    }
-
-    internal static bool IsClaimScreen(ImageRegion screen)
-    {
-        return Bv.IsInBlessingOfTheWelkinMoon(screen) || HasPrimogemReward(screen);
-    }
-
-    internal static bool HasPrimogemReward(ImageRegion screen)
-    {
-        using var primogem = screen.Find(ElementRecognition.Get("Primogem", screen));
-        return primogem.IsExist();
-    }
-
     public async Task Start(CancellationToken ct)
     {
         try
         {
-            if (IsClaimTime())
+            var t = ServerTimeHelper.GetServerTimeNow().AddMinutes(5);
+            if (t.Hour == 4 && t.Minute < 10)
             {
                 using var ra = CaptureToRectArea();
-                if (IsClaimScreen(ra))
+                if (Bv.IsInBlessingOfTheWelkinMoon(ra) || ra.Find(ElementRecognition.Get("Primogem", ra)).IsExist())
                 {
                     Logger.LogInformation("检测到空月祝福界面，自动点击");
                     GameCaptureRegion.GameRegion1080PPosMove(100, 100);
@@ -56,8 +40,14 @@ public class BlessingOfTheWelkinMoonTask
                         }
                         await Delay(500, ct);
                         using var ra2 = CaptureToRectArea();
-                        if (IsClaimScreen(ra2))
+                        if (Bv.IsInBlessingOfTheWelkinMoon(ra2))
                         {
+                            // 仍在空月祝福界面
+                            j = 0;
+                        }
+                        else if (ra2.Find(ElementRecognition.Get("Primogem", ra2)).IsExist())
+                        {
+                            // 仍在原石界面
                             j = 0;
                         }
                         else

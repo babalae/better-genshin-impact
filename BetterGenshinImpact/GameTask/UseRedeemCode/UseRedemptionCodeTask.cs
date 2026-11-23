@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -43,7 +43,6 @@ public class UseRedemptionCodeTask : ISoloTask
     {
         InitLog(_list);
 
-        var restoreMainUi = true;
         try
         {
             Rect captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
@@ -83,11 +82,6 @@ public class UseRedemptionCodeTask : ISoloTask
                 await UseRedeemCode(redeemCode, page);
             }
         }
-        catch (InstrumentExitRecoveryException)
-        {
-            restoreMainUi = false;
-            throw;
-        }
         catch (Exception ex)
         {
             _logger.LogError("使用兑换码时发生错误: {Message}", ex.Message);
@@ -98,8 +92,7 @@ public class UseRedemptionCodeTask : ISoloTask
             // 清空剪贴板
             UIDispatcherHelper.Invoke(Clipboard.Clear);
             // 返回主界面
-            if (restoreMainUi)
-                await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask().Start(ct);
             
         }
     }

@@ -4,63 +4,45 @@ internal enum InstrumentExitScreen
 {
     Other,
     World,
+    UnrelatedPrompt,
     InstrumentPage,
     ExitPrompt,
-    BlockedPrompt,
-    OrdinaryMenu,
-    WelkinReward
+    BlockedPrompt
 }
 
 internal enum InstrumentExitAction
 {
-    NotApplicable,
     Close,
     Confirm,
     Wait,
-    Complete,
-    Stop
+    Complete
 }
 
 internal sealed class InstrumentExitFlow
 {
     private bool _clickedClose;
     private bool _clickedConfirm;
-    private bool _sawWorld;
     private int _worldFrames;
-    private InstrumentExitAction _terminal;
-
-    internal bool Started => _clickedClose || _clickedConfirm;
-
-    internal InstrumentExitAction Observe(InstrumentExitScreen screen, bool sameWorldFrame = false)
+    internal InstrumentExitAction Observe(InstrumentExitScreen screen, bool sameWorldFrame = false, bool worldReady = true)
     {
-        if (_terminal is InstrumentExitAction.Stop or InstrumentExitAction.Complete)
-            return _terminal;
-
         if (screen == InstrumentExitScreen.World)
         {
-            if (Started && sameWorldFrame)
-                return InstrumentExitAction.Wait;
-
-            _sawWorld = true;
-            return !Started || ++_worldFrames == 2
-                ? _terminal = InstrumentExitAction.Complete
-                : InstrumentExitAction.Wait;
+            if (!worldReady) _worldFrames = 0;
+            else if (!sameWorldFrame) _worldFrames++;
+            return _worldFrames >= 2 ? InstrumentExitAction.Complete : InstrumentExitAction.Wait;
         }
 
         _worldFrames = 0;
         switch (screen)
         {
-            case InstrumentExitScreen.BlockedPrompt:
-            case InstrumentExitScreen.InstrumentPage or InstrumentExitScreen.ExitPrompt when _sawWorld:
-                return _terminal = InstrumentExitAction.Stop;
-            case InstrumentExitScreen.InstrumentPage when !Started:
+            case InstrumentExitScreen.InstrumentPage when !_clickedClose && !_clickedConfirm:
                 _clickedClose = true;
                 return InstrumentExitAction.Close;
             case InstrumentExitScreen.ExitPrompt when !_clickedConfirm:
                 _clickedConfirm = true;
                 return InstrumentExitAction.Confirm;
             default:
-                return Started ? InstrumentExitAction.Wait : InstrumentExitAction.NotApplicable;
+                return InstrumentExitAction.Wait;
         }
     }
 }

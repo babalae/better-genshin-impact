@@ -19,9 +19,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
         IInputChannel IInputChannel.Sleep(int ms) => this;
 
-        public void ReleasePressedKeys() => ReleaseAll();
-        public bool TryReleasePressedKeys() { ReleasePressedKeys(); return true; }
-
         public void ReleaseAll()
         {
         }
