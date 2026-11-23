@@ -265,6 +265,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         else
         {
             _synopsisDisplayer?.OffShow(); // 如果用户在展示期间关闭了简介展示选项，那么应当结束展示，避免一直显示在屏幕上
+            _synopsisDisplayer?.ResetDialogueShownFlag();
         }
 
         RefreshOperationMode();
