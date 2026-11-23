@@ -597,7 +597,8 @@ internal static class InstrumentExitRecovery
 
     internal enum MenuAction { Wait, MapAlreadyOpen, MapRequested, Closed, Instrument }
 
-    internal static async Task<MenuAction> ActOnFreshMenuAsync(GameRuntime? runtime, CancellationToken ct, bool openMap)
+    internal static async Task<MenuAction> ActOnFreshMenuAsync(GameRuntime? runtime, CancellationToken ct, bool openMap,
+        Action<ImageRegion>? observeDeparture = null)
     {
         EnsureSameRuntime(runtime, ct);
         EnsureTargetWindow(runtime);
@@ -621,6 +622,7 @@ internal static class InstrumentExitRecovery
         if (sendMap)
         {
             runtime.Input.Foreground.SimulateAction(GIActions.OpenMap);
+            observeDeparture?.Invoke(screen);
             return MenuAction.MapRequested;
         }
         if (mapAlreadyOpen) return MenuAction.MapAlreadyOpen;

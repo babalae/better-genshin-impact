@@ -685,14 +685,9 @@ public partial class PathExecutor
     /// <summary>
     /// 尝试自动领取派遣奖励，
     /// </summary>
-    /// <returns>是否可以领取派遣奖励</returns>
-    private async Task<bool> TryGetExpeditionRewardsDispatch(TpTask? tpTask = null)
+    /// <returns>是否执行过派遣路线</returns>
+    private async Task<bool> TryGetExpeditionRewardsDispatch(Func<Task> openMap)
     {
-        if (tpTask == null)
-        {
-            tpTask = new TpTask(ct);
-        }
-        
         // 最小5分钟间隔
         if ( _combatScenes?.CurrentMultiGameStatus?.IsInMultiGame == true || (DateTime.UtcNow - _lastGetExpeditionRewardsTime).TotalMinutes < 5)
         {
@@ -700,7 +695,7 @@ public partial class PathExecutor
         }
 
         //打开大地图操作
-        await tpTask.OpenBigMapUi();
+        await openMap();
         bool changeBigMap = false;
         string adventurersGuildCountry =
             TaskContext.Instance().Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry;
@@ -745,8 +740,8 @@ public partial class PathExecutor
             InstrumentQuest = waypoint.InstrumentQuest,
             ArrivalMapMatchMethod = waypoint.MapMatchMethod
         };
-        await TryGetExpeditionRewardsDispatch(tpTask);
-        var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
+        var (tpX, tpY) = await tpTask.TpWaypoint(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp,
+            TryGetExpeditionRewardsDispatch);
         var (tprX, tprY) = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod)
             .ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)tpX, (float)tpY));
         Navigation.SetPrevPosition(tprX, tprY); // 通过上一个位置直接进行局部特征匹配
