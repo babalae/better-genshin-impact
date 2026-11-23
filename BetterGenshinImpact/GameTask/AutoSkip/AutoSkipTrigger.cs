@@ -266,6 +266,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {
             _synopsisDisplayer?.OffShow(); // 如果用户在展示期间关闭了简介展示选项，那么应当结束展示，避免一直显示在屏幕上
             _synopsisDisplayer?.ResetDialogueShownFlag();
+            _synopsisDisplayer?.ResetFailedCatchCount();
         }
 
         RefreshOperationMode();
@@ -316,14 +317,15 @@ public partial class AutoSkipTrigger : ITaskTrigger
             TryBringToFrontAfterBackgroundDialog();
         }
 
+        if (_config.SynopsisEnabled && !isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds >= 5) // 认为只要剧情playing在5s内接续上（一些小过场这些），就是同一段对话
+        {
+            _synopsisDisplayer?.ResetFailedCatchCount(); // 离开对话，重置识别计数
+            _synopsisDisplayer?.ResetDialogueShownFlag(); // 离开对话，重置已经展示标签
+            _synopsisDisplayer?.SpeedUp(); // 离开对话，缩短简介展示时间
+        }
+
         if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= PlayingFlagDisappearDelaySeconds)
         {
-            if (_config.SynopsisEnabled)
-            {
-                _synopsisDisplayer?.ResetFailedCatchCount(); // 离开对话，重置识别计数
-                _synopsisDisplayer?.ResetDialogueShownFlag(); // 离开对话，重置已经展示标签
-                _synopsisDisplayer?.SpeedUp(); // 离开对话，缩短简介展示时间
-            }
             
             // 关闭弹出页
             if (_config.ClosePopupPagedEnabled)
