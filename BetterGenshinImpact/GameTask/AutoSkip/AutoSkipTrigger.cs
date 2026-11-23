@@ -262,6 +262,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 _synopsisDisplayer = new SynopsisDisplayer(_config, _runtime);
             }
         }
+        else
+        {
+            _synopsisDisplayer?.OffShow(); // 如果用户在展示期间关闭了简介展示选项，那么应当结束展示，避免一直显示在屏幕上
+        }
 
         RefreshOperationMode();
         if (!_config.AutoWaitDialogueOptionVoiceEnabled)
@@ -783,7 +787,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
             {
                 // 复用已经识别好的回答选项文本，用以展示剧情简介，避免重复识别
                 // 如果用户设置了后台操作的方式跳过剧情，程序运行不到这，将不利用回答选项做匹配，仅仅用台词匹配，也能够用
-                _synopsisDisplayer?.CatchResponse(ocrResList.Select(item => item.Text).ToList());
+                _synopsisDisplayer?.CatchResponse(rs.Select(item => item.Text).ToList());
+                // _logger.LogDebug(string.Join("\n", rs.Select(item => item.Text).ToList()));
             }
 
             if (rs.Count > 0)

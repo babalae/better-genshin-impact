@@ -106,13 +106,13 @@ public partial class AutoSkipConfig : ObservableObject
     /// 剧情简介背景颜色
     /// </summary>
     [ObservableProperty]
-    private string _synopsisBackgroundColor = "#00000033";
+    private string _synopsisBackgroundColor = "#00000055";
     
     partial void OnSynopsisBackgroundColorChanged(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            SynopsisBackgroundColor = "#00000033";
+            SynopsisBackgroundColor = "#00000055";
         }
     }
 

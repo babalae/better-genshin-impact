@@ -862,7 +862,7 @@
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{i18n:T 格式为#RRGGBB或#RRGGBBAA。默认为#00000033（20%不透明度黑色）}"
+                                          Text="{i18n:T 格式为#RRGGBB或#RRGGBBAA。默认为#00000055（33%不透明度黑色）}"
                                           TextWrapping="Wrap" />
                             <!-- 颜色预览 -->
                             <Border Grid.Row="0"
