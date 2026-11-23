@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -15,6 +16,8 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 
 internal static class InstrumentExitRecovery
 {
+    internal sealed class CaptureStoppedException() : NormalEndException("演奏恢复失败：截图器已停止");
+
     internal static bool IsRecoveryScreen(ImageRegion screen)
     {
         return NeedsRecovery(Classify(screen));
@@ -52,6 +55,11 @@ internal static class InstrumentExitRecovery
             await Task.Delay(400, ct);
             if (!ReferenceEquals(TaskContext.Instance().Runtime, runtime) || !runtime.Window.IsAlive)
                 throw new OperationCanceledException("绑定的游戏窗口已更换或关闭", ct);
+            if (!runtime.Capture.IsCapturing)
+            {
+                ct.ThrowIfCancellationRequested();
+                throw new CaptureStoppedException();
+            }
 
             var viewport = runtime.Window.Viewport.ScreenRect;
             using var frame = CanObserve(runtime) ? runtime.Capture.Capture() : null;
@@ -96,7 +104,7 @@ internal static class InstrumentExitRecovery
     }
 
     private static bool CanObserve(GameRuntime runtime) =>
-        ReferenceEquals(TaskContext.Instance().Runtime, runtime) && runtime.Window.IsAlive
+        ReferenceEquals(TaskContext.Instance().Runtime, runtime) && runtime.Window.IsAlive && runtime.Capture.IsCapturing
         && !RunnerContext.Instance.IsSuspend && !runtime.Window.IsMinimized
         && (!runtime.Window.RequiresForeground || runtime.Window.IsForeground)
         && runtime.Window.Viewport.ScreenRect == TaskContext.Instance().SystemInfo.CaptureAreaRect;

@@ -1236,7 +1236,7 @@ public class TpTask
         // 尝试打开地图失败后，先回到主界面后再次尝试打开地图
         if (!await TryToOpenBigMapUi(mapName))
         {
-            await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask().Start(ct, RecoverBeforeOpeningMapAsync);
             await Delay(500, ct);
             if (!await TryToOpenBigMapUi(mapName))
             {

@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Common.Job;
 
 using BetterGenshinImpact.View;
 using Microsoft.Extensions.Logging;
@@ -72,8 +73,16 @@ public class TaskRunner
         }
         catch (NormalEndException e)
         {
-            Notify.Event(NotificationEvent.TaskCancel).Success("任务手动取消，或正常结束");
-            _logger.LogInformation("任务中断:{Msg}", e.Message);
+            if (e is InstrumentExitRecovery.CaptureStoppedException)
+            {
+                Notify.Event(NotificationEvent.TaskError).Error("任务执行异常", e);
+                _logger.LogError(e.Message);
+            }
+            else
+            {
+                Notify.Event(NotificationEvent.TaskCancel).Success("任务手动取消，或正常结束");
+                _logger.LogInformation("任务中断:{Msg}", e.Message);
+            }
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
                 // 连续执行时，抛出异常，终止执行

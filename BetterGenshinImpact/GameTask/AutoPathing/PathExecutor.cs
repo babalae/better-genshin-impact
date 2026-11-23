@@ -255,7 +255,7 @@ public partial class PathExecutor
                     SuccessEnd = true;
                     break;
                 }
-                catch (NormalEndException normalEndException)
+                catch (NormalEndException normalEndException) when (normalEndException is not InstrumentExitRecovery.CaptureStoppedException)
                 {
                     if (!ct.IsCancellationRequested)
                     {
@@ -707,7 +707,7 @@ public partial class PathExecutor
                         5);
                     Logger.LogInformation("自动领取派遣结束，回归原任务！");
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is not InstrumentExitRecovery.CaptureStoppedException)
                 {
                     Logger.LogInformation("未知原因，发生异常，尝试继续执行任务！");
                 }
