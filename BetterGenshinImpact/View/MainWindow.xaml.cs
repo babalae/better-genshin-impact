@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Helpers.DpiAwareness;
+using BetterGenshinImpact.View.Controls;
 using BetterGenshinImpact.ViewModel;
 using Microsoft.Extensions.Logging;
 using System;
@@ -6,19 +7,18 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Threading;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers.Ui;
 using Wpf.Ui;
 using Wpf.Ui.Abstractions;
 using Wpf.Ui.Controls;
-using Wpf.Ui.Tray.Controls;
 
 namespace BetterGenshinImpact.View;
 
 public partial class MainWindow : FluentWindow, INavigationWindow
 {
     private readonly ILogger<MainWindow> _logger = App.GetLogger<MainWindow>();
+    private TrayIcon? _trayIcon;
     private ScrollViewer? _currentScrollViewer;
     private double _targetOffset;
     private double _inputVelocity;
@@ -232,18 +232,20 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     {
         base.OnSourceInitialized(e);
         WindowHelper.TryApplySystemBackdrop(this);
+        _trayIcon = new TrayIcon((ContextMenu)FindResource("TrayMenu"), OnNotifyIconLeftDoubleClick);
     }
 
     protected override void OnClosed(EventArgs e)
     {
         _logger.LogDebug("主窗体退出");
+        _trayIcon?.Dispose();
         CompositionTarget.Rendering -= OnCompositionTargetRendering;
         RemoveHandler(PreviewMouseWheelEvent, new MouseWheelEventHandler(OnGlobalPreviewMouseWheel));
         base.OnClosed(e);
         App.GetService<NotifyIconViewModel>()?.Exit();
     }
 
-    private void OnNotifyIconLeftDoubleClick(NotifyIcon sender, RoutedEventArgs e)
+    private void OnNotifyIconLeftDoubleClick()
     {
         App.GetService<NotifyIconViewModel>()?.ShowOrHide();
     }

@@ -109,7 +109,6 @@
 		<PackageReference Include="XamlAnimatedGif" Version="2.3.1" />
 		<PackageReference Include="WPF-UI" Version="4.3.0" />
 		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.3.0" />
-		<PackageReference Include="WPF-UI.Tray" Version="4.3.0" />
 		<PackageReference Include="WPF-UI.Violeta" Version="4.3.0.15" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
 		<PackageReference Include="YamlDotNet" Version="16.3.0" />

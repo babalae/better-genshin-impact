@@ -7,7 +7,6 @@
                  xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
-                 xmlns:tray="http://schemas.lepo.co/wpfui/2022/xaml/tray"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
                  xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
@@ -27,7 +26,23 @@
                  mc:Ignorable="d">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-
+        <ContextMenu x:Key="TrayMenu" Placement="MousePoint">
+            <ContextMenu.DataContext>
+                <markup:ServiceLocator Type="{x:Type viewModel:NotifyIconViewModel}" />
+            </ContextMenu.DataContext>
+            <ui:MenuItem Command="{Binding OpenChildSessionWindowCommand}"
+                         Header="{i18n:T 桌面分身}"
+                         Icon="{ui:SymbolIcon DesktopCursor24}"
+                         Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            <Separator Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            <ui:MenuItem Command="{Binding CheckUpdateCommand}"
+                         Header="{i18n:T 检查更新}"
+                         Icon="{ui:SymbolIcon ArrowAutofitUp24}" />
+            <Separator />
+            <ui:MenuItem Command="{Binding ExitCommand}"
+                         Header="{i18n:T 退出}"
+                         Icon="{ui:SymbolIcon Dismiss24}" />
+        </ContextMenu>
     </Window.Resources>
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Activated">
@@ -318,32 +333,5 @@
                 </StackPanel>
             </ui:TitleBar.TrailingContent>
         </ui:TitleBar>
-
-        <tray:NotifyIcon Grid.Row="0" Grid.Column="0"
-                         FocusOnLeftClick="False"
-                         Icon="pack://application:,,,/Resources/Images/logo.ico"
-                         LeftDoubleClick="OnNotifyIconLeftDoubleClick"
-                         MenuOnRightClick="True"
-                         TooltipText="BetterGI">
-            <tray:NotifyIcon.Menu>
-                <ContextMenu>
-                    <ContextMenu.DataContext>
-                        <markup:ServiceLocator Type="{x:Type viewModel:NotifyIconViewModel}" />
-                    </ContextMenu.DataContext>
-                    <ui:MenuItem Command="{Binding OpenChildSessionWindowCommand}"
-                                  Header="{i18n:T 桌面分身}"
-                                  Icon="{ui:SymbolIcon DesktopCursor24}"
-                                  Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <Separator Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <ui:MenuItem Command="{Binding CheckUpdateCommand}"
-                                 Header="{i18n:T 检查更新}"
-                                 Icon="{ui:SymbolIcon ArrowAutofitUp24}" />
-                    <Separator />
-                    <ui:MenuItem Command="{Binding ExitCommand}"
-                                 Header="{i18n:T 退出}"
-                                 Icon="{ui:SymbolIcon Dismiss24}" />
-                </ContextMenu>
-            </tray:NotifyIcon.Menu>
-        </tray:NotifyIcon>
     </Grid>
 </ui:FluentWindow>
