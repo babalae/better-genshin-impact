@@ -90,6 +90,7 @@ public class TpTask
     private const int TeleportClickableAreaRetryDelayMs = 80;
     private const int BigMapRectRetryIntervalMs = 150;
     private const int TeleportTimeoutMs = 60_000;
+    private const int InterruptedTeleportArrivalTimeoutMs = 60_000;
     private const double MapPositionRecognitionRecoveryZoomStep = 1.0;
     private static string? s_lastSuccessfulTeleportMapName;
     private double _mapZoomLevelPerWheelNotch = DefaultMapZoomLevelPerWheelNotch;
@@ -1015,14 +1016,16 @@ public class TpTask
     /// </summary>
     private async Task WaitForTeleportCompletion(TeleportTargetContext target)
     {
+        // F 已发送时保留这一次传送的等待，开图和选点消耗的时间不计入这里。
+        var routeCancellation = RouteCancellation ?? ct;
+        var waitCancellation = _confirmationSent ? routeCancellation : ct;
         var observedLoadingState = false;
-        bool observedLoadingFrame = false;
         var consecutiveNonUiChecks = 0;
         var consecutiveMainUiChecks = 0;
         var blessingCheckCountdown = 10;
         for (var attempt = 0; attempt < 600; attempt++)
         {
-            (RouteCancellation ?? ct).ThrowIfCancellationRequested();
+            routeCancellation.ThrowIfCancellationRequested();
 
             var capture = CaptureToRectArea();
             using var ownedCapture = capture;
@@ -1032,19 +1035,12 @@ public class TpTask
             {
                 if (!_confirmationSent) throw new InstrumentBeforeTeleportConfirmationException();
 
-                var departure = _departureMinimap == null ? null : ReadInterruptedTeleportPosition(_departureMinimap, target.MapName);
-                // 原确认仍在等待。恢复过程只观察同一次传送，不能回到开图或确认阶段。
-                await InstrumentExitRecovery.RecoverAsync(_confirmedRuntime, RouteCancellation ?? ct,
-                    world => IsAtInterruptedTeleportDestination(world, target, departure, observedLoadingFrame),
-                    transition =>
-                    {
-                        if (!observedLoadingFrame) observedLoadingFrame = IsBlankTeleportTransition(transition.SrcMat);
-                    });
+                await WaitForInterruptedTeleportArrival(target, waitCancellation);
                 Logger.LogInformation("传送完成");
                 return;
             }
 
-            ct.ThrowIfCancellationRequested();
+            waitCancellation.ThrowIfCancellationRequested();
             var isInMainUi = view == InstrumentExitScreen.World;
 
             if (isInMainUi)
@@ -1061,8 +1057,6 @@ public class TpTask
             else
             {
                 consecutiveMainUiChecks = 0;
-                if (_confirmationSent && !observedLoadingFrame && !isInBigMapUi && view == InstrumentExitScreen.Other)
-                    observedLoadingFrame = IsBlankTeleportTransition(capture.SrcMat);
                 if (!observedLoadingState)
                 {
                     // 地图关闭后出现的黑屏、白屏或加载界面均不属于大地图和主界面。
@@ -1078,7 +1072,7 @@ public class TpTask
                 break;
             }
 
-            await Delay(100, ct);
+            await Delay(100, waitCancellation);
             if (blessingCheckCountdown > 0)
             {
                 blessingCheckCountdown--;
@@ -1087,21 +1081,42 @@ public class TpTask
             // 打开大地图期间推送的月卡会在传送之后直接显示，导致检测不到传送完成。
             if (observedLoadingState && !isInMainUi && blessingCheckCountdown == 0)
             {
-                await _blessingOfTheWelkinMoonTask.Start(ct);
-                ct.ThrowIfCancellationRequested();
+                await _blessingOfTheWelkinMoonTask.Start(waitCancellation);
+                waitCancellation.ThrowIfCancellationRequested();
                 blessingCheckCountdown = 10;
             }
         }
 
+        if (_confirmationSent)
+            throw new TimeoutException("已发送传送确认，但在等待时限内未识别到传送完成");
+
         Logger.LogWarning("传送等待超时，换台电脑吧");
     }
 
-    private static bool IsBlankTeleportTransition(Mat image)
+    private async Task WaitForInterruptedTeleportArrival(TeleportTargetContext target, CancellationToken routeCancellation)
     {
-        Cv2.MeanStdDev(image, out Scalar mean, out Scalar deviation);
-        return deviation.Val0 < 6 && deviation.Val1 < 6 && deviation.Val2 < 6
-            && (mean.Val0 < 12 && mean.Val1 < 12 && mean.Val2 < 12
-                || mean.Val0 > 243 && mean.Val1 > 243 && mean.Val2 > 243);
+        var departure = _departureMinimap == null ? null : ReadInterruptedTeleportPosition(_departureMinimap, target.MapName);
+        using var arrivalCancellation = CancellationTokenSource.CreateLinkedTokenSource(routeCancellation);
+        var arrivalCheckStarted = false;
+
+        try
+        {
+            // 只核对已经发出的传送。从首次识别到大世界开始计时，给退出演奏和过场留出时间。
+            await InstrumentExitRecovery.RecoverAsync(_confirmedRuntime, arrivalCancellation.Token, world =>
+            {
+                if (!arrivalCheckStarted)
+                {
+                    arrivalCheckStarted = true;
+                    arrivalCancellation.CancelAfter(InterruptedTeleportArrivalTimeoutMs);
+                }
+
+                return IsAtInterruptedTeleportDestination(world, target, departure);
+            });
+        }
+        catch (OperationCanceledException e) when (arrivalCancellation.IsCancellationRequested && !routeCancellation.IsCancellationRequested)
+        {
+            throw new TimeoutException("退出演奏后未能在时限内确认原传送落点，保留当前步骤", e);
+        }
     }
 
     private Point2f? ReadInterruptedTeleportPosition(Mat minimap, string mapName)
@@ -1112,8 +1127,10 @@ public class TpTask
     }
 
     private bool IsAtInterruptedTeleportDestination(ImageRegion screen, TeleportTargetContext target,
-        Point2f? departure, bool observedLoadingFrame)
+        Point2f? departure)
     {
+        if (departure is not { } start) return false;
+
         using var minimap = new Mat(screen.SrcMat, MapAssets.Get(screen).MimiMapRect);
         if (ReadInterruptedTeleportPosition(minimap, target.MapName) is not { } current) return false;
         var (x, y) = (target.X, target.Y);
@@ -1123,9 +1140,8 @@ public class TpTask
             (x, y) = (anchor.TranX, anchor.TranY);
 
         return GetDistance(current.X, current.Y, x, y) <= 12d
-            && (observedLoadingFrame || departure is { } start
-                && GetDistance(start.X, start.Y, x, y) > 12d
-                && GetDistance(start.X, start.Y, current.X, current.Y) > 12d);
+            && GetDistance(start.X, start.Y, x, y) > 12d
+            && GetDistance(start.X, start.Y, current.X, current.Y) > 12d;
     }
 
     private bool IsGameRegionPointInClickableArea(double clickX, double clickY, double requiredVisibleRadius = 0)
@@ -1345,6 +1361,11 @@ public class TpTask
                 await CloseTeleportMapOnFailureAsync();
                 // throw; // 不抛出异常，继续重试
                 Logger.LogWarning(e.Message + "  重试");
+            }
+            catch (Exception e) when (_confirmationSent && e is (RetryException or RetryNoCountException))
+            {
+                // 路线会从本段起点重试这些异常，可能再次发送 F。
+                throw new InvalidOperationException($"已发送传送确认，无法确认原传送结果：{e.Message}", e);
             }
             catch (Exception e) when (_confirmationSent || IsTaskStopException(e))
             {

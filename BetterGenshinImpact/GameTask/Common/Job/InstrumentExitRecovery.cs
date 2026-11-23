@@ -38,7 +38,7 @@ internal static class InstrumentExitRecovery
     }
 
     internal static async Task RecoverAsync(GameRuntime? runtime, CancellationToken ct,
-        Func<ImageRegion, bool>? canResumeInWorld = null, Action<ImageRegion>? observeTransition = null)
+        Func<ImageRegion, bool>? canResumeInWorld = null)
     {
         if (runtime == null) throw new OperationCanceledException("游戏窗口尚未绑定", ct);
         var flow = new InstrumentExitFlow();
@@ -69,7 +69,13 @@ internal static class InstrumentExitRecovery
             var view = ReadScreen(screen, true, out var target);
             using (target)
             {
-                var worldReady = view == InstrumentExitScreen.World && (canResumeInWorld?.Invoke(screen) ?? true);
+                // 识别期间窗口状态可能变化，先确认该帧仍可用，再开始落点核对。
+                var worldReady = view == InstrumentExitScreen.World;
+                if (worldReady && canResumeInWorld != null)
+                {
+                    worldReady = CanObserve(runtime) && viewport == runtime.Window.Viewport.ScreenRect && canResumeInWorld(screen);
+                }
+
                 var sameWorld = worldReady && hasPreviousWorld && previousWorld.Size() == screen.SrcMat.Size()
                     && previousWorld.Type() == screen.SrcMat.Type() && Cv2.Norm(previousWorld, screen.SrcMat, NormTypes.L1) == 0;
                 if (!CanObserve(runtime) || viewport != runtime.Window.Viewport.ScreenRect)
@@ -79,7 +85,6 @@ internal static class InstrumentExitRecovery
                     continue;
                 }
 
-                if (view == InstrumentExitScreen.Other) observeTransition?.Invoke(screen);
                 if (worldReady && !sameWorld) screen.SrcMat.CopyTo(previousWorld);
                 hasPreviousWorld = worldReady;
                 var action = flow.Observe(view, sameWorld, worldReady);
