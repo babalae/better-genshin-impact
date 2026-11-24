@@ -1,14 +1,13 @@
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using Microsoft.ClearScript;
-using Microsoft.Extensions.Localization;
 using System.Globalization;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
-    public class AutoFishingTaskParam : BaseTaskParam<AutoFishingTask>
+    public class AutoFishingTaskParam : BaseTaskParam
     {
-        public AutoFishingTaskParam(int wholeProcessTimeoutSeconds, int throwRodTimeOutTimeoutSeconds, FishingTimePolicy fishingTimePolicy, bool saveScreenshotOnKeyTick, CultureInfo? cultureInfo, IStringLocalizer<AutoFishingTask>? stringLocalizer) : base(cultureInfo, stringLocalizer)
+        public AutoFishingTaskParam(int wholeProcessTimeoutSeconds, int throwRodTimeOutTimeoutSeconds, FishingTimePolicy fishingTimePolicy, bool saveScreenshotOnKeyTick, CultureInfo? cultureInfo) : base(cultureInfo)
         {
             WholeProcessTimeoutSeconds = wholeProcessTimeoutSeconds;
             ThrowRodTimeOutTimeoutSeconds = throwRodTimeOutTimeoutSeconds;
@@ -42,7 +41,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var fishingTimePolicy = (FishingTimePolicy)ScriptObjectConverter.GetValue(jsObject, "fishingTimePolicy", (int)autoFishingConfig.FishingTimePolicy);
             var saveScreenshotOnKeyTick = ScriptObjectConverter.GetValue(jsObject, "saveScreenshotOnKeyTick", false);
 
-            return new AutoFishingTaskParam(wholeProcessTimeoutSeconds, throwRodTimeOutTimeoutSeconds, fishingTimePolicy, saveScreenshotOnKeyTick, null, null);
+            return new AutoFishingTaskParam(wholeProcessTimeoutSeconds, throwRodTimeOutTimeoutSeconds, fishingTimePolicy, saveScreenshotOnKeyTick, null);
         }
 
         /// <summary>
@@ -54,7 +53,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public static AutoFishingTaskParam BuildFromConfig(AutoFishingConfig config, bool saveScreenshotOnKeyTick = false)
         {
             CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-            return new AutoFishingTaskParam(config.WholeProcessTimeoutSeconds, config.AutoThrowRodTimeOut, config.FishingTimePolicy, saveScreenshotOnKeyTick, cultureInfo, null);
+            return new AutoFishingTaskParam(config.WholeProcessTimeoutSeconds, config.AutoThrowRodTimeOut, config.FishingTimePolicy, saveScreenshotOnKeyTick, cultureInfo);
         }
     }
 }

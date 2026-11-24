@@ -16,6 +16,9 @@
 ### 其他框架使用要求
 1. 请优先使用 Newtonsoft.Json 作为json序列化工具，但是如果这个模型已经被System.Text.Json序列化过了，那么就直接使用System.Text.Json反序列化。
 2. 所有简单的对话框弹出需求优先使用 ThemedMessageBox 弹出。而不是 WPF 自带的 MessageBox。
+3. 多语言分两类，不要混用：
+   - UI 文案：XAML 用 `{i18n:T 简体原文}`，代码用 `I18nService`，翻译放在 `User/I18n/{lang}.json`。
+   - 与游戏客户端文字做匹配的文本（OCR 目标、按钮文字等）：用 `GameTextService.Instance.Get(GameTextKeys.Xxx.Yyy)`，文本放在 `GameTask/I18n/{lang}.json`，key 使用英文语义标识（`<模块>.<名称>`），新增 key 必须同时登记到 `GameTextKeys` 和 `zh-Hans.json`。不要再新增 `.resx` / `IStringLocalizer`。
 
 ## MVVM 架构规则
 

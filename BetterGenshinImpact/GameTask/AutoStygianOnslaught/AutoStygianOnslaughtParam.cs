@@ -4,7 +4,7 @@ using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
-public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
+public class AutoStygianOnslaughtParam:BaseTaskParam
 {
    
     public int BossNum { get; set; }
@@ -49,11 +49,11 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
         FightTeamName = config.FightTeamName;
         SetCombatStrategyPath(config.StrategyName);
     }
-    public AutoStygianOnslaughtParam() : base(null, null)
+    public AutoStygianOnslaughtParam() : base(null)
     {
         SetDefault();
     }
-    public AutoStygianOnslaughtParam(string combatScriptBagPath) : base(null, null)
+    public AutoStygianOnslaughtParam(string combatScriptBagPath) : base(null)
     {
         SetDefault();
         CombatScriptBagPath=combatScriptBagPath;

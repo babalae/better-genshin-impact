@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.GameTask.AutoBoss;
 /// <summary>
 /// 自动首领讨伐任务参数，供独立任务、一条龙和 JS 调用统一传递配置。
 /// </summary>
-public class AutoBossParam : BaseTaskParam<AutoBossTask>
+public class AutoBossParam : BaseTaskParam
 {
     private const string AutoStrategyName = "根据队伍自动选择";
     private string _strategyName = AutoStrategyName;
@@ -114,7 +114,7 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
         CombatStrategyPath = combatStrategyPath;
     }
 
-    private AutoBossParam(bool loadDefaultConfig) : base(null, null)
+    private AutoBossParam(bool loadDefaultConfig) : base(null)
     {
         if (loadDefaultConfig)
         {

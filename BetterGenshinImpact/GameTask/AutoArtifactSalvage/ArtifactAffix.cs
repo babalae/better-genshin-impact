@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.I18n;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 
@@ -16,26 +17,29 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
         public float Value { get; private set; } = value;
         public bool IsUnactivated { get; private set; } = isUnactivated;
 
-        public static FrozenDictionary<ArtifactAffixType, string> DefaultStrDic { get; } = new Dictionary<ArtifactAffixType, string>() {
-            { ArtifactAffixType.ATK, "攻击力" },
-            { ArtifactAffixType.ATKPercent, "攻击力" },
-            { ArtifactAffixType.DEF, "防御力" },
-            { ArtifactAffixType.DEFPercent, "防御力" },
-            { ArtifactAffixType.HP, "生命值" },
-            { ArtifactAffixType.HPPercent, "生命值" },
-            { ArtifactAffixType.CRITRate, "暴击率" },
-            { ArtifactAffixType.CRITDMG, "暴击伤害" },
-            { ArtifactAffixType.ElementalMastery, "元素精通" },
-            { ArtifactAffixType.EnergyRecharge, "元素充能效率" },
-            { ArtifactAffixType.HealingBonus, "治疗加成" },
-            { ArtifactAffixType.PhysicalDMGBonus, "物理伤害加成" },
-            { ArtifactAffixType.PyroDMGBonus, "火元素伤害加成" },
-            { ArtifactAffixType.HydroDMGBonus, "水元素伤害加成" },
-            { ArtifactAffixType.DendroDMGBonus, "草元素伤害加成" },
-            { ArtifactAffixType.ElectroDMGBonus, "雷元素伤害加成" },
-            { ArtifactAffixType.AnemoDMGBonus, "风元素伤害加成" },
-            { ArtifactAffixType.CryoDMGBonus, "冰元素伤害加成" },
-            { ArtifactAffixType.GeoDMGBonus, "岩元素伤害加成" }
+        /// <summary>
+        /// 词条类型 → 游戏文本 key（<see cref="GameTextKeys.Artifact.Affix"/>），百分比与固定值词条共用同一个名称
+        /// </summary>
+        public static FrozenDictionary<ArtifactAffixType, string> GameTextKeyDic { get; } = new Dictionary<ArtifactAffixType, string>() {
+            { ArtifactAffixType.ATK, GameTextKeys.Artifact.Affix.ATK },
+            { ArtifactAffixType.ATKPercent, GameTextKeys.Artifact.Affix.ATK },
+            { ArtifactAffixType.DEF, GameTextKeys.Artifact.Affix.DEF },
+            { ArtifactAffixType.DEFPercent, GameTextKeys.Artifact.Affix.DEF },
+            { ArtifactAffixType.HP, GameTextKeys.Artifact.Affix.HP },
+            { ArtifactAffixType.HPPercent, GameTextKeys.Artifact.Affix.HP },
+            { ArtifactAffixType.CRITRate, GameTextKeys.Artifact.Affix.CRITRate },
+            { ArtifactAffixType.CRITDMG, GameTextKeys.Artifact.Affix.CRITDMG },
+            { ArtifactAffixType.ElementalMastery, GameTextKeys.Artifact.Affix.ElementalMastery },
+            { ArtifactAffixType.EnergyRecharge, GameTextKeys.Artifact.Affix.EnergyRecharge },
+            { ArtifactAffixType.HealingBonus, GameTextKeys.Artifact.Affix.HealingBonus },
+            { ArtifactAffixType.PhysicalDMGBonus, GameTextKeys.Artifact.Affix.PhysicalDMGBonus },
+            { ArtifactAffixType.PyroDMGBonus, GameTextKeys.Artifact.Affix.PyroDMGBonus },
+            { ArtifactAffixType.HydroDMGBonus, GameTextKeys.Artifact.Affix.HydroDMGBonus },
+            { ArtifactAffixType.DendroDMGBonus, GameTextKeys.Artifact.Affix.DendroDMGBonus },
+            { ArtifactAffixType.ElectroDMGBonus, GameTextKeys.Artifact.Affix.ElectroDMGBonus },
+            { ArtifactAffixType.AnemoDMGBonus, GameTextKeys.Artifact.Affix.AnemoDMGBonus },
+            { ArtifactAffixType.CryoDMGBonus, GameTextKeys.Artifact.Affix.CryoDMGBonus },
+            { ArtifactAffixType.GeoDMGBonus, GameTextKeys.Artifact.Affix.GeoDMGBonus }
         }.ToFrozenDictionary();
     }
 

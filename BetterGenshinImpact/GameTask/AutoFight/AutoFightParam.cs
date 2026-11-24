@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 
 
 
-public class AutoFightParam : BaseTaskParam<AutoFightTask>
+public class AutoFightParam : BaseTaskParam
 {
     /// <summary>
     /// 自动连招（LLM 行为树）策略的固定名称；该名称不对应任何策略文件，
@@ -30,7 +30,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         public double PaimonEndCheckDelay = 0.075;
     }
 
-    public AutoFightParam(string path, AutoFightConfig autoFightConfig) : base(null, null)
+    public AutoFightParam(string path, AutoFightConfig autoFightConfig) : base(null)
     {
         CombatStrategyPath = path;
         ApplyConfig(autoFightConfig);
@@ -72,7 +72,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     /// </summary>
     public bool ExpBasedPickupEnabled { get; set; } = false;
 
-    public AutoFightParam(string? strategyName = null) : base(null, null)
+    public AutoFightParam(string? strategyName = null) : base(null)
     {
         SetCombatStrategyPath(strategyName);
         SetDefault();

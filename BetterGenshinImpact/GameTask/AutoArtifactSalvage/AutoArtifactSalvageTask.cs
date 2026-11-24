@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.I18n;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
@@ -15,7 +16,6 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Core.Mask;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
@@ -73,18 +73,19 @@ public class AutoArtifactSalvageTask : ISoloTask
         this.maxNumToCheck = param.MaxNumToCheck;
         this.recognitionFailurePolicy = param.RecognitionFailurePolicy;
         this.logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
-        var stringLocalizer = param.StringLocalizer;
         this.cultureInfo = param.GameCultureInfo;
-        quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
+        var gameText = GameTextService.Instance;
+        var language = param.GameCultureInfo.Name;
+        quickSelectLocalizedString = gameText.Get(GameTextKeys.Artifact.QuickSelect, language);
         numOfStarLocalizedString =
         [
-            stringLocalizer.WithCultureGet(cultureInfo, "1星圣遗物"),
-            stringLocalizer.WithCultureGet(cultureInfo, "2星圣遗物"),
-            stringLocalizer.WithCultureGet(cultureInfo, "3星圣遗物"),
-            stringLocalizer.WithCultureGet(cultureInfo, "4星圣遗物")
+            gameText.Get(GameTextKeys.Artifact.Star1, language),
+            gameText.Get(GameTextKeys.Artifact.Star2, language),
+            gameText.Get(GameTextKeys.Artifact.Star3, language),
+            gameText.Get(GameTextKeys.Artifact.Star4, language)
         ];
 
-        artifactAffixStrDic = ArtifactAffix.DefaultStrDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, stringLocalizer.WithCultureGet(cultureInfo, kvp.Value))).ToFrozenDictionary();
+        artifactAffixStrDic = ArtifactAffix.GameTextKeyDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, gameText.Get(kvp.Value, language))).ToFrozenDictionary();
     }
 
     public static async Task OpenInventory(GridScreenName gridScreenName, IInputChannel input, ILogger logger, CancellationToken ct)

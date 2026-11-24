@@ -9,7 +9,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using OpenCvSharp;
@@ -49,13 +49,11 @@ internal class GoToSereniteaPotTask
 
     public GoToSereniteaPotTask()
     {
-        IStringLocalizer<GoToSereniteaPotTask> stringLocalizer = App.GetService<IStringLocalizer<GoToSereniteaPotTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.ayuanHeyString = stringLocalizer.WithCultureGet(cultureInfo, "阿圆");
-        this.ayuanHuolingString = stringLocalizer.WithCultureGet(cultureInfo, "壶灵");
-        this.ayuanHuoling2String = stringLocalizer.WithCultureGet(cultureInfo, "<壶灵>");
-        this.ayuanBelieveString = stringLocalizer.WithCultureGet(cultureInfo, "信任");
-        this.ayuanShopString = stringLocalizer.WithCultureGet(cultureInfo, "洞天百宝");
+        this.ayuanHeyString = GameTextService.Instance.Get(GameTextKeys.SereniteaPot.Ayuan);
+        this.ayuanHuolingString = GameTextService.Instance.Get(GameTextKeys.SereniteaPot.Tubby);
+        this.ayuanHuoling2String = GameTextService.Instance.Get(GameTextKeys.SereniteaPot.TubbyTitle);
+        this.ayuanBelieveString = GameTextService.Instance.Get(GameTextKeys.SereniteaPot.Trust);
+        this.ayuanShopString = GameTextService.Instance.Get(GameTextKeys.SereniteaPot.RealmDepot);
     }
 
     public async Task Start(CancellationToken ct)

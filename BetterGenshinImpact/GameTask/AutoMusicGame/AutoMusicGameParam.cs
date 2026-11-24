@@ -3,9 +3,9 @@ using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.AutoMusicGame;
 
-public class AutoMusicGameParam : BaseTaskParam<AutoMusicGameTask>
+public class AutoMusicGameParam : BaseTaskParam
 {
-    public AutoMusicGameParam() : base(null, null)
+    public AutoMusicGameParam() : base(null)
     {
     }
 }

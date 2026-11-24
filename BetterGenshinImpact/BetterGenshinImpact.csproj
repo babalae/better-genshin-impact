@@ -75,7 +75,6 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
-		<PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.4" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.21.0" />
 		<!--排除掉cpu的runtime dll-->
@@ -234,6 +233,9 @@
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\I18n\**">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\I18n\*.json">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>

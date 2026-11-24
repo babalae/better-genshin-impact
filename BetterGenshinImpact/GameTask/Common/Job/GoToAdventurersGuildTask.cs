@@ -12,7 +12,7 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using BetterGenshinImpact.Helpers;
 using System.Globalization;
 
@@ -32,11 +32,9 @@ public class GoToAdventurersGuildTask
 
     public GoToAdventurersGuildTask()
     {
-        IStringLocalizer<GoToAdventurersGuildTask> stringLocalizer = App.GetService<IStringLocalizer<GoToAdventurersGuildTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.dailyLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "每日");
-        this.catherineLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "凯瑟琳");
-        this.expeditionLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "探索");
+        this.dailyLocalizedString = GameTextService.Instance.Get(GameTextKeys.Guild.Daily);
+        this.catherineLocalizedString = GameTextService.Instance.Get(GameTextKeys.Guild.Katheryne);
+        this.expeditionLocalizedString = GameTextService.Instance.Get(GameTextKeys.Guild.Expedition);
     }
 
     public async Task Start(string country, CancellationToken ct, string? dailyRewardPartyName = null ,bool onlyDoOnce = false)

@@ -4,7 +4,7 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using OpenCvSharp;
 using System;
 using System.Globalization;
@@ -90,9 +90,7 @@ public static partial class Bv
             RegionOfInterest = ReviveButtonRoi(region)
         });
 
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        IStringLocalizer stringLocalizer = App.GetService<IStringLocalizer<BvResxHelper>>() ?? throw new Exception();
-        string revival = stringLocalizer.WithCultureGet(cultureInfo, "复苏");
+        string revival = GameTextService.Instance.Get(GameTextKeys.Common.Revive);
 
         return list.Any(r => IsReviveButtonText(r.Text, revival));
     }
@@ -282,9 +280,7 @@ public static partial class Bv
                 RegionOfInterest = new Rect(0, 0, region.Width, region.Height / 2)
             });
 
-            CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-            IStringLocalizer stringLocalizer = App.GetService<IStringLocalizer<BvResxHelper>>() ?? throw new Exception();
-            string revival = stringLocalizer.WithCultureGet(cultureInfo, "复苏");
+            string revival = GameTextService.Instance.Get(GameTextKeys.Common.Revive);
             if (list.Any(r => r.Text.Contains(revival)))
             {
                 return true;
@@ -307,9 +303,7 @@ public static partial class Bv
             RegionOfInterest = ReviveButtonRoi(region)
         });
 
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        IStringLocalizer stringLocalizer = App.GetService<IStringLocalizer<BvResxHelper>>() ?? throw new Exception();
-        string revival = stringLocalizer.WithCultureGet(cultureInfo, "复苏");
+        string revival = GameTextService.Instance.Get(GameTextKeys.Common.Revive);
 
         // 只点按钮本身：说明文字「将在最近拜访过的传送锚点或神像处复苏」也含「复苏」，点到它等于没点
         var button = list.FirstOrDefault(r => IsReviveButtonText(r.Text, revival));

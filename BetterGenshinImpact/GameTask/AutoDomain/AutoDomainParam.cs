@@ -5,7 +5,7 @@ using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
-public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
+public class AutoDomainParam : BaseTaskParam
 {
     /// <summary>仅本次运行使用。null 沿用游戏培养计划；JSON 数组元素为 material 和 target（目标库存）。</summary>
     public string? TrainingTargetsJson { get; set; }
@@ -106,7 +106,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         (DomainName == AutoDomainTask.TrainingGuideOption &&
          TrainingGuideCalculateRunsEnabled && TrainingGuideRewardRecognitionEnabled);
 
-    public AutoDomainParam(int domainRoundNum, string path) : base(null, null)
+    public AutoDomainParam(int domainRoundNum, string path) : base(null)
     {
         DomainRoundNum = domainRoundNum;
         if (domainRoundNum == 0)
@@ -146,7 +146,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         TrainingGuideFallbackSundaySelectedValue = config.TrainingGuideFallbackSundaySelectedValue;
     }
 
-    public AutoDomainParam(int domainRoundNum = 0) : base(null, null)
+    public AutoDomainParam(int domainRoundNum = 0) : base(null)
     {
         DomainRoundNum = domainRoundNum;
         if (domainRoundNum == 0)

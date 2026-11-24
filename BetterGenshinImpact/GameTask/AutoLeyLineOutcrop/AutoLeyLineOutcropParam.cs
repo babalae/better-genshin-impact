@@ -2,7 +2,7 @@
 
 namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 
-public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
+public class AutoLeyLineOutcropParam:BaseTaskParam
 {
 
     // 刷取次数
@@ -63,12 +63,12 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
         LeyLineOutcropType = config.LeyLineOutcropType;
     }
 
-    public AutoLeyLineOutcropParam() : base(null, null)
+    public AutoLeyLineOutcropParam() : base(null)
     {
         SetDefault();
     }
     
-    public AutoLeyLineOutcropParam(int count, string country, string leyLineOutcropType) : base(null, null)
+    public AutoLeyLineOutcropParam(int count, string country, string leyLineOutcropType) : base(null)
     {
         SetDefault();
         this.Count = count;

@@ -8,7 +8,6 @@ using CsTrees;
 using CsTrees.Blackboard;
 using CsTrees.Composites;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -75,7 +74,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             .LeafWithBlackboard(bb => new CheckFishingUserInterfaceBehaviour("检查是否在钓鱼界面", this, bb!))
                             .FailureIsSuccess("拉条循环")
                                 .Sequence("拉条", memory: true)
-                                    .CheckFishBite("自动提竿", _logger, ocrService, cultureInfo: autoFishingTaskParam.GameCultureInfo, stringLocalizer: autoFishingTaskParam.StringLocalizer)
+                                    .CheckFishBite("自动提竿", _logger, ocrService, cultureInfo: autoFishingTaskParam.GameCultureInfo)
                                     .RaiseHook("提竿", _logger, input)
                                     .GetFishBoxArea("等待拉条出现", _logger, false)
                                     .Fishing("钓鱼拉条", _logger, false, input)

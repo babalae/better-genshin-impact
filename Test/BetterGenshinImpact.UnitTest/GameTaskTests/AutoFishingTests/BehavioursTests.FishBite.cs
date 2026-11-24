@@ -119,7 +119,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
-                        .CheckFishBite("-", new FakeLogger(), OcrService, new System.Globalization.CultureInfo(cultureName), stringLocalizer)
+                        .CheckFishBite("-", new FakeLogger(), OcrService, new System.Globalization.CultureInfo(cultureName))
                     .End()
                 .End()
                 .Build();

@@ -17,6 +17,7 @@ using BetterGenshinImpact.Core.Mask;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -31,7 +32,7 @@ using BetterGenshinImpact.Service.Notification.Model.Enum;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.Kernel32;
 using static Vanara.PInvoke.User32;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
@@ -118,25 +119,22 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
         _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(taskParam);
 
-        IStringLocalizer<AutoDomainTask> stringLocalizer =
-            App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.challengeCompletedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "挑战达成");
-        this.autoLeavingLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "自动退出");
-        this.skipLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "跳过");
-        this.leyLineDisorderLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "地脉异常");
-        this.clickanywheretocloseLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "点击任意位置关闭");
-        this.matchingChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "匹配挑战");
-        this.rapidformationString = stringLocalizer.WithCultureGet(cultureInfo, "快速编队");
-        this.limitedFullyString = stringLocalizer.WithCultureGet(cultureInfo, "限时全部开放");
-        this.limitedFullyAllString = stringLocalizer.WithCultureGet(cultureInfo, "限时开放");
-        this.singlePlayerChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "单人挑战");
-        this.startChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "开始挑战");
-        this.retryDomainPromptPattern = stringLocalizer.WithCultureGet(cultureInfo, "是否仍要.*挑战.*秘境");
-        this.petrifiedTreeString = stringLocalizer.WithCultureGet(cultureInfo, "石化古树");
-        this.insufficientCountString = stringLocalizer.WithCultureGet(cultureInfo, "数量不足");
-        this.replenishResinString = stringLocalizer.WithCultureGet(cultureInfo, "补充原粹树脂");
-        this.cancelButtonString = stringLocalizer.WithCultureGet(cultureInfo, "取消");
+        this.challengeCompletedLocalizedString = GameTextService.Instance.Get(GameTextKeys.Domain.ChallengeCompleted);
+        this.autoLeavingLocalizedString = GameTextService.Instance.Get(GameTextKeys.Domain.AutoLeaving);
+        this.skipLocalizedString = GameTextService.Instance.Get(GameTextKeys.Common.Skip);
+        this.leyLineDisorderLocalizedString = GameTextService.Instance.Get(GameTextKeys.Domain.LeyLineDisorder);
+        this.clickanywheretocloseLocalizedString = GameTextService.Instance.Get(GameTextKeys.Common.ClickAnywhereToClose);
+        this.matchingChallengeString = GameTextService.Instance.Get(GameTextKeys.Domain.MatchingChallenge);
+        this.rapidformationString = GameTextService.Instance.Get(GameTextKeys.Domain.QuickSetup);
+        this.limitedFullyString = GameTextService.Instance.Get(GameTextKeys.Domain.LimitedTimeFullyOpen);
+        this.limitedFullyAllString = GameTextService.Instance.Get(GameTextKeys.Domain.LimitedTimeOpen);
+        this.singlePlayerChallengeString = GameTextService.Instance.Get(GameTextKeys.Domain.SinglePlayerChallenge);
+        this.startChallengeString = GameTextService.Instance.Get(GameTextKeys.Domain.StartChallenge);
+        this.retryDomainPromptPattern = GameTextService.Instance.Get(GameTextKeys.Domain.RetryPrompt);
+        this.petrifiedTreeString = GameTextService.Instance.Get(GameTextKeys.Domain.PetrifiedTree);
+        this.insufficientCountString = GameTextService.Instance.Get(GameTextKeys.Resin.Insufficient);
+        this.replenishResinString = GameTextService.Instance.Get(GameTextKeys.Resin.ReplenishOriginal);
+        this.cancelButtonString = GameTextService.Instance.Get(GameTextKeys.Common.Cancel);
     }
 
     /// <summary>
@@ -145,24 +143,30 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private static string ResolveUseButtonPattern()
     {
-        IStringLocalizer<AutoDomainTask> stringLocalizer =
-            App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        return stringLocalizer.WithCultureGet(cultureInfo, "使用");
+        return GameTextService.Instance.Get(GameTextKeys.Common.Use);
     }
+
+    /// <summary>
+    /// 树脂中文名（配置与调用方内部使用）→ 游戏文本 key
+    /// </summary>
+    private static readonly FrozenDictionary<string, string> ResinNameGameTextKeys = new Dictionary<string, string>
+    {
+        ["原粹树脂"] = GameTextKeys.Resin.Original,
+        ["浓缩树脂"] = GameTextKeys.Resin.Condensed,
+        ["须臾树脂"] = GameTextKeys.Resin.Transient,
+        ["脆弱树脂"] = GameTextKeys.Resin.Fragile,
+    }.ToFrozenDictionary();
 
     /// <summary>
     /// 解析树脂名称的本地化匹配串，同一个 idiom 用于 <see cref="PressUseResin(List{Region}, string, string)"/>。
     /// <paramref name="resinName"/> 是内部使用的中文 key（20/40 原粹树脂已在调用前折叠为"原粹树脂"）；
-    /// 若资源里没有对应条目（如 zh-Hans，或调用方已经传入本地化后的值），本地化器会原样回退返回入参本身，
-    /// 因此对已本地化的调用方（future PR-B）是无操作的、向后兼容的。
+    /// 未登记的名称（例如调用方已经传入本地化后的值）原样返回，因此对已本地化的调用方是无操作的、向后兼容的。
     /// </summary>
     private static string ResolveResinNamePattern(string resinName)
     {
-        IStringLocalizer<AutoDomainTask> stringLocalizer =
-            App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        return stringLocalizer.WithCultureGet(cultureInfo, resinName);
+        return ResinNameGameTextKeys.TryGetValue(resinName, out var key)
+            ? GameTextService.Instance.Get(key)
+            : resinName;
     }
 
     private static RecognitionObject GetConfirmRa(params string[] targetText)

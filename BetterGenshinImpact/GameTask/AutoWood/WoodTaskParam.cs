@@ -3,12 +3,12 @@ using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.AutoWood;
 
-public class WoodTaskParam : BaseTaskParam<AutoWoodTask>
+public class WoodTaskParam : BaseTaskParam
 {
     public int WoodRoundNum { get; set; }
     public int WoodDailyMaxCount { get; set; }
 
-    public WoodTaskParam(int woodRoundNum, int woodDailyMaxCount) : base(null, null)
+    public WoodTaskParam(int woodRoundNum, int woodDailyMaxCount) : base(null)
     {
         WoodRoundNum = woodRoundNum;
         if (woodRoundNum == 0)

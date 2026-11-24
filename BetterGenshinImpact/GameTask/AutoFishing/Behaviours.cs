@@ -16,7 +16,7 @@ using Compunet.YoloSharp;
 using CsTrees;
 using CsTrees.Blackboard;
 using BetterGenshinImpact.Core.Input;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
@@ -933,11 +933,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
-        private CheckFishBite(string name, ILogger logger, IOcrService ocrService, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
+        private CheckFishBite(string name, ILogger logger, IOcrService ocrService, CultureInfo? cultureInfo = null) : base(name)
         {
             this.logger = logger;
             this.ocrService = ocrService;
-            this.getABiteLocalizedString = stringLocalizer == null ? "上钩" : stringLocalizer.WithCultureGet(cultureInfo, "上钩");
+            this.getABiteLocalizedString = GameTextService.Instance.Get(GameTextKeys.Fishing.Bite, cultureInfo?.Name ?? GameTextService.BaseLanguage);
         }
 
         protected override void Initialize()

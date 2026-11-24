@@ -5,7 +5,6 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using CsTrees.Blackboard;
 using CsTrees.FluentBuilder;
 using BetterGenshinImpact.Core.Input;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Globalization;
@@ -58,8 +57,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             IItemIconRecognizer itemRecognizer,
             Blackboard blackboard,
             TimeProvider? timeProvider = null,
-            CultureInfo? cultureInfo = null,
-            IStringLocalizer? stringLocalizer = null) => new EnterFishingMode(name, logger, input, itemRecognizer, blackboard, timeProvider, cultureInfo, stringLocalizer);
+            CultureInfo? cultureInfo = null) => new EnterFishingMode(name, logger, input, itemRecognizer, blackboard, timeProvider, cultureInfo);
 
         public CheckInitalState CheckInitalState(
             string name,
@@ -107,8 +105,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             ILogger logger,
             IOcrService ocrService,
             Blackboard blackboard,
-            CultureInfo? cultureInfo = null,
-            IStringLocalizer? stringLocalizer = null) => new CheckFishBite(name, logger, ocrService, blackboard, cultureInfo, stringLocalizer);
+            CultureInfo? cultureInfo = null) => new CheckFishBite(name, logger, ocrService, blackboard, cultureInfo);
 
         public RaiseHook RaiseHook(
             string name,

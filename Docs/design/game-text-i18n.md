@@ -66,7 +66,7 @@ UI 端用简体原文做 key 是合理的：简体就是 UI 的源语言，缺�
 **非目标**
 - 不合并 UI 文案与游戏文本两个维度，UI 端继续使用简体原文作为 key。
 - 不改变各任务“构造时取一次文本、运行中不变”的语义。运行中切换游戏语言仍需重新启动任务才生效，与现状一致。
-- 不在本次补全缺失的译文。缺失项会被列出、打日志，由熟悉对应客户端的人补充，避免凭猜测写入错误文本。
+- 不在本次补全缺失的译文。缺失项由测试基线列出，由熟悉对应客户端的人补充，避免凭猜测写入错误文本。
 
 ## 3. 设计
 
@@ -216,18 +216,21 @@ public sealed class GameTextService
 }
 ```
 
-取值规则：
+取值规则（**缺少文本属于预期情况，静默回退，不记录日志**）：
 
-| 情况 | 返回值 | 日志 |
-|---|---|---|
-| 目标语言表中有该 key | 目标语言的值 | — |
-| 目标语言缺项，zh-Hans 有 | zh-Hans 的值（与现状“回退简体原文”行为一致，避免改造引入回归） | 按 `(language, key)` 去重打一次 `Warning` |
-| zh-Hans 也没有 | key 本身 | `Error`（说明代码里用了未登记的 key，测试会拦住） |
-| `language` 不在 `SupportedLanguages` 中 | 按 zh-Hans 处理 | 打一次 `Warning` |
+| 情况 | 返回值 |
+|---|---|
+| 目标语言表中有该 key | 目标语言的值 |
+| 目标语言缺项，zh-Hans 有 | zh-Hans 的值（与现状“回退简体原文”行为一致，避免改造引入回归） |
+| zh-Hans 也没有 | key 本身（说明代码里用了未登记的 key，由单元测试拦住） |
+| `language` 不在 `SupportedLanguages` 中 | 按 zh-Hans 处理 |
+| 语言文件不存在 | 视为空表，按上述规则回退 |
+
+缺项不在运行时报告，而是交给第 5 节的缺项基线测试跟踪。
 
 实现要点：
 - **加载**：每种语言首次使用时懒加载，解析为 `FrozenDictionary<string, string>`，缓存在 `ConcurrentDictionary<string, Lazy<FrozenDictionary<string, string>>>` 中。表加载后不可变，多线程读取无需加锁。多实例场景下每个进程各自加载，无共享状态。
-- **文件损坏**：JSON 解析失败时记录 `Error` 日志并视为空表（随后按上表回退到 zh-Hans），不抛异常，保证不会因为一个文件损坏而导致任务启动崩溃。
+- **文件损坏**：JSON 解析失败是唯一记录日志的情况（`Error`，每种语言只加载一次，因此最多一条），随后视为空表按上表回退，不抛异常，保证不会因为一个文件损坏而导致任务启动崩溃。
 - **序列化**：使用 Newtonsoft.Json（与 `I18nService` 一致，遵守 `AGENTS.md` 约定）。
 - **注入**：与 `I18nService` 相同，提供 `Instance` 单例，同时在 `App.xaml.cs` 中 `services.AddSingleton(GameTextService.Instance)`。静态类 `Bv` 等不便注入的地方直接用 `Instance`，可注入的任务类优先使用构造注入。
 
@@ -253,7 +256,7 @@ string revival = GameTextService.Instance.Get(GameTextKeys.Common.Revive);
 | `AutoDomainTask.ResolveResinNamePattern(resinName)` | 用户配置中的树脂名，中文 | `AutoDomainTask` 内维护静态映射 `{"原粹树脂" → GameTextKeys.Resin.Original, ...}` |
 | `ArtifactAffix.DefaultStrDic` | 词条类型枚举 → 中文名 | 改为枚举 → key，`ATK/ATKPercent` 都映射到 `Artifact.Affix.ATK`，其余同理 |
 
-中文业务值本身（传送点数据、用户配置）不在本次改动范围内。映射表找不到时打 `Warning`，并把原值直接当作匹配文本使用，与现状一致。
+中文业务值本身（传送点数据、用户配置）不在本次改动范围内。映射表找不到时把原值直接当作匹配文本使用，与现状一致，不记录日志（例如 `TpTask` 中层岩巨渊、渊下宫等子地图名称本来就没有游戏文本）。
 
 ### 3.6 游戏语言下拉框（GameLanguageDict）
 
@@ -269,7 +272,7 @@ string revival = GameTextService.Instance.Get(GameTextKeys.Common.Revive);
 | `View/Converters/CultureInfoNameToKVPConverter.*.resx`（5 个） | 已无引用 |
 | `GameTask/Common/BgiVision/BvResxHelper.cs` | 仅作为泛型占位 |
 | `Helpers/CultureHelper.cs` | `WithCultureGet` / `Use` 只被游戏文本使用 |
-| `BaseTaskParam<T>.StringLocalizer`，以及 `TpTaskParam`、`AutoFishingTaskParam`、`AutoArtifactSalvageTaskParam`、钓鱼 `Behaviours`/`AutoFishingTaskCatalog` 中的 `IStringLocalizer` 参数 | 改为直接使用 `GameTextService`；`GameCultureInfo` 改为 `GameLanguage`（string）或保留，按调用方需要决定 |
+| `BaseTaskParam<T>.StringLocalizer`，以及 `TpTaskParam`、`AutoFishingTaskParam`、`AutoArtifactSalvageTaskParam`、钓鱼 `Behaviours`/`AutoFishingTaskCatalog` 中的 `IStringLocalizer` 参数 | 改为直接使用 `GameTextService`。泛型参数 `T` 只为 `IStringLocalizer<T>` 存在，一并去掉，`BaseTaskParam<T>` 改为 `BaseTaskParam`；`GameCultureInfo` 保留（圣遗物分解还用它解析数字） |
 | `App.xaml.cs` 中的 `services.AddLocalization()` | 已无消费者 |
 | `Microsoft.Extensions.Localization` 包引用 | 删除前确认没有其他引用；`AutoEatParam.cs`、`CommonSettingsPageViewModel.cs` 中的 `using` 是残留，一并清理 |
 | `Test/.../LocalizationFixture.cs` | 测试改为直接构造 `GameTextService` |
@@ -302,14 +305,14 @@ string revival = GameTextService.Instance.Get(GameTextKeys.Common.Revive);
 | 风险 | 应对 |
 |---|---|
 | 导出脚本漏项或改动了文本（空白、转义） | 导出后逐条比对 resx 与 JSON 的值，全部相等才提交 |
-| 动态 key 映射遗漏（新增地区、树脂名） | 映射找不到时打 `Warning` 并按原值匹配，行为与现状一致；新增地区时需要同时在映射和 JSON 中登记 |
+| 动态 key 映射遗漏（新增地区、树脂名） | 映射找不到时按原值匹配，行为与现状一致；新增地区时需要同时在映射和 JSON 中登记 |
 | 用户手动改坏 JSON | 解析失败视为空表并打 `Error` 日志，行为退化为“回退 zh-Hans 值”，与现在的缺项表现一致，不会崩溃 |
 | 第三方脚本或插件依赖 `IStringLocalizer` | 仓库内没有发现外部可见的 API 暴露它；JS 脚本接口不涉及 resx |
 | `ja`/`ru` 用户配置被重置 | 改造前这些用户的识别已经失效；重置时打日志提示用户确认 |
 
 ## 附录 A：key 对照表
 
-由现有 resx 与代码调用点整理，共 68 个 key。“缺失语言”指迁移后该语言 JSON 中没有这个 key（运行时回退 zh-Hans 值并打 `Warning`），即第 5 节缺项基线的初始内容。
+由现有 resx 与代码调用点整理，共 68 个 key。“缺失语言”指迁移后该语言 JSON 中没有这个 key（运行时静默回退 zh-Hans 值），即第 5 节缺项基线的初始内容。
 
 | 新 key | 原 key（简体原文） | 使用位置 | 缺失语言 |
 |---|---|---|---|

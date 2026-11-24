@@ -1,5 +1,4 @@
 using BetterGenshinImpact.GameTask.Model;
-using Microsoft.Extensions.Localization;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -7,9 +6,9 @@ using System.Text;
 
 namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
 {
-    public class AutoArtifactSalvageTaskParam : BaseTaskParam<AutoArtifactSalvageTask>
+    public class AutoArtifactSalvageTaskParam : BaseTaskParam
     {
-        public AutoArtifactSalvageTaskParam(int star, string? javaScript, string? artifactSetFilter, int? maxNumToCheck, RecognitionFailurePolicy? recognitionFailurePolicy, CultureInfo? cultureInfo = null, IStringLocalizer<AutoArtifactSalvageTask>? stringLocalizer = null) : base(cultureInfo, stringLocalizer)
+        public AutoArtifactSalvageTaskParam(int star, string? javaScript, string? artifactSetFilter, int? maxNumToCheck, RecognitionFailurePolicy? recognitionFailurePolicy, CultureInfo? cultureInfo = null) : base(cultureInfo)
         {
             Star = star;
             JavaScript = javaScript;

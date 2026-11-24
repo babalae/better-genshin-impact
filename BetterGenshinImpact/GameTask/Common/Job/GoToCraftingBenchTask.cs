@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using System.Globalization;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Core.Recognition.OCR;
@@ -40,9 +40,7 @@ public class GoToCraftingBenchTask
 
     public GoToCraftingBenchTask()
     {
-        IStringLocalizer<GoToCraftingBenchTask> stringLocalizer = App.GetService<IStringLocalizer<GoToCraftingBenchTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.craftLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "合成");
+        this.craftLocalizedString = GameTextService.Instance.Get(GameTextKeys.Crafting.Craft);
     }
     
     public async Task GoCraftResin(string country, CancellationToken ct)

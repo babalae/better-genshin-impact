@@ -3,9 +3,9 @@ using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
-public class GeniusInvokationTaskParam : BaseTaskParam<AutoGeniusInvokationTask>
+public class GeniusInvokationTaskParam : BaseTaskParam
 {
-    public GeniusInvokationTaskParam(string strategyContent) : base(null, null)
+    public GeniusInvokationTaskParam(string strategyContent) : base(null)
     {
         this.StrategyContent = strategyContent;
     }
