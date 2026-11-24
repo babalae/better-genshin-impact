@@ -118,7 +118,7 @@ _Avoid_：把共享配置理解为共享运行状态，或把共享文件理解�
 **界面语言**：BetterGI 软件界面显示的语言，保存在 `OtherConfig.UiCultureInfoName`；简体中文原文同时是翻译 Key。可选语言由内置语言（简体中文、繁體中文、English、日本語、Русский）和已启用的语言插件提供。详见[界面语言插件化](Docs/design/ui-language-plugin.md)。
 _Avoid_：与“游戏语言”（`GameCultureInfoName`，原神客户端的语言，影响识别）混为一谈。
 
-**语言插件**：用程序集特性 `[assembly: UiLanguage]` 声明界面语言、自带翻译 JSON 的插件，标识为 `lang_<语言代码>`，如 `lang_it`。可以新增语言，也可以覆盖内置语言的部分翻译。所选语言的插件未启用时界面回退为简体中文，保存的选择不变。
+**语言插件**：用程序集特性 `[assembly: UiLanguage]` 声明界面语言、`[assembly: GameLanguage]` 声明游戏语言（识别文本，Key 为 `GameTextKeys`），自带 JSON 的插件，标识为 `lang_<语言代码>`，如 `lang_it`。两种语言相互独立，一个插件可以只提供其中一种。可以新增语言，也可以覆盖内置语言的部分条目。所选语言的插件未启用时回退为简体中文，保存的选择不变。内置游戏语言为简体中文、繁體中文、English、Français，意大利语由 `lang_it` 提供。
 _Avoid_：把语言插件当作可插拔能力的实现；它不经过插件页“功能选择”。
 
 ### 外部访问

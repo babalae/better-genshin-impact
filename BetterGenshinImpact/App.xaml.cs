@@ -200,15 +200,8 @@ public partial class App : Application
                 services.AddSingleton<HardwareAccelerationViewModelFactory>();
                 services.AddSingleton<IInferenceSettingsInteraction, InferenceSettingsInteraction>();
 
-                // 游戏语言只能是游戏文本表支持的语言；历史版本可选的 ja/ru 等没有游戏文本，识别会静默失效
-                if (!GameTextService.IsSupported(all.OtherConfig.GameCultureInfoName))
-                {
-                    Log.Warning("游戏语言 {GameLanguage} 没有对应的游戏文本，已重置为 {DefaultLanguage}，请在设置中确认游戏语言",
-                        all.OtherConfig.GameCultureInfoName, GameTextService.BaseLanguage);
-                    all.OtherConfig.GameCultureInfoName = GameTextService.BaseLanguage;
-                    configService.Save();
-                }
-
+                // 游戏语言可以由插件提供，此时插件尚未加载，不在这里校验或重置配置；
+                // 不可用的游戏语言（插件未启用，或历史版本可选的 ja/ru）在取值时回退，PluginManager.Initialize() 末尾记录警告
                 services.AddSingleton(GameTextService.Instance);
 
                 var i18nService = I18nService.Instance;

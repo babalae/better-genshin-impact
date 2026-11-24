@@ -86,10 +86,9 @@
                               Grid.Column="1"
                               Width="200"
                               Margin="0,0,36,0"
-                              DisplayMemberPath="Value"
-                              ItemsSource="{Binding GameLanguageDict}"
-                              SelectedItem="{Binding Config.OtherConfig.GameCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}"
-                              SelectedValuePath="Key" />
+                              DisplayMemberPath="DisplayName"
+                              ItemsSource="{Binding GameLanguageOptions}"
+                              SelectedItem="{Binding SelectedGameLanguage, Mode=TwoWay}" />
                 </Grid>
 
             </ui:CardControl.Header>

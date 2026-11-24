@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Plugins.Pluggables;
+using BetterGenshinImpact.GameTask.I18n;
 using BetterGenshinImpact.Infrastructure.Storage;
 using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Instance;
@@ -21,7 +22,7 @@ namespace BetterGenshinImpact.Core.Plugins.Hosting;
 
 /// <summary>
 /// 插件宿主：发现 Plugins 目录下的插件，加载程序集，启用、停用（不需要重启），安装、卸载。
-/// 启用时把插件程序集中的实现交给 <see cref="PluggableRegistry"/>、界面语言交给 <see cref="I18nService"/>，停用时移除；不直接调用其他业务代码。
+/// 启用时把插件程序集中的实现交给 <see cref="PluggableRegistry"/>、界面语言交给 <see cref="I18nService"/>、游戏语言交给 <see cref="GameTextService"/>，停用时移除；不直接调用其他业务代码。
 /// </summary>
 /// <remarks>
 /// 宿主内部类型，不承诺兼容，插件不要使用。除标明的方法外只在界面线程调用。
@@ -55,6 +56,11 @@ public sealed class PluginManager
     private readonly I18nService _i18n;
 
     /// <summary>
+    /// 游戏文本服务，登记插件提供的游戏语言。
+    /// </summary>
+    private readonly GameTextService _gameText;
+
+    /// <summary>
     /// 日志。
     /// </summary>
     private readonly ILogger<PluginManager> _logger;
@@ -73,12 +79,13 @@ public sealed class PluginManager
     /// 创建插件宿主。
     /// </summary>
     public PluginManager(PluggableRegistry registry, AllConfig config, PendingCleanupStore cleanup,
-        I18nService i18n, ILogger<PluginManager> logger)
+        I18nService i18n, GameTextService gameText, ILogger<PluginManager> logger)
     {
         _registry = registry;
         _config = config.PluginConfig;
         _cleanup = cleanup;
         _i18n = i18n;
+        _gameText = gameText;
         _logger = logger;
         PluginsDirectory = Global.Absolute("Plugins");
         _registry.Incompatible += OnIncompatible;
@@ -134,6 +141,14 @@ public sealed class PluginManager
         if (_i18n.IsFallback)
         {
             _logger.LogInformation("界面语言 {Language} 不可用，使用简体中文", _i18n.CurrentLanguage);
+        }
+
+        // 所选游戏语言来自未启用的插件时同样只回退，配置不变，插件启用后自动生效
+        var gameLanguage = GameTextService.CurrentLanguage;
+        if (!_gameText.IsAvailable(gameLanguage))
+        {
+            _logger.LogWarning("游戏语言 {Language} 不可用，识别使用 {Effective} 的游戏文本，请在设置中确认游戏语言或启用对应的语言插件",
+                gameLanguage, _gameText.GetEffectiveLanguage(gameLanguage));
         }
     }
 
@@ -205,9 +220,11 @@ public sealed class PluginManager
 
             var runtime = entry.Runtime!;
             entry.Implementations = _registry.AddPluginAssembly(id, entry.Manifest.Name, runtime.Assembly, runtime.Services);
-            // 界面语言在实现登记成功后登记；当前语言由该插件提供时界面立即刷新
-            _i18n.AddPluginLanguages(id, runtime.Languages);
-            entry.Languages = runtime.Languages;
+            // 界面语言、游戏语言在实现登记成功后登记；当前界面语言由该插件提供时界面立即刷新，游戏语言在下次启动任务时生效
+            _i18n.AddPluginLanguages(id, runtime.UiLanguages);
+            entry.UiLanguages = runtime.UiLanguages;
+            _gameText.AddPluginLanguages(id, runtime.GameLanguages);
+            entry.GameLanguages = runtime.GameLanguages;
             entry.State = PluginState.Enabled;
             entry.Error = null;
             if (!_config.EnabledPlugins.Contains(id))
@@ -215,8 +232,8 @@ public sealed class PluginManager
                 _config.EnabledPlugins.Add(id);
             }
 
-            _logger.LogInformation("已启用插件 {Id} {Version}，提供 {Count} 个实现、{LanguageCount} 种界面语言",
-                id, entry.Manifest.Version, entry.Implementations.Count, entry.Languages.Count);
+            _logger.LogInformation("已启用插件 {Id} {Version}，提供 {Count} 个实现、{UiLanguageCount} 种界面语言、{GameLanguageCount} 种游戏语言",
+                id, entry.Manifest.Version, entry.Implementations.Count, entry.UiLanguages.Count, entry.GameLanguages.Count);
             return true;
         }
         catch (Exception e)
@@ -229,7 +246,7 @@ public sealed class PluginManager
     }
 
     /// <summary>
-    /// 停用插件：移除它的界面语言；注册表移除它的实现，受影响的可插拔能力回退；等待它的实例上的调用结束并释放，然后从启用列表移除。
+    /// 停用插件：移除它的界面语言和游戏语言；注册表移除它的实现，受影响的可插拔能力回退；等待它的实例上的调用结束并释放，然后从启用列表移除。
     /// 程序集仍保留在进程中，再次启用时复用。
     /// </summary>
     public async Task DisableAsync(PluginEntry entry)
@@ -238,9 +255,11 @@ public sealed class PluginManager
         if (entry.State == PluginState.Enabled)
         {
             entry.State = PluginState.Disabling;
-            // 界面语言没有进行中的调用，先移除，当前语言随之回退
+            // 语言没有进行中的调用，先移除，当前语言随之回退；已经开始的任务在构造时取过游戏文本，不受影响
             _i18n.RemovePluginLanguages(id);
-            entry.Languages = [];
+            entry.UiLanguages = [];
+            _gameText.RemovePluginLanguages(id);
+            entry.GameLanguages = [];
             try
             {
                 await _registry.RemovePluginAsync(id);
@@ -362,12 +381,13 @@ public sealed class PluginManager
         var logger = App.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger($"Plugin.{manifest.Id}");
         var context = new PluginContext(manifest, entry.Directory, logger);
         var services = new PluginServiceProvider(context, App.ServiceProvider);
-        // 先读取界面语言再注册设置界面：语言声明不合法时插件加载失败，不留下已注册的模板
-        var languages = PluginLanguageReader.Read(assembly, entry.Directory);
+        // 先读取语言再注册设置界面：语言声明不合法时插件加载失败，不留下已注册的模板
+        var uiLanguages = PluginLanguageReader.ReadUiLanguages(assembly, entry.Directory);
+        var gameLanguages = PluginLanguageReader.ReadGameLanguages(assembly, entry.Directory);
         var settingsViewModelType = RegisterSettingsView(assembly);
         _logger.LogInformation("已加载插件 {Id} {Version}：{Path}，SHA256 {Hash}",
             manifest.Id, manifest.Version, entryPath, ComputeSha256(entryPath));
-        return new PluginRuntime(loadContext, assembly, context, services, settingsViewModelType, languages);
+        return new PluginRuntime(loadContext, assembly, context, services, settingsViewModelType, uiLanguages, gameLanguages);
     }
 
     /// <summary>

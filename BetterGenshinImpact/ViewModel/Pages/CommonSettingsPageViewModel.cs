@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -60,6 +59,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
     private readonly CustomHtmlMaskService _customHtmlMaskService;
     private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
     private readonly I18nService _i18nService;
+
+    /// <summary>
+    /// 游戏文本服务，提供可选的游戏语言（内置语言和已启用插件提供的语言）。
+    /// </summary>
+    private readonly GameTextService _gameTextService;
 
     /// <summary>
     /// 外部访问令牌生成与校验服务。
@@ -130,7 +134,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         RecognitionTemplateEditorService recognitionTemplateEditorService, I18nService i18nService,
         ExternalAccessState externalAccessState, ExternalAccessTokenService externalAccessTokenService,
         IStorageService storageService, Func<StorageManagementWindow> storageManagementWindowFactory,
-        NetworkSettingsViewModel networkSettings, PluggableRegistry pluggables)
+        NetworkSettingsViewModel networkSettings, PluggableRegistry pluggables, GameTextService gameTextService)
     {
         NetworkSettings = networkSettings;
         // OCR 模型是可插拔能力：可选项为内置的 PP-OCRv6 和已启用的 OCR 插件，与插件页“功能选择”保持同步
@@ -147,6 +151,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _customHtmlMaskService = customHtmlMaskService;
         _recognitionTemplateEditorService = recognitionTemplateEditorService;
         _i18nService = i18nService;
+        _gameTextService = gameTextService;
         ExternalAccessState = externalAccessState;
         _externalAccessTokenService = externalAccessTokenService;
         Config.ExternalAccessConfig.PropertyChanged += (_, args) =>
@@ -162,9 +167,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
         OverlayStyleSettingGroups = OverlayStyleSettingGroup.Create(Config.MaskWindowConfig, OnOverlayStyleChanged);
         InitializeCountries();
         InitializeMiyousheCookie();
-        // 界面语言列表随插件启用、停用变化
+        // 界面语言、游戏语言列表随插件启用、停用变化
         RebuildUiLanguageOptions();
         _i18nService.LanguagesChanged += (_, _) => RebuildUiLanguageOptions();
+        RebuildGameLanguageOptions();
+        _gameTextService.LanguagesChanged += (_, _) => RebuildGameLanguageOptions();
     }
 
     public AllConfig Config { get; set; }
@@ -205,12 +212,20 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public ObservableCollection<string> MapPathingTypes { get; } = ["SIFT", "TemplateMatch"];
 
     /// <summary>
-    /// 原神游戏语言的可选项。与界面语言无关，意大利语迁移为插件后游戏语言仍保留 it。
-    /// 只列出游戏文本表支持的语言，见 <see cref="GameTextService.SupportedLanguages"/>。
+    /// 原神游戏语言的可选项，与界面语言无关：内置游戏语言和已启用插件提供的游戏语言（如意大利语插件 lang_it）；
+    /// 保存的语言不可用时末尾多一项“（不可用）”。只列出有游戏文本的语言，见 <see cref="GameTextService.Languages"/>。
     /// </summary>
-    [ObservableProperty] private FrozenDictionary<string, string> _gameLanguageDict =
-        GameTextService.SupportedLanguages
-            .ToFrozenDictionary(c => c, c => CultureInfoNameToKVPConverter.GetDisplayName(c));
+    public ObservableCollection<GameLanguageOption> GameLanguageOptions { get; } = [];
+
+    /// <summary>
+    /// 当前选中的游戏语言。用户选择时保存配置，下次启动任务时生效。
+    /// </summary>
+    [ObservableProperty] private GameLanguageOption? _selectedGameLanguage;
+
+    /// <summary>
+    /// 正在重建游戏语言列表，期间的选中变化不写配置。
+    /// </summary>
+    private bool _rebuildingGameLanguages;
 
     /// <summary>
     /// 界面语言的可选项：内置语言和已启用插件提供的语言；保存的语言不可用时末尾多一项“（不可用）”。
@@ -493,6 +508,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         OcrModel.Refresh();
         // 切换语言后去掉之前的“（不可用）”项
         RebuildUiLanguageOptions();
+        RebuildGameLanguageOptions();
     }
 
     /// <summary>
@@ -670,6 +686,55 @@ public partial class CommonSettingsPageViewModel : ViewModel
         finally
         {
             _rebuildingUiLanguages = false;
+        }
+    }
+
+    /// <summary>
+    /// 用户选择游戏语言时保存配置。重建列表时的选中变化、清空列表时的 null 不处理。
+    /// </summary>
+    partial void OnSelectedGameLanguageChanged(GameLanguageOption? value)
+    {
+        if (_rebuildingGameLanguages || value is null
+            || string.Equals(value.Code, Config.OtherConfig.GameCultureInfoName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        Config.OtherConfig.GameCultureInfoName = value.Code;
+        _configService.Save();
+    }
+
+    /// <summary>
+    /// 按游戏文本服务的当前语言列表重建游戏语言下拉框，并重新选中保存的语言。
+    /// 保存的语言不可用（提供它的插件未安装或未启用，或是历史版本可选但没有游戏文本的语言）时追加一项“（不可用）”。
+    /// </summary>
+    private void RebuildGameLanguageOptions()
+    {
+        _rebuildingGameLanguages = true;
+        try
+        {
+            var saved = Config.OtherConfig.GameCultureInfoName;
+            // 先清空选中项：选项是值相等的记录，重建后赋相同的值不会触发变化通知，下拉框会显示空白
+            SelectedGameLanguage = null;
+            GameLanguageOptions.Clear();
+            foreach (var language in _gameTextService.Languages)
+            {
+                GameLanguageOptions.Add(language);
+            }
+
+            var selected = GameLanguageOptions.FirstOrDefault(l => string.Equals(l.Code, saved, StringComparison.OrdinalIgnoreCase));
+            if (selected is null && !string.IsNullOrWhiteSpace(saved))
+            {
+                selected = new GameLanguageOption(saved,
+                    string.Format(I18nService.Instance.Translate("{0}（不可用）"), GetNativeLanguageName(saved)));
+                GameLanguageOptions.Add(selected);
+            }
+
+            SelectedGameLanguage = selected;
+        }
+        finally
+        {
+            _rebuildingGameLanguages = false;
         }
     }
 

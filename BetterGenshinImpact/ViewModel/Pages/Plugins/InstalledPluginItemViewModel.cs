@@ -130,7 +130,7 @@ public sealed partial class InstalledPluginItemViewModel : ObservableObject
     public bool CanUninstall => !IsBusy && Entry.State is not (PluginState.Disabling or PluginState.Uninstalled);
 
     /// <summary>
-    /// 插件提供的功能，按可插拔能力列出实现名称，界面语言单独列为一项。
+    /// 插件提供的功能，按可插拔能力列出实现名称，界面语言、游戏语言各单独列为一项。
     /// </summary>
     public string ImplementationsText
     {
@@ -140,9 +140,14 @@ public sealed partial class InstalledPluginItemViewModel : ObservableObject
                 .GroupBy(i => i.PluggableId)
                 .Select(g => $"{_pluggableName(g.Key)}（{string.Join("、", g.Select(i => i.DisplayName))}）")
                 .ToList();
-            if (Entry.Languages.Count > 0)
+            if (Entry.UiLanguages.Count > 0)
             {
-                parts.Add($"界面语言（{string.Join("、", Entry.Languages.Select(l => l.DisplayName))}）");
+                parts.Add($"界面语言（{string.Join("、", Entry.UiLanguages.Select(l => l.DisplayName))}）");
+            }
+
+            if (Entry.GameLanguages.Count > 0)
+            {
+                parts.Add($"游戏语言（{string.Join("、", Entry.GameLanguages.Select(l => l.DisplayName))}）");
             }
 
             return parts.Count == 0 ? "启用后显示" : string.Join("；", parts);

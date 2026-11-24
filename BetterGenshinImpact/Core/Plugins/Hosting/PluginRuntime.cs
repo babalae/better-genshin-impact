@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.I18n;
 using BetterGenshinImpact.Service.I18n;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,14 +18,16 @@ namespace BetterGenshinImpact.Core.Plugins.Hosting;
 /// <param name="Context">提供给插件的上下文。</param>
 /// <param name="Services">插件实现解析构造参数使用的服务容器。</param>
 /// <param name="SettingsViewModelType">带 <see cref="PluginSettingsViewAttribute"/> 的设置 VM 类型，没有设置界面时为 null。</param>
-/// <param name="Languages">插件用 <see cref="UiLanguageAttribute"/> 声明的界面语言，翻译已读入内存。</param>
+/// <param name="UiLanguages">插件用 <see cref="UiLanguageAttribute"/> 声明的界面语言，翻译已读入内存。</param>
+/// <param name="GameLanguages">插件用 <see cref="GameLanguageAttribute"/> 声明的游戏语言，文本已读入内存。</param>
 internal sealed record PluginRuntime(
     PluginLoadContext LoadContext,
     Assembly Assembly,
     PluginContext Context,
     IServiceProvider Services,
     Type? SettingsViewModelType,
-    IReadOnlyList<UiLanguagePack> Languages);
+    IReadOnlyList<UiLanguagePack> UiLanguages,
+    IReadOnlyList<GameTextPack> GameLanguages);
 
 /// <summary>
 /// <see cref="IPluginContext"/> 的实现。
