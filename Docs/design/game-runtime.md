@@ -364,7 +364,7 @@ WinEventHook 从 Dispatcher 搬进这里，同时做两处调整：
 
 | 成员 | 行为 |
 | --- | --- |
-| `AcquireAsync` | 按配置关闭 HDR，然后 `FindGenshinImpactHandle`。找到就 `AttachTo`；没找到时，开启了关联启动则 `StartFromLocalAsync` 后 `AttachTo`，否则提示"未找到原神窗口"并返回 null |
+| `AcquireAsync` | 先 `FindGenshinImpactHandle`。找到就 `AttachTo`；没找到且开启关联启动时，按配置通过 `GenshinHdrHelper` 包装 `StartFromLocalAsync`，启动本地原神前关闭原生 HDR、临时禁用 Auto HDR，启动完成后恢复 Auto HDR 配置再 `AttachTo`；否则提示"未找到原神窗口"并返回 null |
 | `AttachTo(hWnd)` | Activate，确认窗口没有最小化，`GameCaptureFactory.Create(配置的 CaptureMode)` 并 Start，然后组装 `GameRuntime`。输入为 `new Win32InputBackend(hWnd)` |
 | `CloseGame` | 调用 `SystemControl.CloseGameProcesses()`（原 `CloseGame` 的实现）：按进程名结束同 Session 的游戏进程 |
 

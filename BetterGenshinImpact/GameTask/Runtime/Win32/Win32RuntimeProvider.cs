@@ -29,7 +29,6 @@ public sealed class Win32RuntimeProvider(
     public async Task<GameRuntime?> AcquireAsync(CancellationToken ct)
     {
         var config = configService.Get();
-        DisableGenshinHdrIfNeeded(config);
 
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
@@ -43,7 +42,10 @@ public sealed class Win32RuntimeProvider(
                     return null;
                 }
 
-                hWnd = await SystemControl.StartFromLocalAsync(startConfig.InstallPath);
+                hWnd = startConfig.AutoDisableGenshinHdrEnabled
+                    ? await GenshinHdrHelper.StartWithHdrDisabledAsync(startConfig.InstallPath,
+                        token => SystemControl.StartFromLocalAsync(startConfig.InstallPath, token), logger, ct)
+                    : await SystemControl.StartFromLocalAsync(startConfig.InstallPath, ct);
                 if (hWnd == IntPtr.Zero)
                 {
                     // 启动失败的提示已由 StartFromLocalAsync 给出
@@ -110,21 +112,5 @@ public sealed class Win32RuntimeProvider(
             config.CaptureMode = CaptureModes.BitBlt.ToString();
             return CaptureModes.BitBlt;
         }
-    }
-
-    private void DisableGenshinHdrIfNeeded(AllConfig config)
-    {
-        if (!config.GenshinStartConfig.AutoDisableGenshinHdrEnabled)
-        {
-            return;
-        }
-
-        if (!GenshinHdrRegistryHelper.TryDisableHdr(out _))
-        {
-            return;
-        }
-
-        // 这行日志可能看不到
-        logger.LogWarning("检测到原神 HDR 已开启并已自动关闭。如游戏已在运行，请重启游戏后生效。");
     }
 }
