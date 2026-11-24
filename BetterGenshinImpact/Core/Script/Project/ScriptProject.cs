@@ -6,11 +6,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.View;
 using Microsoft.ClearScript.JavaScript;
 using Microsoft.Extensions.Logging;
@@ -137,6 +139,10 @@ public class ScriptProject
                 var evaluation = engine.Evaluate(code);
                 if (evaluation is Task task) await task;
             }
+        }
+        catch (ScriptEngineException e) when (e.GetBaseException() is InstrumentExitRecovery.CaptureStoppedException captureStopped)
+        {
+            ExceptionDispatchInfo.Throw(captureStopped);
         }
         catch (Exception e)
         {

@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Job;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
@@ -34,7 +35,7 @@ public class AutoPathingScript
 
             await pathExecutor.Pathing(task);
         }
-        catch (Exception e)
+        catch (Exception e) when (e is not InstrumentExitRecovery.CaptureStoppedException)
         {
             TaskControl.Logger.LogDebug(e,"执行地图追踪时候发生错误");
             TaskControl.Logger.LogError("执行地图追踪时候发生错误: {Msg}",e.Message);
@@ -48,7 +49,7 @@ public class AutoPathingScript
             var json = await new LimitedFile(_rootPath).ReadText(path);
             await Run(json);
         }
-        catch (Exception e)
+        catch (Exception e) when (e is not InstrumentExitRecovery.CaptureStoppedException)
         {
             TaskControl.Logger.LogDebug(e,"读取文件时发生错误");
             TaskControl.Logger.LogError("读取文件时发生错误: {Msg}",e.Message);
