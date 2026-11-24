@@ -13,3 +13,4 @@
 - [配置持久化链路（AllConfig 保存）优化](config-persistence.md)
 - [实时触发器生命周期与启停设计](realtime-trigger.md)
 - [TaskTriggerDispatcher 依赖注入改造设计](task-trigger-dispatcher-di.md)
+- [游戏文本多语言（GameText）改造设计](game-text-i18n.md)
