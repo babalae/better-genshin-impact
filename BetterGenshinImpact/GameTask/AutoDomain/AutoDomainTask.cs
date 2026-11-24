@@ -19,6 +19,7 @@ using BetterGenshinImpact.Core.Mask;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -33,7 +34,7 @@ using BetterGenshinImpact.Service.Notification.Model.Enum;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.Kernel32;
 using static Vanara.PInvoke.User32;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
@@ -159,25 +160,23 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
         _runtime = runtime;
         _allConfig = config;
 
-        IStringLocalizer<AutoDomainTask> stringLocalizer =
-            App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(config.OtherConfig.GameCultureInfoName);
-        this.challengeCompletedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "挑战达成");
-        this.autoLeavingLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "自动退出");
-        this.skipLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "跳过");
-        this.leyLineDisorderLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "地脉异常");
-        this.clickanywheretocloseLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "点击任意位置关闭");
-        this.matchingChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "匹配挑战");
-        this.rapidformationString = stringLocalizer.WithCultureGet(cultureInfo, "快速编队");
-        this.limitedFullyString = stringLocalizer.WithCultureGet(cultureInfo, "限时全部开放");
-        this.limitedFullyAllString = stringLocalizer.WithCultureGet(cultureInfo, "限时开放");
-        this.singlePlayerChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "单人挑战");
-        this.startChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "开始挑战");
-        this.retryDomainPromptPattern = stringLocalizer.WithCultureGet(cultureInfo, "是否仍要.*挑战.*秘境");
-        this.petrifiedTreeString = stringLocalizer.WithCultureGet(cultureInfo, "石化古树");
-        this.insufficientCountString = stringLocalizer.WithCultureGet(cultureInfo, "数量不足");
-        this.replenishResinString = stringLocalizer.WithCultureGet(cultureInfo, "补充原粹树脂");
-        this.cancelButtonString = stringLocalizer.WithCultureGet(cultureInfo, "取消");
+        var gameLanguage = config.OtherConfig.GameCultureInfoName;
+        this.challengeCompletedLocalizedString = GameTextService.Instance.Get(GameTextKeys.Domain.ChallengeCompleted, gameLanguage);
+        this.autoLeavingLocalizedString = GameTextService.Instance.Get(GameTextKeys.Domain.AutoLeaving, gameLanguage);
+        this.skipLocalizedString = GameTextService.Instance.Get(GameTextKeys.Common.Skip, gameLanguage);
+        this.leyLineDisorderLocalizedString = GameTextService.Instance.Get(GameTextKeys.Domain.LeyLineDisorder, gameLanguage);
+        this.clickanywheretocloseLocalizedString = GameTextService.Instance.Get(GameTextKeys.Common.ClickAnywhereToClose, gameLanguage);
+        this.matchingChallengeString = GameTextService.Instance.Get(GameTextKeys.Domain.MatchingChallenge, gameLanguage);
+        this.rapidformationString = GameTextService.Instance.Get(GameTextKeys.Domain.QuickSetup, gameLanguage);
+        this.limitedFullyString = GameTextService.Instance.Get(GameTextKeys.Domain.LimitedTimeFullyOpen, gameLanguage);
+        this.limitedFullyAllString = GameTextService.Instance.Get(GameTextKeys.Domain.LimitedTimeOpen, gameLanguage);
+        this.singlePlayerChallengeString = GameTextService.Instance.Get(GameTextKeys.Domain.SinglePlayerChallenge, gameLanguage);
+        this.startChallengeString = GameTextService.Instance.Get(GameTextKeys.Domain.StartChallenge, gameLanguage);
+        this.retryDomainPromptPattern = GameTextService.Instance.Get(GameTextKeys.Domain.RetryPrompt, gameLanguage);
+        this.petrifiedTreeString = GameTextService.Instance.Get(GameTextKeys.Domain.PetrifiedTree, gameLanguage);
+        this.insufficientCountString = GameTextService.Instance.Get(GameTextKeys.Resin.Insufficient, gameLanguage);
+        this.replenishResinString = GameTextService.Instance.Get(GameTextKeys.Resin.ReplenishOriginal, gameLanguage);
+        this.cancelButtonString = GameTextService.Instance.Get(GameTextKeys.Common.Cancel, gameLanguage);
     }
 
     private RecognitionObject GetConfirmRa(params string[] targetText)

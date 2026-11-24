@@ -10,7 +10,7 @@ using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
-public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
+public class AutoStygianOnslaughtParam:BaseTaskParam
 {
     /// <summary>参数独立持有的树脂设置，默认值来自任务能力。</summary>
     private ResinUsage _resinUsage = ResinCapabilities.StygianOnslaught.Defaults;
@@ -121,17 +121,17 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
         StrategyName = config.StrategyName;
         SetCombatStrategyPath(config.StrategyName);
     }
-    public AutoStygianOnslaughtParam() : base(null, null)
+    public AutoStygianOnslaughtParam() : base(null)
     {
         SetDefault();
     }
 
     /// <summary>使用本次计划的独立配置创建参数，不加载全局业务默认值。</summary>
-    internal AutoStygianOnslaughtParam(AutoStygianOnslaughtConfig config) : base(null, null)
+    internal AutoStygianOnslaughtParam(AutoStygianOnslaughtConfig config) : base(null)
     {
         SetAutoStygianOnslaughtConfig(config);
     }
-    public AutoStygianOnslaughtParam(string combatScriptBagPath) : base(null, null)
+    public AutoStygianOnslaughtParam(string combatScriptBagPath) : base(null)
     {
         SetDefault();
         CombatScriptBagPath=combatScriptBagPath;

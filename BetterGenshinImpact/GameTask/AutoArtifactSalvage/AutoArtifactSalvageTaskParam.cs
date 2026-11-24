@@ -1,5 +1,4 @@
 using BetterGenshinImpact.GameTask.Model;
-using Microsoft.Extensions.Localization;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -8,9 +7,9 @@ using System.Text;
 namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
 {
     /// <summary>
-    /// 圣遗物分解任务参数。可 JSON 往返；语言和本地化器由基类提供，不参与 JSON。
+    /// 圣遗物分解任务参数。可 JSON 往返；游戏语言由基类提供，不参与 JSON。
     /// </summary>
-    public class AutoArtifactSalvageTaskParam : BaseTaskParam<AutoArtifactSalvageTask>
+    public class AutoArtifactSalvageTaskParam : BaseTaskParam
     {
         /// <summary>
         /// 使用默认值创建参数：分解 4 星及以下，只做快速分解，不逐个筛选。用于 JSON 反序列化和任务计划。
@@ -19,7 +18,7 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
         {
         }
 
-        public AutoArtifactSalvageTaskParam(int star, string? javaScript, string? artifactSetFilter, int? maxNumToCheck, RecognitionFailurePolicy? recognitionFailurePolicy, CultureInfo? cultureInfo = null, IStringLocalizer<AutoArtifactSalvageTask>? stringLocalizer = null) : base(cultureInfo, stringLocalizer)
+        public AutoArtifactSalvageTaskParam(int star, string? javaScript, string? artifactSetFilter, int? maxNumToCheck, RecognitionFailurePolicy? recognitionFailurePolicy, CultureInfo? cultureInfo = null) : base(cultureInfo)
         {
             Star = star;
             JavaScript = javaScript;

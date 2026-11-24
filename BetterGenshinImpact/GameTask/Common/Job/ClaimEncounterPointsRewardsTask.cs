@@ -13,7 +13,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -58,9 +58,8 @@ public class ClaimEncounterPointsRewardsTask : ISoloTask<NoParam, NoData>
         _runtime = runtime;
         _config = config;
         _returnMainUiTask = new ReturnMainUiTask(runtime);
-        IStringLocalizer<ClaimEncounterPointsRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<ClaimEncounterPointsRewardsTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(config.OtherConfig.GameCultureInfoName);
-        this.commissionsLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "委托");
+        var gameLanguage = config.OtherConfig.GameCultureInfoName;
+        this.commissionsLocalizedString = GameTextService.Instance.Get(GameTextKeys.Common.Commissions, gameLanguage);
     }
 
     /// <summary>

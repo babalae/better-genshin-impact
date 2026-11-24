@@ -1,8 +1,7 @@
 using System.Globalization;
-using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.I18n;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.Model.Area;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.ResinTests;
@@ -18,9 +17,9 @@ public sealed class ResinRewardPromptTests
             Text(100, 200, "原粹树脂20"), Text(800, 200, "补充"),
             Text(100, 300, "须臾树脂"), Text(800, 300, "使用"),
             Text(100, 400, "脆弱树脂"), Text(800, 400, "使用")];
-        var offered = ResinRewardPrompt.DetectOffered(rows, 500, new CultureInfo("zh-Hans"), new TestLocalizer());
+        var offered = ResinRewardPrompt.DetectOffered(rows, 500, new CultureInfo("zh-Hans"), GameText);
         Assert.Equal(new[] { ResinKind.Condensed, ResinKind.Transient, ResinKind.Fragile }, ResinKinds.InOrder.Where(offered.Contains));
-        Assert.True(ResinRewardPrompt.HasShortageHint(rows, new CultureInfo("zh-Hans"), new TestLocalizer()));
+        Assert.True(ResinRewardPrompt.HasShortageHint(rows, new CultureInfo("zh-Hans"), GameText));
     }
 
     /// <summary>使用按钮必须位于右侧且与名称行相交，其他行或左侧文字不能当成可用按钮。</summary>
@@ -28,22 +27,17 @@ public sealed class ResinRewardPromptTests
     public void Offered_RequiresRightHandButtonOnSameRow()
     {
         Region[] rows = [Text(100, 100, "原粹树脂40"), Text(800, 200, "使用"), Text(200, 100, "使用")];
-        Assert.Empty(ResinRewardPrompt.DetectOffered(rows, 500, CultureInfo.InvariantCulture, new TestLocalizer()));
+        Assert.Empty(ResinRewardPrompt.DetectOffered(rows, 500, CultureInfo.InvariantCulture, GameText));
         Assert.False(ResinRewardPrompt.IsHeightOverlap(rows[0], rows[1]));
         Assert.True(ResinRewardPrompt.IsHeightOverlap(rows[0], rows[2]));
     }
 
-    /// <summary>匹配使用 AutoDomainTask 资源的翻译，而不是固定中文或其他任务本地化器。</summary>
+    /// <summary>按游戏语言使用对应的游戏文本匹配名称和按钮；en-US 按父区域 en 查找。</summary>
     [Fact]
-    public void Offered_UsesDomainLocalizerForTranslatedNamesAndButtons()
+    public void Offered_UsesGameTextForTranslatedNamesAndButtons()
     {
-        var localizer = new TestLocalizer(new Dictionary<string, string>
-        {
-            ["使用"] = "Use", ["原粹树脂"] = "Original Resin", ["浓缩树脂"] = "Condensed Resin",
-            ["须臾树脂"] = "Transient Resin", ["脆弱树脂"] = "Fragile Resin"
-        });
         Region[] rows = [Text(100, 100, "Original Resin 40"), Text(800, 100, "Use")];
-        Assert.Equal(new[] { ResinKind.Original }, ResinRewardPrompt.DetectOffered(rows, 500, new CultureInfo("en-US"), localizer));
+        Assert.Equal(new[] { ResinKind.Original }, ResinRewardPrompt.DetectOffered(rows, 500, new CultureInfo("en-US"), GameText));
     }
 
     /// <summary>原粹点数识别及默认值保持旧逻辑，非原粹的实际个数由选择器记账。</summary>
@@ -58,15 +52,6 @@ public sealed class ResinRewardPromptTests
     /// <summary>建立脱离截图树的 OCR 区域。</summary>
     private static Region Text(int x, int y, string text) => new(x, y, 80, 20) { Text = text };
 
-    /// <summary>原秘境资源本地化器的纯内存替身。</summary>
-    private sealed class TestLocalizer(IReadOnlyDictionary<string, string>? translations = null) : IStringLocalizer<AutoDomainTask>
-    {
-        /// <summary>按资源 key 返回测试翻译或原文。</summary>
-        public LocalizedString this[string name] => new(name, translations?.GetValueOrDefault(name) ?? name);
-        /// <summary>测试资源不使用格式参数，沿用资源 key 的结果。</summary>
-        public LocalizedString this[string name, params object[] arguments] => this[name];
-        /// <summary>返回测试中登记的全部翻译。</summary>
-        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures)
-            => translations?.Select(pair => new LocalizedString(pair.Key, pair.Value)) ?? [];
-    }
+    /// <summary>使用测试输出目录中的游戏文本表，不依赖服务容器和配置。</summary>
+    private static readonly GameTextService GameText = new(Path.Combine(AppContext.BaseDirectory, "GameTask", "I18n"));
 }

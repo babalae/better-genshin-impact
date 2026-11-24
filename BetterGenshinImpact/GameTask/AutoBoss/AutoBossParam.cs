@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.AutoBoss;
 /// <summary>
 /// 自动首领讨伐任务参数，供独立任务、一条龙和 JS 调用统一传递配置。
 /// </summary>
-public class AutoBossParam : BaseTaskParam<AutoBossTask>
+public class AutoBossParam : BaseTaskParam
 {
     /// <summary>参数独立持有的树脂设置，默认值来自任务能力。</summary>
     private ResinUsage _resinUsage = ResinCapabilities.Boss.Defaults;
@@ -178,7 +178,7 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
         CombatStrategyPath = combatStrategyPath;
     }
 
-    private AutoBossParam(bool loadDefaultConfig) : base(null, null)
+    private AutoBossParam(bool loadDefaultConfig) : base(null)
     {
         if (loadDefaultConfig)
         {

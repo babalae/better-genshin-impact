@@ -10,7 +10,7 @@ using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 
-public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
+public class AutoLeyLineOutcropParam:BaseTaskParam
 {
     /// <summary>参数独立持有的树脂设置，默认值来自任务能力。</summary>
     private ResinUsage _resinUsage = ResinCapabilities.LeyLineOutcrop.Defaults;
@@ -169,18 +169,18 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
         TargetItems = TargetItem.CloneAll(config.TargetItems);
     }
 
-    public AutoLeyLineOutcropParam() : base(null, null)
+    public AutoLeyLineOutcropParam() : base(null)
     {
         SetDefault();
     }
 
     /// <summary>使用快照配置创建参数，避免构造期间读取独立任务页面的业务配置。</summary>
-    internal AutoLeyLineOutcropParam(AutoLeyLineOutcropConfig config) : base(null, null)
+    internal AutoLeyLineOutcropParam(AutoLeyLineOutcropConfig config) : base(null)
     {
         SetAutoLeyLineOutcropConfig(config);
     }
     
-    public AutoLeyLineOutcropParam(int count, string country, string leyLineOutcropType) : base(null, null)
+    public AutoLeyLineOutcropParam(int count, string country, string leyLineOutcropType) : base(null)
     {
         SetDefault();
         this.Count = count;

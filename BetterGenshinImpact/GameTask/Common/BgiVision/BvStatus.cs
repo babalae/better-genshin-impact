@@ -5,7 +5,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using OpenCvSharp;
 using System;
 using System.Globalization;
@@ -82,7 +82,33 @@ public static partial class Bv
     public static bool IsInMainUi(ImageRegion captureRa)
     {
         using var ra = captureRa.Find(ElementRecognition.Get("PaimonMenu", captureRa));
-        return ra.IsExist() && !IsInRevivePrompt(captureRa);
+        // 死亡界面派蒙图标仍在，IsInRevivePrompt 判不出，需要额外排除
+        return ra.IsExist() && !IsInRevivePrompt(captureRa) && !IsInReviveModal(captureRa);
+    }
+
+    /// <summary>是否停在死亡界面（底部「复苏」按钮）。IsInRevivePrompt 只看上半屏，判不出这种界面。</summary>
+    internal static bool IsInReviveModal(ImageRegion region)
+    {
+        var list = region.FindMulti(new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.Ocr,
+            RegionOfInterest = ReviveButtonRoi(region)
+        });
+
+        string revival = GameTextService.Instance.Get(GameTextKeys.Common.Revive, Config.OtherConfig.GameCultureInfoName);
+
+        return list.Any(r => IsReviveButtonText(r.Text, revival));
+    }
+
+    /// <summary>死亡界面「复苏」按钮所在区域</summary>
+    private static Rect ReviveButtonRoi(ImageRegion region)
+    {
+        // PP-OCR 实测五种死亡界面：按钮 cy 0.911~0.944，标题 0.812、说明文字 0.848，下界取 0.88 即可排除干扰
+        return new Rect(
+            (int)(region.Width * 0.25),
+            (int)(region.Height * 0.88),
+            (int)(region.Width * 0.50),
+            (int)(region.Height * 0.10));
     }
 
     /// <summary>
@@ -272,9 +298,7 @@ public static partial class Bv
                 RegionOfInterest = new Rect(0, 0, region.Width, region.Height / 2)
             });
 
-            CultureInfo cultureInfo = new CultureInfo(Config.OtherConfig.GameCultureInfoName);
-            IStringLocalizer stringLocalizer = App.GetService<IStringLocalizer<BvResxHelper>>() ?? throw new Exception();
-            string revival = stringLocalizer.WithCultureGet(cultureInfo, "复苏");
+            string revival = GameTextService.Instance.Get(GameTextKeys.Common.Revive, Config.OtherConfig.GameCultureInfoName);
             if (list.Any(r => r.Text.Contains(revival)))
             {
                 return true;
@@ -294,16 +318,37 @@ public static partial class Bv
         var list = region.FindMulti(new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
-            RegionOfInterest = new Rect(0, region.Height / 4 * 3, region.Width, region.Height / 4)
+            RegionOfInterest = ReviveButtonRoi(region)
         });
-        using var r = list.FirstOrDefault(r => r.Text.Contains("复苏"));
-        if (r != null)
+
+        string revival = GameTextService.Instance.Get(GameTextKeys.Common.Revive, Config.OtherConfig.GameCultureInfoName);
+
+        // 只点按钮本身：说明文字「将在最近拜访过的传送锚点或神像处复苏」也含「复苏」，点到它等于没点
+        var button = list.FirstOrDefault(r => IsReviveButtonText(r.Text, revival));
+        if (button == null)
         {
-            r.Click();
-            return true;
+            return false;
         }
 
-        return false;
+        using (button)
+        {
+            button.Click();
+        }
+
+        return true;
+    }
+
+    /// <summary>这段文本是不是「复苏」按钮本身（允许带手柄图标等 1 个多余字符，用长度排除说明文字）</summary>
+    private static bool IsReviveButtonText(string text, string revival)
+    {
+        // 去掉空白再比较：按钮文案常被 OCR 切成「复 苏」
+        static string Normalize(string s) => string.Concat(s.Where(c => !char.IsWhiteSpace(c)));
+
+        var normalized = Normalize(text);
+        var label = Normalize(revival);
+        // 只放行 1 个多余字符：实测「复苏完成」（4 字）不该算按钮，而按钮带图标最多多 1 个
+        return label.Length > 0
+               && (normalized == label || (normalized.Contains(label) && normalized.Length <= label.Length + 1));
     }
 
     /// <summary>

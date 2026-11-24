@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using System.Globalization;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Core.Recognition.OCR;
@@ -79,9 +79,8 @@ public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, CraftCo
         _runtime = runtime;
         _config = config;
         _chooseTalkOptionTask = new ChooseTalkOptionTask(runtime);
-        IStringLocalizer<GoToCraftingBenchTask> stringLocalizer = App.GetService<IStringLocalizer<GoToCraftingBenchTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(config.OtherConfig.GameCultureInfoName);
-        this.craftLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "合成");
+        var gameLanguage = config.OtherConfig.GameCultureInfoName;
+        this.craftLocalizedString = GameTextService.Instance.Get(GameTextKeys.Crafting.Craft, gameLanguage);
     }
     
     /// <summary>

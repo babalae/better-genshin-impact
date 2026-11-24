@@ -13,7 +13,7 @@ using Compunet.YoloSharp;
 using CsTrees;
 using CsTrees.Blackboard;
 using BetterGenshinImpact.Core.Input;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
@@ -224,13 +224,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Write)]
         public BehaviourKeyAccess<bool> PitchReset { get; private set; } = null!;
 
-        private EnterFishingMode(string name, ILogger logger, IInputChannel input, IItemIconRecognizer itemRecognizer, TimeProvider? timeProvider = null, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
+        private EnterFishingMode(string name, ILogger logger, IInputChannel input, IItemIconRecognizer itemRecognizer, TimeProvider? timeProvider = null, CultureInfo? cultureInfo = null) : base(name)
         {
             _logger = logger;
             _input = input;
             _itemRecognizer = itemRecognizer;
             _timeProvider = timeProvider ?? TimeProvider.System;
-            _fishingLocalizedString = stringLocalizer == null ? "钓鱼" : stringLocalizer.WithCultureGet(cultureInfo, "钓鱼");
+            _fishingLocalizedString = GameTextService.Instance.Get(GameTextKeys.Fishing.Fish, cultureInfo?.Name ?? GameTextService.BaseLanguage);
         }
 
         protected async override Task<Status> Update()

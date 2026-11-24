@@ -10,7 +10,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 
 
 
-public class AutoFightParam : BaseTaskParam<AutoFightTask>
+public class AutoFightParam : BaseTaskParam
 {
     /// <summary>
     /// 配置根。参数类可以被脚本和界面直接 new，没有创建方可以传配置，暂时读配置根（见 task-context-removal.md 第 5 节）
@@ -37,7 +37,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         public double PaimonEndCheckDelay = 0.075;
     }
 
-    public AutoFightParam(string path, AutoFightConfig autoFightConfig) : base(null, null)
+    public AutoFightParam(string path, AutoFightConfig autoFightConfig) : base(null)
     {
         CombatStrategyPath = path;
         ApplyConfig(autoFightConfig);
@@ -87,7 +87,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     {
     }
 
-    public AutoFightParam(string? strategyName = null) : base(null, null)
+    public AutoFightParam(string? strategyName = null) : base(null)
     {
         SetCombatStrategyPath(strategyName);
         SetDefault();

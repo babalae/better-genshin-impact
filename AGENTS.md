@@ -35,6 +35,9 @@
 - 在 `App.xaml.cs` 中注册依赖：页面使用 `services.AddView<ExamplePage, ExampleViewModel>()`，单例服务使用 `services.AddSingleton<IExampleService, ExampleService>()`。
 - 新增窗口必须启用主题背景；简单对话框优先使用 `ThemedMessageBox`，不要使用 WPF 自带的 `MessageBox`。
 - JSON 序列化优先使用 Newtonsoft.Json；模型若已由 System.Text.Json 序列化，则使用 System.Text.Json 反序列化。
+- 多语言分两类，不要混用：
+  - UI 文案：XAML 用 `{i18n:T 简体原文}`，代码用 `I18nService`。
+  - 与游戏客户端文字做匹配的文本（OCR 目标、按钮文字等）：用 `GameTextService.Instance.Get(GameTextKeys.Xxx.Yyy, 游戏语言)`，文本放在 `GameTask/I18n/{lang}.json`，key 使用英文语义标识（`<模块>.<名称>`），新增 key 必须同时登记到 `GameTextKeys` 和 `zh-Hans.json`。不要再新增 `.resx` / `IStringLocalizer`。
 
 ## 识别与模拟操作
 

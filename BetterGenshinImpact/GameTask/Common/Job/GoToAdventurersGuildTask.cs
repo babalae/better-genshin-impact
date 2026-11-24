@@ -15,7 +15,7 @@ using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.SoloTask;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using BetterGenshinImpact.Helpers;
 using System.Globalization;
 
@@ -56,11 +56,10 @@ public class GoToAdventurersGuildTask
         _runtime = runtime;
         _config = config;
         _chooseTalkOptionTask = new ChooseTalkOptionTask(runtime);
-        IStringLocalizer<GoToAdventurersGuildTask> stringLocalizer = App.GetService<IStringLocalizer<GoToAdventurersGuildTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(config.OtherConfig.GameCultureInfoName);
-        this.dailyLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "每日");
-        this.catherineLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "凯瑟琳");
-        this.expeditionLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "探索");
+        var gameLanguage = config.OtherConfig.GameCultureInfoName;
+        this.dailyLocalizedString = GameTextService.Instance.Get(GameTextKeys.Guild.Daily, gameLanguage);
+        this.catherineLocalizedString = GameTextService.Instance.Get(GameTextKeys.Guild.Katheryne, gameLanguage);
+        this.expeditionLocalizedString = GameTextService.Instance.Get(GameTextKeys.Guild.Expedition, gameLanguage);
     }
 
     public async Task Start(string country, CancellationToken ct, string? dailyRewardPartyName = null ,bool onlyDoOnce = false)

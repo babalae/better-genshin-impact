@@ -15,7 +15,7 @@ using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using SixLabors.ImageSharp;
@@ -55,11 +55,10 @@ public class CheckRewardsTask
     {
         _runtime = runtime;
         _config = config;
-        IStringLocalizer<CheckRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<CheckRewardsTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(config.OtherConfig.GameCultureInfoName);
-        this._dailyRewardsClaimedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "今日奖励已领取");
-        this._dailyCommissionRewardsString = stringLocalizer.WithCultureGet(cultureInfo, "每日委托奖励");
-        this._commissionsButtonString = stringLocalizer.WithCultureGet(cultureInfo, "委托");
+        var gameLanguage = config.OtherConfig.GameCultureInfoName;
+        this._dailyRewardsClaimedLocalizedString = GameTextService.Instance.Get(GameTextKeys.Rewards.DailyClaimed, gameLanguage);
+        this._dailyCommissionRewardsString = GameTextService.Instance.Get(GameTextKeys.Rewards.DailyCommissionRewards, gameLanguage);
+        this._commissionsButtonString = GameTextService.Instance.Get(GameTextKeys.Common.Commissions, gameLanguage);
     }
 
     public string Name => "检查奖励并通知的任务";

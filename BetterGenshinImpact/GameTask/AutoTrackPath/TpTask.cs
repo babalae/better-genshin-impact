@@ -22,10 +22,11 @@ using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using Fischless.GameCapture;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -59,8 +60,26 @@ public class TpTask : ITpTask
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask;
 
     private readonly CancellationToken ct;
-    private readonly CultureInfo cultureInfo;
-    private readonly IStringLocalizer stringLocalizer;
+    /// <summary>
+    /// 游戏语言，用于获取地区名的游戏内文本
+    /// </summary>
+    private readonly string _gameLanguage;
+
+    /// <summary>
+    /// 地区中文名（传送点数据中的 country、尘歌壶等）→ 游戏文本 key
+    /// </summary>
+    private static readonly FrozenDictionary<string, string> AreaNameGameTextKeys = new Dictionary<string, string>
+    {
+        ["蒙德"] = GameTextKeys.Map.Area.Mondstadt,
+        ["璃月"] = GameTextKeys.Map.Area.Liyue,
+        ["稻妻"] = GameTextKeys.Map.Area.Inazuma,
+        ["须弥"] = GameTextKeys.Map.Area.Sumeru,
+        ["枫丹"] = GameTextKeys.Map.Area.Fontaine,
+        ["纳塔"] = GameTextKeys.Map.Area.Natlan,
+        ["挪德卡莱"] = GameTextKeys.Map.Area.NodKrai,
+        ["至冬"] = GameTextKeys.Map.Area.Snezhnaya,
+        ["尘歌壶"] = GameTextKeys.Map.Area.SereniteaPot,
+    }.ToFrozenDictionary();
 
     private const double DefaultDisplayTpPointZoomLevel = 4.4; // 传送点显示时的默认地图比例
     private const double MoonCanonDisplayTpPointZoomLevel = 3.0;
@@ -258,9 +277,7 @@ public class TpTask : ITpTask
         _blessingOfTheWelkinMoonTask = new BlessingOfTheWelkinMoonTask(runtime);
         this.ct = ct;
         _assets = QuickTeleportAssets.Get(_captureRect.Width, _captureRect.Height);
-        TpTaskParam param = new TpTaskParam();
-        this.cultureInfo = param.GameCultureInfo;
-        this.stringLocalizer = param.StringLocalizer;
+        _gameLanguage = config.OtherConfig.GameCultureInfoName;
     }
 
     private RecognitionObject GetQuickTeleportRecognitionObject(string objectName)
@@ -1186,7 +1203,30 @@ public class TpTask : ITpTask
             await _runtime.Delay(500, ct);
             if (!await TryToOpenBigMapUi(mapName))
             {
-                throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
+                // 连续两次打不开：常见原因是 4:00 的月卡挡着，或者角色还停在死亡界面
+                await _blessingOfTheWelkinMoonTask.Start(ct, ignoreTimeWindow: true);
+                using (var ra = _runtime.CaptureToRectArea())
+                {
+                    if (Bv.ClickIfInReviveModal(ra))
+                    {
+                        // 点下去就会被送往最近的锚点，所在地图可能已变。
+                        s_lastSuccessfulTeleportMapName = null;
+
+                        if (await Bv.WaitForMainUi(_runtime, ct))
+                        {
+                            Logger.LogInformation("复苏完成");
+                        }
+                        else
+                        {
+                            Logger.LogWarning("复苏未生效，界面未回到主界面");
+                        }
+                    }
+                }
+
+                if (!await TryToOpenBigMapUi(mapName))
+                {
+                    throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
+                }
             }
         }
     }
@@ -2448,11 +2488,21 @@ public class TpTask : ITpTask
         throw new Exception($"切换区域[{areaName}]失败");
     }
 
+    /// <summary>
+    /// 地区中文名对应的游戏内显示文本。未登记的地区（如层岩巨渊等子地图）按原文匹配，与改造前行为一致。
+    /// </summary>
+    private string GetAreaGameText(string areaName)
+    {
+        return AreaNameGameTextKeys.TryGetValue(areaName, out var key)
+            ? GameTextService.Instance.Get(key, _gameLanguage)
+            : areaName;
+    }
+
     private async Task<bool> TrySwitchArea(string areaName)
     {
         _runtime.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
         await _runtime.Delay(50, ct);
-        var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
+        var minCountryLocalized = GetAreaGameText(areaName);
         var candidatesText = "";
         for (var attempt = 0; attempt < 19; attempt++)
         {

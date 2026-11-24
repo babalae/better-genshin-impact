@@ -23,6 +23,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.I18n;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
@@ -45,7 +46,6 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
 using Microsoft.Win32;
 using Wpf.Ui;
 
@@ -206,9 +206,10 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     /// <summary>
     /// 原神游戏语言的可选项。与界面语言无关，意大利语迁移为插件后游戏语言仍保留 it。
+    /// 只列出游戏文本表支持的语言，见 <see cref="GameTextService.SupportedLanguages"/>。
     /// </summary>
     [ObservableProperty] private FrozenDictionary<string, string> _gameLanguageDict =
-        new[] { "zh-Hans", "zh-Hant", "en", "ja", "ru", "it"  }
+        GameTextService.SupportedLanguages
             .ToFrozenDictionary(c => c, c => CultureInfoNameToKVPConverter.GetDisplayName(c));
 
     /// <summary>

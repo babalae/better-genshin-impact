@@ -15,6 +15,7 @@ class CultureInfoNameToKVPConverter : IValueConverter
             "zh-Hans" => "简体中文",
             "zh-Hant" => "繁體中文",
             "en" => "English",
+            "fr" => "Français",
             "ja" => "日本語",
             "ru" => "Русский",
             "it" => "Italiano",

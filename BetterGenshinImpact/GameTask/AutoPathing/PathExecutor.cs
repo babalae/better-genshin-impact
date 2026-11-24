@@ -375,8 +375,15 @@ public partial class PathExecutor
         // 切换队伍前判断是否全队死亡 // 可能队伍切换失败导致的死亡
         if (Bv.ClickIfInReviveModal(ra))
         {
-            await Bv.WaitForMainUi(_runtime, ct); // 等待主界面加载完成
-            Logger.LogInformation("复苏完成");
+            if (await Bv.WaitForMainUi(_runtime, ct))
+            {
+                Logger.LogInformation("复苏完成");
+            }
+            else
+            {
+                Logger.LogWarning("复苏未生效，界面未回到主界面");
+            }
+
             await _runtime.Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
@@ -700,8 +707,15 @@ public partial class PathExecutor
         }
         else if (Bv.ClickIfInReviveModal(region))
         {
-            await Bv.WaitForMainUi(_runtime, ct); // 等待主界面加载完成
-            Logger.LogInformation("复苏完成");
+            if (await Bv.WaitForMainUi(_runtime, ct))
+            {
+                Logger.LogInformation("复苏完成");
+            }
+            else
+            {
+                Logger.LogWarning("复苏未生效，界面未回到主界面");
+            }
+
             await _runtime.Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
@@ -829,7 +843,9 @@ public partial class PathExecutor
         // 按下w，一直走
         InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         // 赶路帧间隔：始终使用配置值（5-150 钳制），不依赖是否配置赶路角色（空选也可用）
-        var hurryFrameInterval = Math.Clamp(PartyConfig.HurryOnFrameInterval, 5, 150);
+        // 选瓦雷莎时钳制上限 50ms：夜魂疾冲的 E 窗口检测依赖高频帧，间隔再大也不生效
+        var hurryFrameIntervalUpper = _hurryOnAvatar == "瓦雷莎" ? 50 : 150;
+        var hurryFrameInterval = Math.Clamp(PartyConfig.HurryOnFrameInterval, 5, hurryFrameIntervalUpper);
         while (!ct.IsCancellationRequested)
         {
             if (!InputHub.Foreground.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.I18n;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
@@ -18,7 +19,6 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Core.Mask;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
@@ -135,24 +135,25 @@ public class AutoArtifactSalvageTask : ISoloTask<AutoArtifactSalvageTaskParam, N
     }
 
     /// <summary>
-    /// 按参数中的游戏语言和本地化器初始化识别用的本地化字符串。
+    /// 按参数中的游戏语言初始化识别用的游戏文本。
     /// </summary>
-    /// <param name="param">提供游戏语言与本地化器的参数</param>
+    /// <param name="param">提供游戏语言的参数</param>
     private void ApplyLocalization(AutoArtifactSalvageTaskParam param)
     {
-        var stringLocalizer = param.StringLocalizer;
         this.cultureInfo = param.GameCultureInfo;
-        quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
+        var gameText = GameTextService.Instance;
+        var language = param.GameCultureInfo.Name;
+        quickSelectLocalizedString = gameText.Get(GameTextKeys.Artifact.QuickSelect, language);
         numOfStarLocalizedString =
         [
-            stringLocalizer.WithCultureGet(cultureInfo, "1星圣遗物"),
-            stringLocalizer.WithCultureGet(cultureInfo, "2星圣遗物"),
-            stringLocalizer.WithCultureGet(cultureInfo, "3星圣遗物"),
-            stringLocalizer.WithCultureGet(cultureInfo, "4星圣遗物")
+            gameText.Get(GameTextKeys.Artifact.Star1, language),
+            gameText.Get(GameTextKeys.Artifact.Star2, language),
+            gameText.Get(GameTextKeys.Artifact.Star3, language),
+            gameText.Get(GameTextKeys.Artifact.Star4, language)
         ];
 
-        artifactAffixUnactivatedFlagStr = stringLocalizer.WithCultureGet(cultureInfo, "待激活");
-        artifactAffixStrDic = ArtifactAffix.DefaultStrDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, stringLocalizer.WithCultureGet(cultureInfo, kvp.Value))).ToFrozenDictionary();
+        artifactAffixUnactivatedFlagStr = gameText.Get(GameTextKeys.Artifact.AffixUnactivated, language);
+        artifactAffixStrDic = ArtifactAffix.GameTextKeyDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, gameText.Get(kvp.Value, language))).ToFrozenDictionary();
     }
 
     /// <summary>

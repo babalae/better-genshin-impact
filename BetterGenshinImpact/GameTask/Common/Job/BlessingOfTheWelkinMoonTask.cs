@@ -24,12 +24,13 @@ public class BlessingOfTheWelkinMoonTask(GameRuntime runtime)
 
     public string Name => "自动点击空月祝福";
 
-    public async Task Start(CancellationToken ct)
+    /// <param name="ignoreTimeWindow">「打开大地图连续失败」时额外检测月卡，不受时间限制</param>
+    public async Task Start(CancellationToken ct, bool ignoreTimeWindow = false)
     {
         try
         {
             var t = ServerTimeHelper.GetServerTimeNow().AddMinutes(5);
-            if (t.Hour == 4 && t.Minute < 10)
+            if (ignoreTimeWindow || (t.Hour == 4 && t.Minute < 10))
             {
                 using var ra = _runtime.CaptureToRectArea();
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra) || ra.Find(ElementRecognition.Get("Primogem", ra)).IsExist())

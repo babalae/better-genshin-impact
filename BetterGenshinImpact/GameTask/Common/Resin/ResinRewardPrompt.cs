@@ -5,12 +5,11 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.I18n;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.Common.Resin;
@@ -18,25 +17,31 @@ namespace BetterGenshinImpact.GameTask.Common.Resin;
 /// <summary>秘境、幽境、地脉花领奖弹窗的行匹配、点击与档位操作；首领不使用此流程。</summary>
 public static class ResinRewardPrompt
 {
-    /// <summary>解析“使用”按钮的本地化模式；资源文件按 AutoDomainTask 命名，不能更换本地化器类型。</summary>
-    public static string ResolveUseButtonPattern(IStringLocalizer<AutoDomainTask> localizer, CultureInfo culture)
-        => localizer.WithCultureGet(culture, "使用");
+    /// <summary>解析“使用”按钮的游戏文本匹配模式。</summary>
+    public static string ResolveUseButtonPattern(GameTextService gameText, CultureInfo culture)
+        => gameText.Get(GameTextKeys.Common.Use, culture.Name);
 
-    /// <summary>集中将树脂种类转为中文资源 key，再按原秘境资源解析匹配串。</summary>
-    public static string ResolveResinNamePattern(ResinKind kind, IStringLocalizer<AutoDomainTask> localizer, CultureInfo culture)
-        => localizer.WithCultureGet(culture, ResinUsageText.DisplayName(kind));
+    /// <summary>把树脂种类转为游戏文本 key，再按游戏语言解析匹配串。</summary>
+    public static string ResolveResinNamePattern(ResinKind kind, GameTextService gameText, CultureInfo culture)
+        => gameText.Get(ResinNameKey(kind), culture.Name);
 
-    /// <summary>获取秘境本地化器；三个任务共用现有资源，不创建新的资源包。</summary>
-    private static IStringLocalizer<AutoDomainTask> Localizer()
-        => App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new InvalidOperationException("未初始化秘境本地化服务。");
+    /// <summary>树脂种类对应的游戏文本 key。</summary>
+    private static string ResinNameKey(ResinKind kind) => kind switch
+    {
+        ResinKind.Condensed => GameTextKeys.Resin.Condensed,
+        ResinKind.Original => GameTextKeys.Resin.Original,
+        ResinKind.Transient => GameTextKeys.Resin.Transient,
+        ResinKind.Fragile => GameTextKeys.Resin.Fragile,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "未知的树脂种类")
+    };
 
     /// <summary>检测明确的库存不足提示；不把该提示当作其他树脂行不可用的依据。</summary>
     public static bool HasShortageHint(IReadOnlyList<Region> regions, CultureInfo culture,
-        IStringLocalizer<AutoDomainTask>? localizer = null)
+        GameTextService? gameText = null)
     {
-        localizer ??= Localizer();
-        var insufficient = localizer.WithCultureGet(culture, "数量不足");
-        var replenish = localizer.WithCultureGet(culture, "补充原粹树脂");
+        gameText ??= GameTextService.Instance;
+        var insufficient = gameText.Get(GameTextKeys.Resin.Insufficient, culture.Name);
+        var replenish = gameText.Get(GameTextKeys.Resin.ReplenishOriginal, culture.Name);
         return regions.Any(region => Regex.IsMatch(region.Text, insufficient) || Regex.IsMatch(region.Text, replenish)
             || (culture.TwoLetterISOLanguageName == "zh" && region.Text.Contains("补充", StringComparison.Ordinal)));
     }
@@ -45,20 +50,20 @@ public static class ResinRewardPrompt
     /// <param name="regionList">弹窗 OCR 结果，可包含被拆分的名称和数量。</param>
     /// <param name="buttonMinX">使用按钮所在右半区的最小横坐标。</param>
     /// <param name="culture">游戏语言。</param>
-    /// <param name="localizer">原秘境资源本地化器，测试可注入替身。</param>
+    /// <param name="gameText">游戏文本服务，测试可注入指定目录的文本表。</param>
     public static IReadOnlySet<ResinKind> DetectOffered(IReadOnlyList<Region> regionList, double buttonMinX,
-        CultureInfo culture, IStringLocalizer<AutoDomainTask>? localizer = null)
+        CultureInfo culture, GameTextService? gameText = null)
     {
-        localizer ??= Localizer();
-        return ResinKinds.InOrder.Where(kind => FindUseRow(regionList, kind, buttonMinX, localizer, culture).Button is not null).ToHashSet();
+        gameText ??= GameTextService.Instance;
+        return ResinKinds.InOrder.Where(kind => FindUseRow(regionList, kind, buttonMinX, gameText, culture).Button is not null).ToHashSet();
     }
 
     /// <summary>匹配树脂名称和同行按钮；同行拼接也兼容 OCR 将名称与消耗量拆开的情况。</summary>
     private static (Region? Button, string Text) FindUseRow(IReadOnlyList<Region> regions, ResinKind kind,
-        double buttonMinX, IStringLocalizer<AutoDomainTask> localizer, CultureInfo culture)
+        double buttonMinX, GameTextService gameText, CultureInfo culture)
     {
-        var use = ResolveUseButtonPattern(localizer, culture);
-        var resin = ResolveResinNamePattern(kind, localizer, culture);
+        var use = ResolveUseButtonPattern(gameText, culture);
+        var resin = ResolveResinNamePattern(kind, gameText, culture);
         foreach (var button in regions.Where(region => region.X > buttonMinX && Regex.IsMatch(region.Text, use)))
         {
             var text = string.Concat(regions.Where(region => IsHeightOverlap(region, button)).OrderBy(region => region.X).Select(region => region.Text));
@@ -80,7 +85,7 @@ public static class ResinRewardPrompt
     public static (bool success, int originalSpent) PressUseResin(GameRuntime runtime, IReadOnlyList<Region> regions,
         ResinKind kind, ILogger logger, string logPrefix, CancellationToken ct, CultureInfo culture)
     {
-        var row = FindUseRow(regions, kind, runtime.SystemInfo.ScaleMax1080PCaptureRect.Width / 2d, Localizer(), culture);
+        var row = FindUseRow(regions, kind, runtime.SystemInfo.ScaleMax1080PCaptureRect.Width / 2d, GameTextService.Instance, culture);
         if (row.Button is null)
         {
             logger.LogWarning("{LogPrefix}：未找到 {ResinName} 的使用按键", logPrefix, ResinUsageText.DisplayName(kind));
@@ -122,7 +127,7 @@ public static class ResinRewardPrompt
     public static bool SwitchOriginalTier(GameRuntime runtime, int expectedNum, ILogger logger, string logPrefix, CancellationToken ct)
     {
         var culture = new CultureInfo(ConfigService.Config!.OtherConfig.GameCultureInfoName);
-        var pattern = ResolveResinNamePattern(ResinKind.Original, Localizer(), culture);
+        var pattern = ResolveResinNamePattern(ResinKind.Original, GameTextService.Instance, culture);
         for (var attempt = 0; attempt < 10; attempt++)
         {
             ct.ThrowIfCancellationRequested();

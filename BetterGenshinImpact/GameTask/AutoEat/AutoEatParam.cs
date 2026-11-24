@@ -1,5 +1,4 @@
 using BetterGenshinImpact.GameTask.Model;
-using Microsoft.Extensions.Localization;
 using System.Globalization;
 
 namespace BetterGenshinImpact.GameTask.AutoEat;
@@ -7,9 +6,9 @@ namespace BetterGenshinImpact.GameTask.AutoEat;
 /// <summary>
 /// 自动吃药任务参数
 /// </summary>
-public class AutoEatParam : BaseTaskParam<AutoEatTask>
+public class AutoEatParam : BaseTaskParam
 {
-    public AutoEatParam() : base(null, null)
+    public AutoEatParam() : base(null)
     {
     }
 

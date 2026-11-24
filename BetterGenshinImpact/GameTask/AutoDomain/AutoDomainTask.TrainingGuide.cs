@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.I18n;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -844,7 +845,7 @@ public partial class AutoDomainTask
     /// <returns>20 或 40；未找到原粹树脂行或同时出现两个档位时返回 null。</returns>
     private int? ReadGuideOriginalCost(IReadOnlyList<Region> regions)
     {
-        var pattern = ResinRewardPrompt.ResolveResinNamePattern(ResinKind.Original, _taskParam.StringLocalizer,
+        var pattern = ResinRewardPrompt.ResolveResinNamePattern(ResinKind.Original, GameTextService.Instance,
             _taskParam.GameCultureInfo);
         var name = regions.FirstOrDefault(r => Regex.IsMatch(r.Text, pattern));
         if (name == null) return null;

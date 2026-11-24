@@ -28,3 +28,4 @@
 - [插件系统与 OCR 模型插件化](plugin-system.md)（第 2 版，部分实施；可插拔机制、插件宿主、插件页、插件设置界面已实现，主程序只保留 PP-OCRv6，其他模型作为 6 个插件在 `bettergi-plugins` 仓库中；传送任务抽出接口 `ITpTask`，经可插拔能力 `ITpTaskFactory` 创建，PR #3697 的实验传送作为插件提供完整实现；待界面与游戏内验收）
 - [界面语言插件化](ui-language-plugin.md)（第 1 版，已实施，待界面验收；插件用程序集特性 `[assembly: UiLanguage]` 声明界面语言并可覆盖内置语言，意大利语迁移为 `bettergi-plugins` 中的 `lang_it` 插件）
 - [按键宏：不识图的键鼠宏](key-macro.md)（第 2 版，已确认，第一期实施中，2026-10-31；每个宏保存为 `User/BgiMacro` 下的一个 txt，单独绑定快捷键，支持单次、按住循环、切换循环；只有基础键鼠指令和 wait，解析与执行独立于战斗策略；提供步骤视图和带高亮、补全、实时校验的脚本视图）
+- [游戏文本多语言（GameText）改造设计](game-text-i18n.md)

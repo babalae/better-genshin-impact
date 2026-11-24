@@ -113,8 +113,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
       - name: 🛠️ Build application
-        run: dotnet publish BetterGenshinImpact/BetterGenshinImpact.csproj -c Release -p:PublishProfile=FolderProfile -p:Version=${{ needs.validate.outputs.version }}
-        continue-on-error: true
+        run: |
+          dotnet --version
+          dotnet publish BetterGenshinImpact/BetterGenshinImpact.csproj -c Release -p:PublishProfile=FolderProfile -p:Version=${{ needs.validate.outputs.version }} -warnaserror:NETSDK1236
       - name: 🧹 Clear & Move Files
         run: |
             $sourceDir = ".\BetterGenshinImpact\bin\x64\Release\net10.0-windows10.0.22621.0\publish\win-x64"
@@ -327,8 +328,9 @@ jobs:
         uses: robinraju/release-downloader@v1.8
         with:
           repository: "lemutec/MicaSetup"
-          latest: true
-          fileName: "MicaSetup_v*.7z"
+          # v2.5.7 打包自定义许可证时会引用已删除的多语言资源。
+          tag: "v2.5.6"
+          fileName: "MicaSetup_v2.5.6.7z"
       - name: 📦 Pack MicaSetup
         run: |
           $archiveFiles = Get-ChildItem -Path . -Filter "MicaSetup_v*.7z"

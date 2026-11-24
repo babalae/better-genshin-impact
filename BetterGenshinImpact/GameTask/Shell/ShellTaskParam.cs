@@ -6,12 +6,12 @@ namespace BetterGenshinImpact.GameTask.Shell;
 /// <summary>
 /// Shell 任务参数
 /// </summary>
-public class ShellTaskParam : BaseTaskParam<ShellTask>
+public class ShellTaskParam : BaseTaskParam
 {
     /// <summary>
     /// 创建默认参数，默认值与 <see cref="ShellConfig"/> 的默认值一致
     /// </summary>
-    public ShellTaskParam() : base(null, null)
+    public ShellTaskParam() : base(null)
     {
     }
 

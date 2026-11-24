@@ -3,7 +3,6 @@ using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using Microsoft.ClearScript;
-using Microsoft.Extensions.Localization;
 using System.Globalization;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
@@ -11,7 +10,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     /// <summary>
     /// 自动钓鱼任务参数
     /// </summary>
-    public class AutoFishingTaskParam : BaseTaskParam<AutoFishingTask>
+    public class AutoFishingTaskParam : BaseTaskParam
     {
         /// <summary>
         /// 配置根。参数类由脚本和界面直接构建，没有创建方可以传参，暂时读配置根（见 task-context-removal.md 第 5 节）
@@ -21,7 +20,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <summary>
         /// 使用默认值创建参数（与 <see cref="AutoFishingConfig"/> 的默认值一致），供 JSON 反序列化和默认参数使用
         /// </summary>
-        public AutoFishingTaskParam() : base(null, null)
+        public AutoFishingTaskParam() : base(null)
         {
         }
 
@@ -33,8 +32,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// <param name="fishingTimePolicy">昼夜策略</param>
         /// <param name="saveScreenshotOnKeyTick">是否保存关键帧截图</param>
         /// <param name="cultureInfo">游戏语言，为 null 时读取配置</param>
-        /// <param name="stringLocalizer">多语言资源，为 null 时从服务容器获取</param>
-        public AutoFishingTaskParam(int wholeProcessTimeoutSeconds, int throwRodTimeOutTimeoutSeconds, FishingTimePolicy fishingTimePolicy, bool saveScreenshotOnKeyTick, CultureInfo? cultureInfo, IStringLocalizer<AutoFishingTask>? stringLocalizer) : base(cultureInfo, stringLocalizer)
+        public AutoFishingTaskParam(int wholeProcessTimeoutSeconds, int throwRodTimeOutTimeoutSeconds, FishingTimePolicy fishingTimePolicy, bool saveScreenshotOnKeyTick, CultureInfo? cultureInfo) : base(cultureInfo)
         {
             WholeProcessTimeoutSeconds = wholeProcessTimeoutSeconds;
             ThrowRodTimeOutTimeoutSeconds = throwRodTimeOutTimeoutSeconds;
@@ -82,7 +80,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             var fishingTimePolicy = (FishingTimePolicy)ScriptObjectConverter.GetValue(jsObject, "fishingTimePolicy", (int)autoFishingConfig.FishingTimePolicy);
             var saveScreenshotOnKeyTick = ScriptObjectConverter.GetValue(jsObject, "saveScreenshotOnKeyTick", false);
 
-            return new AutoFishingTaskParam(wholeProcessTimeoutSeconds, throwRodTimeOutTimeoutSeconds, fishingTimePolicy, saveScreenshotOnKeyTick, null, null);
+            return new AutoFishingTaskParam(wholeProcessTimeoutSeconds, throwRodTimeOutTimeoutSeconds, fishingTimePolicy, saveScreenshotOnKeyTick, null);
         }
 
         /// <summary>
@@ -94,7 +92,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         public static AutoFishingTaskParam BuildFromConfig(AutoFishingConfig config, bool saveScreenshotOnKeyTick = false)
         {
             CultureInfo cultureInfo = new CultureInfo(Config.OtherConfig.GameCultureInfoName);
-            return new AutoFishingTaskParam(config.WholeProcessTimeoutSeconds, config.AutoThrowRodTimeOut, config.FishingTimePolicy, saveScreenshotOnKeyTick, cultureInfo, null);
+            return new AutoFishingTaskParam(config.WholeProcessTimeoutSeconds, config.AutoThrowRodTimeOut, config.FishingTimePolicy, saveScreenshotOnKeyTick, cultureInfo);
         }
     }
 }

@@ -5,12 +5,12 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 /// <summary>
 /// 自动七圣召唤任务参数
 /// </summary>
-public class GeniusInvokationTaskParam : BaseTaskParam<AutoGeniusInvokationTask>
+public class GeniusInvokationTaskParam : BaseTaskParam
 {
     /// <summary>
     /// 创建空策略的参数，供 JSON 反序列化和默认参数使用
     /// </summary>
-    public GeniusInvokationTaskParam() : base(null, null)
+    public GeniusInvokationTaskParam() : base(null)
     {
     }
 
@@ -18,7 +18,7 @@ public class GeniusInvokationTaskParam : BaseTaskParam<AutoGeniusInvokationTask>
     /// 使用指定策略文本创建参数
     /// </summary>
     /// <param name="strategyContent">七圣召唤策略文本</param>
-    public GeniusInvokationTaskParam(string strategyContent) : base(null, null)
+    public GeniusInvokationTaskParam(string strategyContent) : base(null)
     {
         this.StrategyContent = strategyContent;
     }

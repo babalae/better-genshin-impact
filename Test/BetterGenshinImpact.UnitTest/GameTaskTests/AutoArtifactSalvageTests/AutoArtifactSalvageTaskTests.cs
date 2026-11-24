@@ -3,7 +3,6 @@ using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests;
 using Microsoft.ClearScript;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
 using System;
@@ -20,12 +19,10 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
     public class AutoArtifactSalvageTaskTests
     {
         private readonly PaddleFixture paddle;
-        private readonly IStringLocalizer<AutoArtifactSalvageTask> stringLocalizer;
 
-        public AutoArtifactSalvageTaskTests(PaddleFixture paddle, LocalizationFixture localization)
+        public AutoArtifactSalvageTaskTests(PaddleFixture paddle)
         {
             this.paddle = paddle;
-            this.stringLocalizer = localization.CreateStringLocalizer<AutoArtifactSalvageTask>();
         }
 
         /// <summary>
@@ -109,7 +106,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
 
             //
-            AutoArtifactSalvageTaskParam salvageParam = new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo, this.stringLocalizer);
+            AutoArtifactSalvageTaskParam salvageParam = new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo);
             AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(CreateRuntime(), new FakeLogger());
             string result = PaddleResultDic.GetOrAdd(screenshot, screenshot_ =>
             {
@@ -221,7 +218,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             */
 
             //
-            AutoArtifactSalvageTaskParam salvageParam = new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo, this.stringLocalizer);
+            AutoArtifactSalvageTaskParam salvageParam = new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo);
             AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(CreateRuntime(), new FakeLogger());
             ArtifactStat result = sut.GetArtifactStat(mat, paddle.Get(cultureInfo.Name), salvageParam, out string _);
 
@@ -254,7 +251,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
 
             //
-            AutoArtifactSalvageTaskParam salvageParam = new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo, this.stringLocalizer);
+            AutoArtifactSalvageTaskParam salvageParam = new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo);
             AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(CreateRuntime(), new FakeLogger());
             ArtifactStat artifact = sut.GetArtifactStat(mat, paddle.Get(), salvageParam, out string _);
             bool result = await IsMatchJavaScript(artifact, js, new FakeLogger());

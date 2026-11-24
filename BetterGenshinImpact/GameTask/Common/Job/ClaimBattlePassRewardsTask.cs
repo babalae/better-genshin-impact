@@ -15,7 +15,7 @@ using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
-using Microsoft.Extensions.Localization;
+using BetterGenshinImpact.GameTask.I18n;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -62,9 +62,8 @@ public class ClaimBattlePassRewardsTask : ISoloTask<NoParam, NoData>
         _runtime = runtime;
         _config = config;
         _returnMainUiTask = new ReturnMainUiTask(runtime);
-        IStringLocalizer<ClaimBattlePassRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<ClaimBattlePassRewardsTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(config.OtherConfig.GameCultureInfoName);
-        this.claimAllLocalizedStrings = ((string[])["一键", "领取"]).Select(i => stringLocalizer.WithCultureGet(cultureInfo, i)).ToArray();
+        var gameLanguage = config.OtherConfig.GameCultureInfoName;
+        this.claimAllLocalizedStrings = [GameTextService.Instance.Get(GameTextKeys.BattlePass.OneClick, gameLanguage), GameTextService.Instance.Get(GameTextKeys.BattlePass.Claim, gameLanguage)];
     }
 
     /// <summary>

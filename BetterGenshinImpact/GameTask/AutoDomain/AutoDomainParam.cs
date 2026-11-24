@@ -16,7 +16,7 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 /// <summary>
 /// 自动秘境任务参数。也是 JS 宿主类型，现有构造函数与属性是社区脚本的对外合同，只允许新增。
 /// </summary>
-public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
+public class AutoDomainParam : BaseTaskParam
 {
     /// <summary>参数独立持有的树脂设置，默认值来自任务能力。</summary>
     private ResinUsage _resinUsage = ResinCapabilities.Domain.Defaults;
@@ -263,7 +263,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         (DomainName == AutoDomainTask.TrainingGuideOption &&
          TrainingGuideCalculateRunsEnabled && TrainingGuideRewardRecognitionEnabled);
 
-    public AutoDomainParam(int domainRoundNum, string path) : base(null, null)
+    public AutoDomainParam(int domainRoundNum, string path) : base(null)
     {
         DomainRoundNum = domainRoundNum;
         if (domainRoundNum == 0)
@@ -276,7 +276,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
     }
 
     /// <summary>为 Pulonia 创建不读取全局业务配置的参数，全部配置由运行快照填充。</summary>
-    internal AutoDomainParam(string path) : base(null, null)
+    internal AutoDomainParam(string path) : base(null)
     {
         DomainRoundNum = 9999;
         CombatStrategyPath = path;
@@ -324,7 +324,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         TrainingGuideFallbackSundaySelectedValue = config.TrainingGuideFallbackSundaySelectedValue;
     }
 
-    public AutoDomainParam(int domainRoundNum = 0) : base(null, null)
+    public AutoDomainParam(int domainRoundNum = 0) : base(null)
     {
         DomainRoundNum = domainRoundNum;
         if (domainRoundNum == 0)

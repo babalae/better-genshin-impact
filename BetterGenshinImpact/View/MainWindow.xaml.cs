@@ -1,25 +1,26 @@
 using BetterGenshinImpact.Helpers.DpiAwareness;
+using BetterGenshinImpact.View.Controls;
 using BetterGenshinImpact.ViewModel;
 using Microsoft.Extensions.Logging;
 using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Threading;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.View.Behavior;
 using Wpf.Ui;
 using Wpf.Ui.Abstractions;
 using Wpf.Ui.Controls;
-using Wpf.Ui.Tray.Controls;
 
 namespace BetterGenshinImpact.View;
 
 public partial class MainWindow : FluentWindow, INavigationWindow
 {
     private readonly ILogger<MainWindow> _logger = App.GetLogger<MainWindow>();
+    private TrayIcon? _trayIcon;
     private ScrollViewer? _currentScrollViewer;
     private double _targetOffset;
     private double _inputVelocity;
@@ -237,18 +238,43 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     {
         base.OnSourceInitialized(e);
         WindowHelper.TryApplySystemBackdrop(this);
+        _trayIcon = new TrayIcon((ContextMenu)FindResource("TrayMenu"), OnNotifyIconLeftDoubleClick,
+            ViewModel.InstanceIconSource, ViewModel.TrayTooltipText);
+        ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+    }
+
+    /// <summary>
+    /// 托盘图标和提示文本随实例身份（是否显示角标、已连接子实例）变化。
+    /// </summary>
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not (null or "" or nameof(MainWindowViewModel.InstanceIconSource) or nameof(MainWindowViewModel.TrayTooltipText)))
+        {
+            return;
+        }
+
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.InvokeAsync(() => OnViewModelPropertyChanged(sender, e));
+            return;
+        }
+
+        _trayIcon?.Update(ViewModel.InstanceIconSource, ViewModel.TrayTooltipText);
     }
 
     protected override void OnClosed(EventArgs e)
     {
         _logger.LogDebug("主窗体退出");
+        ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _trayIcon?.Dispose();
+        _trayIcon = null;
         CompositionTarget.Rendering -= OnCompositionTargetRendering;
         RemoveHandler(PreviewMouseWheelEvent, new MouseWheelEventHandler(OnGlobalPreviewMouseWheel));
         base.OnClosed(e);
         _ = App.GetService<NotifyIconViewModel>()?.ExitAsync();
     }
 
-    private void OnNotifyIconLeftDoubleClick(NotifyIcon sender, RoutedEventArgs e)
+    private void OnNotifyIconLeftDoubleClick()
     {
         App.GetService<NotifyIconViewModel>()?.ShowOrHide();
     }
