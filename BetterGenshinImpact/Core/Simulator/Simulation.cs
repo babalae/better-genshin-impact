@@ -21,20 +21,28 @@ public class Simulation
     {
         foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
         {
-            // 检查键是否被按下
-            if (IsKeyDown(key)) // 强制转换 VK 枚举为 int
+            // 鼠标键不能当键盘键抬起，统一在下面按鼠标事件处理
+            if (IsMouseButtonVk(key))
+            {
+                continue;
+            }
+
+            // 检查键盘按键是否处于按下状态
+            if (IsKeyDown(key))
             {
                 TaskControl.Logger.LogDebug($"解除{key}的按下状态.");
                 SendInput.Keyboard.KeyUp(key);
             }
         }
 
-        // 鼠标键同样只在确实处于按下状态时才抬起。
-        // 无条件发送抬起会产生一条没有对应按下的 WM_*BUTTONUP，DefWindowProc 会把它转成 WM_CONTEXTMENU，
-        // 在游戏/程序未处于前台时表现为在光标处“右键一下”弹出菜单。
+        // 鼠标键处于按下状态时才发送抬起。
+        // 无条件发送右键抬起会产生孤立的 WM_RBUTTONUP，DefWindowProc 可据此生成 WM_CONTEXTMENU。
+        // 如果事件落到光标下的 BGI 控件，也可能触发 WPF 的右键菜单。
         ReleaseMouseButtonIfPressed(User32.VK.VK_LBUTTON, () => SendInput.Mouse.LeftButtonUp());
         ReleaseMouseButtonIfPressed(User32.VK.VK_RBUTTON, () => SendInput.Mouse.RightButtonUp());
         ReleaseMouseButtonIfPressed(User32.VK.VK_MBUTTON, () => SendInput.Mouse.MiddleButtonUp());
+        ReleaseMouseButtonIfPressed(User32.VK.VK_XBUTTON1, () => SendInput.Mouse.XButtonUp(0x0001));
+        ReleaseMouseButtonIfPressed(User32.VK.VK_XBUTTON2, () => SendInput.Mouse.XButtonUp(0x0002));
     }
 
     /// <summary>
@@ -52,6 +60,10 @@ public class Simulation
         TaskControl.Logger.LogDebug($"解除{mouseButton}的按下状态.");
         release();
     }
+
+    /// <summary>判断虚拟键码是否对应鼠标键。</summary>
+    private static bool IsMouseButtonVk(User32.VK key) => key is User32.VK.VK_LBUTTON or User32.VK.VK_RBUTTON
+        or User32.VK.VK_MBUTTON or User32.VK.VK_XBUTTON1 or User32.VK.VK_XBUTTON2;
 
     public static bool IsKeyDown(User32.VK key)
     {
