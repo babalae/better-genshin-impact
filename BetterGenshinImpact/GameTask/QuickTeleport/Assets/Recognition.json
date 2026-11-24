@@ -6,6 +6,12 @@
       "roi": "rect(1440 * s, ch - 120 * s, 100 * s, 120 * s)",
       "draw": false
     },
+    "TeleportUnavailablePrompt": {
+      "type": "TemplateMatch",
+      "template": "TeleportUnavailablePrompt.png",
+      "roi": "rect(1440 * s, ch - 120 * s, 100 * s, 120 * s)",
+      "draw": false
+    },
     "MapScaleButton": {
       "type": "TemplateMatch",
       "template": "MapScaleButton.png",
