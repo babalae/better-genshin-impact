@@ -6,6 +6,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:cfg="clr-namespace:BetterGenshinImpact.Core.Config"
              xmlns:autofight="clr-namespace:BetterGenshinImpact.GameTask.AutoFight"
              xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
              Width="800"
@@ -75,17 +76,26 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="{i18n:T 是否开启自动拾取}"
+                                      Text="{i18n:T 地图追踪拾取方式}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="{i18n:T 推荐开启以拾取路线中的掉落物、采集物}"
+                                      Text="{i18n:T 原版自动拾取使用 OCR 与全局黑白名单；只拾取圣遗物用物品名模板，不捡材料、采集和对话；不拾取则本配置组地图追踪不自动按 F。}"
                                       TextWrapping="Wrap" />
-                        <ui:ToggleSwitch Grid.Row="0"
-                                         Grid.RowSpan="2"
-                                         Grid.Column="1"
-                                         IsChecked="{Binding PathingConfig.AutoPickEnabled}" />
+                        <ComboBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  MinWidth="160"
+                                  SelectedValue="{Binding PathingConfig.PickupMode, Mode=TwoWay}"
+                                  SelectedValuePath="Tag">
+                            <ComboBoxItem Tag="{x:Static cfg:PathingPickupMode.AutoPick}"
+                                          Content="{i18n:T 原版自动拾取}" />
+                            <ComboBoxItem Tag="{x:Static cfg:PathingPickupMode.ArtifactOnly}"
+                                          Content="{i18n:T 只拾取圣遗物}" />
+                            <ComboBoxItem Tag="{x:Static cfg:PathingPickupMode.Disabled}"
+                                          Content="{i18n:T 不拾取}" />
+                        </ComboBox>
                     </Grid>
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
