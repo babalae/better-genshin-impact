@@ -444,6 +444,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private Mat? _bitmap;
         private CaptureContent? _content;
 
+        private const int MaxConsecutiveCaptureFailures = 30;
+        private const int CaptureFailureBackoffMilliseconds = 1000;
+        private int _consecutiveCaptureFailures;
+        private DateTimeOffset _lastCaptureFailureWarnTime = DateTimeOffset.MinValue;
+
         protected async override Task<Status> Update()
         {
             _bitmap?.Dispose();
@@ -473,7 +478,22 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     throw new OperationCanceledException("截图器已停止");
                 }
 
-                _logger.LogWarning("截图失败");
+                _consecutiveCaptureFailures++;
+                var now = DateTimeOffset.Now;
+                // 截图持续失败时（如游戏窗口被最小化）行为树会全速空转，必须限频记日志并退避重试
+                if ((now - _lastCaptureFailureWarnTime).TotalSeconds >= 1)
+                {
+                    _logger.LogWarning("截图失败（连续 {FailCount} 次，已退避重试）", _consecutiveCaptureFailures);
+                    _lastCaptureFailureWarnTime = now;
+                }
+
+                if (_consecutiveCaptureFailures >= MaxConsecutiveCaptureFailures)
+                {
+                    throw new OperationCanceledException(
+                        $"连续 {MaxConsecutiveCaptureFailures} 次截图失败，已自动中止钓鱼任务，请检查游戏窗口是否被最小化、遮挡或处于无法捕获的状态");
+                }
+
+                await Task.Delay(CaptureFailureBackoffMilliseconds, _runtime.Stopping);
                 return Status.Failure;
             }
 
@@ -481,6 +501,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _content = new CaptureContent(_bitmap, 0, 0, _runtime.SystemInfo);
 
             Screenshot.Set(_content.CaptureRectArea);
+            _consecutiveCaptureFailures = 0;
 
             return Status.Success;
         }
