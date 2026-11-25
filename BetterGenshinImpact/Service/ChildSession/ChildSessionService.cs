@@ -326,7 +326,9 @@ public sealed class ChildSessionService : IDisposable
 
     public bool IsRelativeMouseForwardingAvailable()
     {
-        return _desktopWindow?.IsVisible == true
+        return !WatchModeEnabled
+               && _desktopWindow?.IsVisible == true
+               && _desktopWindow.WindowState != WindowState.Minimized
                && _desktopWindow.RdpHost.IsInputWindowFocused();
     }
 
@@ -499,6 +501,7 @@ public sealed class ChildSessionService : IDisposable
     {
         if (_desktopWindow is not null)
         {
+            _desktopWindow.RdpHost.SetIgnoreRemotePointerUpdates(_config.IgnoreRemotePointerUpdates);
             return _desktopWindow;
         }
 
@@ -509,6 +512,7 @@ public sealed class ChildSessionService : IDisposable
         _desktopWindow.RdpHost.SetSmartSizing(_config.SmartSizingEnabled);
         _desktopWindow.RdpHost.SetSendSystemShortcutsToRemote(SendSystemShortcutsToRemote);
         _desktopWindow.RdpHost.SetAudioMuted(AudioMuted);
+        _desktopWindow.RdpHost.SetIgnoreRemotePointerUpdates(_config.IgnoreRemotePointerUpdates);
         return _desktopWindow;
     }
 
@@ -806,6 +810,7 @@ public sealed class ChildSessionService : IDisposable
             _connectionRetryInProgress = false;
             // OnLogonError 触发后 ActiveX 可能仍处于连接状态，必须先断开再重连。
             // 否则这里直接退出会丢失已捕获的真实错误，最终只剩外层连接超时。
+            _desktopWindow.RdpHost.SetIgnoreRemotePointerUpdates(_config.IgnoreRemotePointerUpdates);
             _desktopWindow.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
         }
         catch (OperationCanceledException) when (_disposed)
@@ -955,6 +960,7 @@ public sealed class ChildSessionService : IDisposable
         _rdpSettingsReconnectRetriesRemaining = RdpSettingsReconnectRetryCount;
         try
         {
+            window.RdpHost.SetIgnoreRemotePointerUpdates(_config.IgnoreRemotePointerUpdates);
             window.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
         }
         catch
