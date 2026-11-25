@@ -179,6 +179,15 @@ public partial class ScriptGroupProject : ObservableObject
         Project = new ScriptProject(FolderName);
     }
 
+    /// <summary>
+    /// 修改 Shell 任务的命令（复用 Name 字段）。
+    /// </summary>
+    public void UpdateShellCommand(string command)
+    {
+        Name = command;
+        OnPropertyChanged(nameof(Name));
+    }
+
     public string GetHttpAllowedUrlsHash()
     {
         if (Project == null)

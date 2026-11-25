@@ -870,6 +870,27 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void OnEditShell(ScriptGroupProject? item)
+    {
+        if (item is not { Type: "Shell" } || SelectedScriptGroup == null)
+        {
+            return;
+        }
+
+        var command = PromptDialog.Prompt(
+            "执行 shell 操作存在极大风险！请勿输入你看不懂的指令！以免引发安全隐患并损坏系统！\n执行 shell 的时候，游戏可能会失去焦点",
+            "修改需要执行的shell",
+            item.Name);
+        if (string.IsNullOrEmpty(command) || command == item.Name)
+        {
+            return;
+        }
+
+        item.UpdateShellCommand(command);
+        WriteScriptGroup(SelectedScriptGroup);
+    }
+
+    [RelayCommand]
     private async Task OnAddPathing()
     {
         try
