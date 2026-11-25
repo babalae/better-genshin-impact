@@ -31,7 +31,7 @@ public sealed class ContinuousVoiceCancellationTests
         if (boundary != "route") synthesis = await f.Engine.NextAsync();
         if (boundary == "save") { synthesis!.Complete(); save = await f.Artifacts.NextAsync(); }
         f.Offer(3, "C");
-        var failure = new BetterGenshinImpact.GameTask.QuestVoice.Core.Tts.VoiceException(BetterGenshinImpact.GameTask.QuestVoice.Core.Tts.VoiceErrorCode.SynthesisRejected, "stale failure");
+        var failure = new BetterGenshinImpact.GameTask.QuestVoice.Core.TTS.VoiceException(BetterGenshinImpact.GameTask.QuestVoice.Core.TTS.VoiceErrorCode.SynthesisRejected, "stale failure");
         if (boundary == "route") route.Release.SetException(failure);
         else if (boundary == "save") save!.Result.SetException(failure);
         else synthesis!.Result.SetException(failure);

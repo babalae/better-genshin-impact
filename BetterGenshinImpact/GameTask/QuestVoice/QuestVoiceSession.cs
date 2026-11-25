@@ -3,11 +3,11 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.TTS;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Audio;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
-using BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
-using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.OCR;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.TTS;
 using Serilog;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Diagnostics;
 

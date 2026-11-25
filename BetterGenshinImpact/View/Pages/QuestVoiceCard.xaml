@@ -164,6 +164,36 @@
                            Command="{Binding ConfirmBackendRestartedCommand, Mode=OneWay}"
                            Visibility="{Binding Status.BackendUnknown, Mode=OneWay, Converter={StaticResource QuestVoiceCardBoolVisibility}}" />
             </Grid>
+                        <!-- 设计稿中的 P0/P1 共享状态摘要；弹性布局适配设置页宽度。 -->
+            <Grid Margin="16,0,16,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Padding="10" Margin="0,0,6,0"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                    <StackPanel>
+                        <ui:TextBlock FontWeight="SemiBold" Text="全局剧情范围" />
+                        <ui:TextBlock Margin="0,6,0,0" Text="{Binding Story.SelectedChapter.Label, Mode=OneWay}"
+                                      TextTrimming="CharacterEllipsis" ToolTip="{Binding Story.SelectedChapter.Label, Mode=OneWay}" />
+                        <ui:TextBlock Text="{Binding Story.ChapterStatus, Mode=OneWay}" TextTrimming="CharacterEllipsis"
+                                      ToolTip="{Binding Story.ChapterStatus, Mode=OneWay}" Margin="0,4,0,0"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Padding="10" Margin="6,0,0,0"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                    <StackPanel>
+                        <ui:TextBlock FontWeight="SemiBold" Text="P1 预合成进度" />
+                        <ui:TextBlock Margin="0,6,0,4" Text="{Binding Story.PreSynthesisStatus, Mode=OneWay}"
+                                      TextTrimming="CharacterEllipsis" ToolTip="{Binding Story.PreSynthesisStatus, Mode=OneWay}" />
+                        <ProgressBar Height="4" Minimum="0" Maximum="100"
+                                     Value="{Binding Story.ProgressPercent, Mode=OneWay}" />
+                        <ui:TextBlock Text="{Binding Story.CacheHitRate, StringFormat={}{0:F0}% 缓存命中率, Mode=OneWay}"
+                                      Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
             <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
             <!-- 进度：对话界面 → OCR → 角色 → 声线 → 合成 → 播放 -->
             <Grid Margin="16,12,16,8">
@@ -258,6 +288,10 @@
             <!-- 操作 -->
             <WrapPanel Margin="16,12">
                 <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="设置…" Icon="{ui:SymbolIcon Settings24}" Command="{Binding OpenSettingsCommand, Mode=OneWay}" />
+                <ui:Button Margin="0,0,8,4" Content="切换全局剧情" Icon="{ui:SymbolIcon List24}"
+                           Command="{Binding OpenSettingsCommand, Mode=OneWay}" />
+                <ui:Button Margin="0,0,8,4" Content="后台预合成剩余"
+                           Command="{Binding PreSynthesizeRemainingCommand, Mode=OneWay}" />
                 <ui:Button Margin="0,0,8,4" Content="校验配置" Icon="{ui:SymbolIcon CheckmarkCircle24}" Command="{Binding ValidateCommand, Mode=OneWay}" />
                 <ui:Button Margin="0,0,8,4" Content="打开日志" Icon="{ui:SymbolIcon Document24}" Command="{Binding OpenLogFileCommand, Mode=OneWay}" />
                 <ui:Button Margin="0,0,8,4" Content="打开日志目录" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding OpenLogFolderCommand, Mode=OneWay}" />

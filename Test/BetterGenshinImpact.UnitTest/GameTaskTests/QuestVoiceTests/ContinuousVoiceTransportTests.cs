@@ -9,8 +9,8 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
-using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.TTS;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.TTS;
 using Xunit;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;
