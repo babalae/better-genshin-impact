@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
@@ -14,6 +14,7 @@ namespace BetterGenshinImpact.Helpers.DpiAwareness;
 internal class DpiAwarenessController
 {
     private readonly Window window;
+    private readonly bool applySuggestedBounds;
 
     private HwndSource? hwndSource;
     private HWND? hwnd;
@@ -48,9 +49,11 @@ internal class DpiAwarenessController
     /// 构造一个新的高分辨率适配器
     /// </summary>
     /// <param name="window">目标窗体</param>
-    public DpiAwarenessController(Window window)
+    /// <param name="applySuggestedBounds">是否应用系统在 DPI 变化时建议的窗口位置和尺寸</param>
+    public DpiAwarenessController(Window window, bool applySuggestedBounds)
     {
         this.window = window;
+        this.applySuggestedBounds = applySuggestedBounds;
         window.Loaded += (_, _) => OnAttached();
         window.Closing += (_, _) => OnDetaching();
     }
@@ -98,13 +101,15 @@ internal class DpiAwarenessController
     {
         if (message is 0x02E0)
         {
-            RECT rect = *(RECT*)&lParam;
-
-            User32.SetWindowPosFlags flag =
-                User32.SetWindowPosFlags.SWP_NOZORDER
-                | User32.SetWindowPosFlags.SWP_NOACTIVATE
-                | User32.SetWindowPosFlags.SWP_NOOWNERZORDER;
-            User32.SetWindowPos(hWnd, default, rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top, flag);
+            if (applySuggestedBounds && lParam != 0)
+            {
+                RECT rect = *(RECT*)lParam;
+                User32.SetWindowPosFlags flag =
+                    User32.SetWindowPosFlags.SWP_NOZORDER
+                    | User32.SetWindowPosFlags.SWP_NOACTIVATE
+                    | User32.SetWindowPosFlags.SWP_NOOWNERZORDER;
+                User32.SetWindowPos(hWnd, default, rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top, flag);
+            }
 
             // we modified this fragment to correct the wrong behaviour
             double newDpiRatio = GetScaleRatio(window) * currentDpiRatio;

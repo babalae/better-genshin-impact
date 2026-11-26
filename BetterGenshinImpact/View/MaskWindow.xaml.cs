@@ -44,7 +44,7 @@ public partial class MaskWindow : Window
 
         this.SetResourceReference(StyleProperty, typeof(MaskWindow));
         InitializeComponent();
-        this.InitializeDpiAwareness();
+        this.InitializeDpiAwareness(applySuggestedBounds: false);
 
         LogTextBox.TextChanged += LogTextBoxTextChanged;
         Loaded += OnLoaded;
