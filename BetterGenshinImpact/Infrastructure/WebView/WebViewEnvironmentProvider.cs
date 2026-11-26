@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Infrastructure.Storage;
+using BetterGenshinImpact.Service.Instance;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
 
@@ -21,6 +23,11 @@ public sealed partial class WebViewEnvironmentProvider : IWebViewEnvironmentProv
     /// 云原神实例数据根目录名，不能用作普通环境的 Id
     /// </summary>
     private const string CloudGameFolderName = "CloudGame";
+
+    /// <summary>
+    /// 桌面分身的会话数据目录后缀前缀，完整目录名为 <c>{环境 Id}-Session{会话号}</c>
+    /// </summary>
+    private const string SessionFolderInfix = "-Session";
 
     /// <summary>
     /// 禁用 Chromium 的遮挡与后台降频，否则会影响自动化：
@@ -45,6 +52,15 @@ public sealed partial class WebViewEnvironmentProvider : IWebViewEnvironmentProv
     private readonly ILogger<WebViewEnvironmentProvider> _logger;
 
     /// <summary>
+    /// 普通环境的数据目录后缀，非主实例为 <c>-Session{会话号}</c>，主实例为空字符串。
+    /// 桌面分身运行在另一个 Windows 会话，与主实例共用 Data/WebView2/{Id} 时，
+    /// 后创建控制器的一方会因 User Data Folder 被占用得到 ERROR_BUSY（0x800700AA，
+    /// 见 issue #3985：桌面分身内 htmlMask.show() 失败）。按会话号隔离，会话号在进程重启后不变，
+    /// 悬浮小窗等 Profile 的登录态得以保留。方案见 Docs/design/infrastructure-foundation.md 8.7 节。
+    /// </summary>
+    private readonly string _dataFolderSuffix;
+
+    /// <summary>
     /// 已创建或正在创建的普通环境，按环境 Id
     /// </summary>
     private readonly ConcurrentDictionary<string, Lazy<Task<CoreWebView2Environment>>> _environments =
@@ -57,8 +73,20 @@ public sealed partial class WebViewEnvironmentProvider : IWebViewEnvironmentProv
     {
         _cloudGameInstanceName = cloudGameInstanceName;
         _logger = logger;
+        // 主实例沿用定义里的目录；桌面分身等子实例按 Windows 会话号隔离出独立目录
+        var context = InstanceBootstrap.Current?.Context;
+        _dataFolderSuffix = context is null || context.IsRoot
+            ? ""
+            : SessionFolderInfix + context.WindowsSessionId.ToString(CultureInfo.InvariantCulture);
         ValidateDefinitions();
     }
+
+    /// <summary>
+    /// 环境在磁盘上的实际数据目录。主实例即定义里的目录，桌面分身追加会话后缀
+    /// </summary>
+    /// <param name="environment">普通环境定义</param>
+    public string GetDataFolder(WebViewEnvironmentDefinition environment) =>
+        environment.DataFolder + _dataFolderSuffix;
 
     /// <inheritdoc />
     public Task<CoreWebView2Environment> GetAsync(WebViewEnvironmentDefinition environment)
@@ -69,7 +97,7 @@ public sealed partial class WebViewEnvironmentProvider : IWebViewEnvironmentProv
         }
 
         var lazy = _environments.GetOrAdd(environment.Id, _ => new Lazy<Task<CoreWebView2Environment>>(
-            () => CreateAsync(environment.Id, environment.DataFolder, environment.BrowserArguments)));
+            () => CreateAsync(environment.Id, GetDataFolder(environment), environment.BrowserArguments)));
         var task = lazy.Value;
 
         // 创建失败（例如运行时尚未安装）不缓存，安装后再次打开页面即可重试
@@ -153,10 +181,12 @@ public sealed partial class WebViewEnvironmentProvider : IWebViewEnvironmentProv
         var areas = new List<StorageArea>();
         foreach (var profile in WebViewProfiles.All)
         {
+            // 目录随环境入口实际使用的数据目录计算：桌面分身与会话后缀一起变化，清理区域始终指向真实位置
+            var profileFolder = profile.FolderUnder(GetDataFolder(profile.Environment));
             // 网页进程长期占用这些文件，统一推迟到下次启动、任何 WebView 创建之前删除
             areas.Add(profile.ClearsAllData
                 ? new StorageArea($"webview:{profile.Environment.Id}:{profile.ProfileName}", profile.DisplayName,
-                    StorageGroup.WebData, [profile.ProfileFolder])
+                    StorageGroup.WebData, [profileFolder])
                 {
                     Description = profile.Description,
                     CleanupEffect = "会清除网页中保存的设置，下次启动时清理",
@@ -165,7 +195,7 @@ public sealed partial class WebViewEnvironmentProvider : IWebViewEnvironmentProv
                     IncludedInQuickCleanup = false,
                 }
                 : new StorageArea($"webview:{profile.Environment.Id}:{profile.ProfileName}", profile.DisplayName,
-                    StorageGroup.WebData, WebViewDataFolders.GetCacheFolders(profile.ProfileFolder))
+                    StorageGroup.WebData, WebViewDataFolders.GetCacheFolders(profileFolder))
                 {
                     Description = profile.Description,
                     CleanupEffect = "下次启动时清理",
@@ -197,7 +227,12 @@ public sealed partial class WebViewEnvironmentProvider : IWebViewEnvironmentProv
         try
         {
             return Directory.Exists(AppPaths.WebView)
-                ? Directory.GetFileSystemEntries(AppPaths.WebView).Where(path => !known.Contains(Path.GetFileName(path))).ToList()
+                ? Directory.GetFileSystemEntries(AppPaths.WebView)
+                    .Where(path => !known.Contains(Path.GetFileName(path)))
+                    // 桌面分身的会话目录 {环境 Id}-Session{n} 属于已知环境，不是遗留数据
+                    .Where(path => !WebViewEnvironments.All.Any(environment =>
+                        Path.GetFileName(path).StartsWith(environment.Id + SessionFolderInfix, StringComparison.OrdinalIgnoreCase)))
+                    .ToList()
                 : [];
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)

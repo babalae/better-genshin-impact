@@ -36,7 +36,14 @@ public sealed record WebViewProfile(WebViewEnvironmentDefinition Environment, st
     /// Profile 的数据目录。默认 Profile 为 EBWebView/Default，命名 Profile 为 EBWebView/WV2Profile_{小写名称}
     /// （已用 CoreWebView2Profile.ProfilePath 实测确认）
     /// </summary>
-    public string ProfileFolder => Path.Combine(Environment.DataFolder, "EBWebView",
+    public string ProfileFolder => FolderUnder(Environment.DataFolder);
+
+    /// <summary>
+    /// 在指定环境数据目录下的 Profile 目录。桌面分身使用按会话号隔离的目录时，
+    /// 由环境入口传入实际的目录，保证 Profile 数据与创建的环境落在同一处。
+    /// </summary>
+    /// <param name="dataFolder">环境的数据目录</param>
+    public string FolderUnder(string dataFolder) => Path.Combine(dataFolder, "EBWebView",
         IsDefault ? DefaultProfileName : "WV2Profile_" + ProfileName.ToLowerInvariant());
 }
 
