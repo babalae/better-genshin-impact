@@ -53,7 +53,7 @@ public partial class MaskWindow : Window
 
         this.SetResourceReference(StyleProperty, typeof(MaskWindow));
         InitializeComponent();
-        this.InitializeDpiAwareness();
+        this.InitializeDpiAwareness(applySuggestedBounds: false);
 
         _logDocument = new OverlayLogDocument(LogTextBox);
         Loaded += OnLoaded;

@@ -1,7 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Threading;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
@@ -9,7 +8,6 @@ using System.Windows.Threading;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
@@ -31,7 +29,6 @@ public sealed class MaskWindowHost : IMaskWindowHost
 
     // 期望状态，受 _lock 保护
     private bool _attached;
-    private nint _gameHandle;
     private bool _desiredVisible;
     private RECT _desiredBounds;
     private bool _bringToTopPending;
@@ -40,7 +37,6 @@ public sealed class MaskWindowHost : IMaskWindowHost
 
     // 以下字段只在 UI 线程访问
     private MaskWindow? _window;
-    private RECT _appliedBounds;
 
     private MaskWindowState _state;
 
@@ -71,7 +67,6 @@ public sealed class MaskWindowHost : IMaskWindowHost
         lock (_lock)
         {
             _attached = true;
-            _gameHandle = gameHandle;
             _lastReport = null;
             _lastGameActive = true;
             _desiredVisible = true;
@@ -102,7 +97,6 @@ public sealed class MaskWindowHost : IMaskWindowHost
         {
             var window = _window;
             _window = null;
-            _appliedBounds = default;
             window?.Close();
         });
     }
@@ -260,13 +254,11 @@ public sealed class MaskWindowHost : IMaskWindowHost
         bool visible;
         bool bringToTop;
         RECT bounds;
-        nint gameHandle;
         lock (_lock)
         {
             visible = _attached && _desiredVisible;
             bringToTop = _bringToTopPending;
             bounds = _desiredBounds;
-            gameHandle = _gameHandle;
             _bringToTopPending = false;
         }
 
@@ -275,21 +267,19 @@ public sealed class MaskWindowHost : IMaskWindowHost
             if (visible)
             {
                 var window = EnsureWindow();
-                if (bounds.Width > 0 && bounds.Height > 0 && bounds != _appliedBounds)
-                {
-                    Position(window, gameHandle, bounds);
-                    _appliedBounds = bounds;
-                    bringToTop = true;
-                }
+                var handle = new WindowInteropHelper(window).EnsureHandle();
+                bringToTop |= AlignBounds(handle, bounds);
 
                 if (!window.IsVisible)
                 {
                     window.Show();
+                    // 首次显示会完成 WPF 布局，再检查一次实际矩形。
+                    bringToTop |= AlignBounds(handle, bounds);
                 }
 
                 if (bringToTop)
                 {
-                    BringToTop(window);
+                    User32.BringWindowToTop(handle);
                 }
             }
             else if (_window is { IsVisible: true } window)
@@ -314,12 +304,13 @@ public sealed class MaskWindowHost : IMaskWindowHost
         }
 
         var window = _windowFactory();
+        window.DpiChanged += OnWindowDpiChanged;
         window.Closed += (_, _) =>
         {
+            window.DpiChanged -= OnWindowDpiChanged;
             if (ReferenceEquals(_window, window))
             {
                 _window = null;
-                _appliedBounds = default;
                 PublishState();
             }
         };
@@ -327,22 +318,36 @@ public sealed class MaskWindowHost : IMaskWindowHost
         return window;
     }
 
-    private static void Position(Window window, nint gameHandle, RECT bounds)
+    private void OnWindowDpiChanged(object sender, DpiChangedEventArgs e)
     {
-        var dpi = DpiHelper.GetScale(gameHandle);
-        window.Left = bounds.Left / dpi.X;
-        window.Top = bounds.Top / dpi.Y;
-        window.Width = bounds.Width / dpi.X;
-        window.Height = bounds.Height / dpi.Y;
+        // WPF 还会应用 DPI 消息建议的矩形，等本次消息处理结束再对齐游戏。
+        _applyCoalescer.Request();
     }
 
-    private static void BringToTop(Window window)
+    private bool AlignBounds(HWND handle, RECT bounds)
     {
-        var hWnd = new WindowInteropHelper(window).Handle;
-        if (hWnd != IntPtr.Zero)
+        if (bounds.Width <= 0 || bounds.Height <= 0
+            || (User32.GetWindowRect(handle, out var actualBounds) && actualBounds == bounds))
         {
-            User32.BringWindowToTop(hWnd);
+            return false;
         }
+
+        // 有实际父窗口时，SetWindowPos 的位置相对于父窗口客户区。
+        var origin = new POINT(bounds.Left, bounds.Top);
+        var parent = User32.GetAncestor(handle, User32.GetAncestorFlag.GA_PARENT);
+        if (parent != HWND.NULL && parent != User32.GetDesktopWindow() && !User32.ScreenToClient(parent, ref origin))
+        {
+            return false;
+        }
+
+        var flags = User32.SetWindowPosFlags.SWP_NOZORDER | User32.SetWindowPosFlags.SWP_NOACTIVATE;
+        if (User32.SetWindowPos(handle, HWND.NULL, origin.X, origin.Y, bounds.Width, bounds.Height, flags))
+        {
+            return true;
+        }
+
+        _logger.LogDebug("遮罩窗口定位失败，Win32 错误码 {Error}", Marshal.GetLastWin32Error());
+        return false;
     }
 
     private void PublishState()
