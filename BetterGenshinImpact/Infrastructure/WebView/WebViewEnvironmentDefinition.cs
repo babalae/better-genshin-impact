@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using BetterGenshinImpact.Infrastructure.Storage;
-using BetterGenshinImpact.Service.Instance;
 
 namespace BetterGenshinImpact.Infrastructure.WebView;
 
@@ -19,24 +17,9 @@ public sealed record WebViewEnvironmentDefinition(string Id, string DisplayName)
     public string BrowserArguments { get; init; } = "";
 
     /// <summary>
-    /// 用户数据目录，由 Id 决定，不允许单独指定。
-    /// 桌面分身运行在另一个 Windows 会话，与主实例共用同一目录会因 WebView2 的 User Data Folder
-    /// 被占用而返回 ERROR_BUSY（0x800700AA，见 issue #3985：桌面分身内 htmlMask.show() 失败），
-    /// 因此非主实例按会话号追加 <c>-Session{会话号}</c>，得到 <c>Data/WebView2/{Id}-Session{n}/</c>，
-    /// 与设计文档 8.7 节给出的方案一致。会话号在进程重启后不变，悬浮小窗等 Profile 的登录态得以保留。
-    /// 云原神实例使用独立目录，不走这里。
+    /// 用户数据目录，由 Id 决定，不允许单独指定
     /// </summary>
-    public string DataFolder
-    {
-        get
-        {
-            var root = Path.Combine(AppPaths.WebView, Id);
-            var context = InstanceBootstrap.Current?.Context;
-            return context is null || context.IsRoot
-                ? root
-                : $"{root}-Session{context.WindowsSessionId.ToString(CultureInfo.InvariantCulture)}";
-        }
-    }
+    public string DataFolder => Path.Combine(AppPaths.WebView, Id);
 }
 
 /// <summary>
