@@ -360,11 +360,29 @@ public static partial class Bv
     {
         var assetScale = captureRa.GetAssetScale();
 
-        // 获取 (808, 1010) 位置的像素颜色
-        var pixelColor = captureRa.SrcMat.At<Vec3b>((int)(1010 * assetScale), (int)(808 * assetScale));
+                // 血条左端略微靠内的一个点（1080P 基准），在它周围 5x5 的邻域里找“红血”像素。
+        // 原来只比较单个像素且要求精确等于 (255, 90, 90)，实际渲染/抗锯齿会让取值变成
+        // (249, 93, 92) 之类的近似值，导致判定永远为 false（自动吃药从不触发）。
+        var x = (int)(808 * assetScale);
+        var y = (int)(1010 * assetScale);
 
-        // 判断颜色是否是 (255, 90, 90)
-        return pixelColor is { Item2: 255, Item1: 90, Item0: 90 };
+        for (var dy = -2; dy <= 2; dy++)
+        {
+            for (var dx = -2; dx <= 2; dx++)
+            {
+                var pixelColor = captureRa.SrcMat.At<Vec3b>(y + dy, x + dx);
+
+                // Vec3b: Item0 = B, Item1 = G, Item2 = R
+                if (pixelColor.Item2 >= 235
+                    && Math.Abs(pixelColor.Item1 - 90) <= 20
+                    && Math.Abs(pixelColor.Item0 - 90) <= 20)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
