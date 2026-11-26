@@ -101,6 +101,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// 优先自动点击的选项
     /// </summary>
     private List<string> _selectList = [];
+
+    /// <summary>
+    /// 剧情简介展示器
+    /// </summary>
+    private SynopsisDisplayer? _synopsisDisplayer;
     
     private static RecognitionObject GetRecognitionObject(string objectName, ImageRegion region)
     {
@@ -165,12 +170,20 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {
             InitKeyword();
         }
+
+        if (_config.SynopsisEnabled)
+        {
+            // 初始化简介展示器
+            _synopsisDisplayer = new SynopsisDisplayer(_config, _runtime); 
+        }
     }
 
     public void OnDisabled()
     {
         ReleaseChooseOptionWait("触发器关闭");
         ResetPageCloseRecognition();
+        _synopsisDisplayer?.OffShow();
+        _synopsisDisplayer = null;  //  关闭触发器时将资源释放掉
     }
 
     private void InitKeyword()
@@ -238,6 +251,24 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
+        if (_config.SynopsisEnabled)
+        {
+            _synopsisDisplayer?.UpdateShow(); // 更新展示状态，性能开销极小
+            
+            if (_config.SynopsisStyle != _synopsisDisplayer?.SynopsisStyle)
+            {
+                // 检查是否需要做简介风格切换，仅当用户手动变更风格选项时才触发
+                _synopsisDisplayer?.OffShow();
+                _synopsisDisplayer = new SynopsisDisplayer(_config, _runtime);
+            }
+        }
+        else
+        {
+            _synopsisDisplayer?.OffShow(); // 如果用户在展示期间关闭了简介展示选项，那么应当结束展示，避免一直显示在屏幕上
+            _synopsisDisplayer?.ResetDialogueShownFlag();
+            _synopsisDisplayer?.ResetFailedCatchCount();
+        }
+
         RefreshOperationMode();
         if (!_config.AutoWaitDialogueOptionVoiceEnabled)
         {
@@ -286,8 +317,16 @@ public partial class AutoSkipTrigger : ITaskTrigger
             TryBringToFrontAfterBackgroundDialog();
         }
 
+        if (_config.SynopsisEnabled && !isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds >= 5) // 认为只要剧情playing在5s内接续上（一些小过场这些），就是同一段对话
+        {
+            _synopsisDisplayer?.ResetFailedCatchCount(); // 离开对话，重置识别计数
+            _synopsisDisplayer?.ResetDialogueShownFlag(); // 离开对话，重置已经展示标签
+            _synopsisDisplayer?.SpeedUp(); // 离开对话，缩短简介展示时间
+        }
+
         if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= PlayingFlagDisappearDelaySeconds)
         {
+            
             // 关闭弹出页
             if (_config.ClosePopupPagedEnabled)
             {
@@ -323,6 +362,13 @@ public partial class AutoSkipTrigger : ITaskTrigger
         if (isPlaying)
         {
             _prevPlayingTime = DateTime.Now;
+
+            if (_config.SynopsisEnabled)
+            {
+                // 捕获当前对话，用作对话简介
+                _synopsisDisplayer?.CatchDialogue(content.CaptureRectArea);
+            }
+
             if (_config.QuicklySkipConversationsEnabled)
             {
                 if (_config.BeforeClickConfirmDelay > 0)
@@ -738,6 +784,14 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 }
 
                 rs.Add(item);
+            }
+
+            if (_config.SynopsisEnabled)
+            {
+                // 复用已经识别好的回答选项文本，用以展示剧情简介，避免重复识别
+                // 如果用户设置了后台操作的方式跳过剧情，程序运行不到这，将不利用回答选项做匹配，仅仅用台词匹配，也能够用
+                _synopsisDisplayer?.CatchResponse(rs.Select(item => item.Text).ToList());
+                // _logger.LogDebug(string.Join("\n", rs.Select(item => item.Text).ToList()));
             }
 
             if (rs.Count > 0)

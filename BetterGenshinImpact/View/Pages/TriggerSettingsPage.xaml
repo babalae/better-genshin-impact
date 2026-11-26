@@ -568,6 +568,335 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 显示剧情简介}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 触发对话后将展示本轮对话的剧情简介，推荐在快速跳过对话文本时开启}"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Margin="0,0,12,0"
+                              DisplayMemberPath="Value"
+                              ItemsSource="{Binding SynopsisStyleDict}"
+                              SelectedValue="{Binding Config.AutoSkipConfig.SynopsisStyle, Mode=TwoWay}"
+                              SelectedValuePath="Key" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="2"
+                                     Margin="0,0,8,0"
+                                     IsChecked="{Binding Config.AutoSkipConfig.SynopsisEnabled, Mode=TwoWay}" />
+                </Grid>
+                <ui:CardExpander Margin="16, 0, 16, 16"
+                                 ContentPadding="0">
+                    <ui:CardExpander.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 剧情简介详细设置}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="{i18n:T 调整剧情简介展示的位置、字体大小、颜色、展示持续时间等}" />
+                        </Grid>
+                    </ui:CardExpander.Header>
+                    <StackPanel>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 性能层级}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{i18n:T 【低/中/高】 越高识别效果越好，所需的计算机资源也更多。默认：中。}"
+                                          TextWrapping="Wrap" />
+                            <ComboBox Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="1"
+                                      Margin="0,0,8,0"
+                                      ItemsSource="{Binding SynopsisPerformanceModels}"
+                                      SelectedItem="{Binding Config.AutoSkipConfig.SynopsisPerformance, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 展示持续时间（秒）}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="{i18n:T 范围：5-120，默认值60。}" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.AutoSkipConfig.SynopsisDisplayDurationTimeSecond, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 提前结束时间（秒）}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="{i18n:T 如果当前对话结束了，展示将提前多少秒关闭，范围：0-120，默认值50。}" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.AutoSkipConfig.SynopsisDisplaySpeedUpSecond, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 横坐标}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="{i18n:T 调整展示窗口左上角在界面上的横坐标，范围：0-1920，默认值420。}" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.AutoSkipConfig.SynopsisLeftTopX, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 纵坐标}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="{i18n:T 调整展示窗口左上角在界面上的纵坐标，范围：0-1080，默认值40。}" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.AutoSkipConfig.SynopsisLeftTopY, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 字体大小}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="{i18n:T 展示文本的字体大小，范围：18-42，默认值26。}" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.AutoSkipConfig.SynopsisFontSize, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 行宽}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="{i18n:T 展示文本的每行最大字符数量，范围：10-200，默认值40。}" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.AutoSkipConfig.SynopsisMaxCharsPerLine, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 展示文本颜色}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{i18n:T 格式为#RRGGBB或#RRGGBBAA。默认为#33E8D6（薄荷青）}"
+                                          TextWrapping="Wrap" />
+                            <!-- 颜色预览 -->
+                            <Border Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Width="24"
+                                     Height="24"
+                                     Margin="0,0,8,0"
+                                     VerticalAlignment="Center"
+                                     BorderBrush="#40000000"
+                                     BorderThickness="1"
+                                     CornerRadius="4">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding Config.AutoSkipConfig.SynopsisTextColor, Converter={StaticResource StringToColorConverter}}" />
+                                </Border.Background>
+                            </Border>
+                            <!-- 颜色输入框 -->
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="2"
+                                        MinWidth="120"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.AutoSkipConfig.SynopsisTextColor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 展示框背景颜色}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{i18n:T 格式为#RRGGBB或#RRGGBBAA。默认为#00000055（33%不透明度黑色）}"
+                                          TextWrapping="Wrap" />
+                            <!-- 颜色预览 -->
+                            <Border Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Width="24"
+                                     Height="24"
+                                     Margin="0,0,8,0"
+                                     VerticalAlignment="Center"
+                                     BorderBrush="#40000000"
+                                     BorderThickness="1"
+                                     CornerRadius="4">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding Config.AutoSkipConfig.SynopsisBackgroundColor, Converter={StaticResource StringToColorConverter}}" />
+                                </Border.Background>
+                            </Border>
+                            <!-- 颜色输入框 -->
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="2"
+                                        MinWidth="120"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.AutoSkipConfig.SynopsisBackgroundColor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </Grid>
+                    </StackPanel>
+                </ui:CardExpander>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"

@@ -41,6 +41,15 @@ public partial class TriggerSettingsPageViewModel : ViewModel
             { nameof(PictureSourceType.CaptureLoop), "60帧模式" },
             { nameof(PictureSourceType.TriggerDispatcher), "截图器供图" }
         };
+    
+    [ObservableProperty] private string[] _synopsisPerformanceModels = ["低", "中", "高"];
+    
+    [ObservableProperty] private Dictionary<string, string> _synopsisStyleDict =
+        new()
+        {
+            { nameof(SynopsisStyleType.Serious), "正经风格" },
+            { nameof(SynopsisStyleType.Funny), "搞笑风格" }
+        };
 
     public AllConfig Config { get; set; }
 
