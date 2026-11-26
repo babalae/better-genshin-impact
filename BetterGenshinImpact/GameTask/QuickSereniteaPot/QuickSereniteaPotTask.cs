@@ -37,6 +37,8 @@ public class QuickSereniteaPotTask
             using var ra2 = ra1.Find(RecognitionAssets.Get("QuickSereniteaPot", "SereniteaPotIcon", ra1));
             if (ra2.IsEmpty())
             {
+                // 找不到壶先留一张截图，确认是没打开背包、页签不对还是图标变了
+                SavePotIconDebugCapture(ra1);
                 throw new RetryException("未检测到壶");
             }
             else
@@ -44,6 +46,23 @@ public class QuickSereniteaPotTask
                 ra2.Click();
             }
         }, TimeSpan.FromMilliseconds(200), 3);
+    }
+
+    /// <summary>
+    /// 把找不到壶图标时的画面存到 log\pot_icon_debug。失败不影响主流程。
+    /// </summary>
+    private static void SavePotIconDebugCapture(BetterGenshinImpact.GameTask.Model.Area.ImageRegion imageRegion)
+    {
+        try
+        {
+            var dir = BetterGenshinImpact.Core.Config.Global.Absolute(@"log\pot_icon_debug");
+            System.IO.Directory.CreateDirectory(dir);
+            imageRegion.SrcMat.SaveImage(System.IO.Path.Combine(dir, $"{DateTime.Now:HHmmss_fff}.png"));
+        }
+        catch
+        {
+            // 忽略调试截图的异常
+        }
     }
 
     public static void Done()
