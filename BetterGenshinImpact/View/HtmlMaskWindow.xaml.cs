@@ -459,9 +459,15 @@ public partial class HtmlMaskWindow : Window
         }
         catch (Exception e)
         {
+            // 桌面分身等子实例与主实例共用同一份程序目录时，WebView2 的 User Data Folder
+            // 曾被多个进程同时占用，创建控制器会返回 ERROR_BUSY（0x800700AA）。
+            // 实例隔离后不应再出现；若仍出现，给出可据判断的明确原因，而不是把 COMException 透传给脚本。
+            var busy = (e as System.Runtime.InteropServices.COMException)?.HResult == unchecked((int)0x800700AA);
             TaskControl.Logger.LogError(e, "WebView2 初始化失败");
             // 告诉用户遮罩为什么没有出现，不再静默关闭
-            Toast.Error($"脚本遮罩网页初始化失败：{e.Message}");
+            Toast.Error(busy
+                ? "脚本遮罩网页初始化失败：网页数据目录被其他进程占用（0x800700AA）。若正在桌面分身中运行，请关闭主窗口中的遮罩或稍后重试。"
+                : $"脚本遮罩网页初始化失败：{e.Message}");
             if (!_isClosing)
             {
                 Close();
