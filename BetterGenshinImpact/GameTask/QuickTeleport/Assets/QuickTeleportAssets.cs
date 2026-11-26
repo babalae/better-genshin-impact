@@ -37,6 +37,7 @@ public sealed class QuickTeleportAssets
             BuildMapChooseIconRo("StygianOnslaught.png", captureSize),
             BuildMapChooseIconRo("TheCatsTail.png", captureSize),
             BuildMapChooseIconRo("Train.png", captureSize),
+            BuildMapChooseIconRo("Novokitezhgrad.png", captureSize),
         ];
         MapChooseIconRoList = mapChooseIconRoList.AsReadOnly();
         MapChooseIconGreyMatList = mapChooseIconRoList.ConvertAll(x => x.TemplateImageGreyMat ?? new Mat()).AsReadOnly();

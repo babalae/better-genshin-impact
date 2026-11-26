@@ -498,6 +498,7 @@ public class TpTask
             "NatlanObsidianTotemPole" => "曜石图腾柱",
             "NodKraiMeetingPoint" => "挪德卡莱集会所",
             "SnezhnayaMeetingPoint" => "至冬聚所",
+            "Novokitezhgrad" => "新基捷城",
             "Train" => "列车",
             "TheCatsTail" => "猫尾酒馆",
             "StygianOnslaught" => "幽境危战",
