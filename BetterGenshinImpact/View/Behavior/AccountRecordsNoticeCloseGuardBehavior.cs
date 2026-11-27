@@ -88,7 +88,7 @@ public sealed class AccountRecordsNoticeCloseGuardBehavior : Behavior<ButtonBase
     /// <summary>原按钮 Click 先于关闭命令执行，遮罩此时立即参与实际命中测试。</summary>
     private void OnCloseClick(object sender, RoutedEventArgs e)
     {
-        if (_guard == null) Prepare();
+        // 只有鼠标按下预建的遮罩才参与关闭；键盘 Click 不创建鼠标保护。
         if (_guard == null || _window == null) return;
         _lastPointer = Mouse.GetPosition(_window);
         _guard.IsHitTestVisible = true;

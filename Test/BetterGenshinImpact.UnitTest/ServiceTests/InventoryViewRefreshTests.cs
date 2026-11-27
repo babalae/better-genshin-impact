@@ -167,6 +167,36 @@ public sealed class InventoryViewRefreshTests
         finally { dialog.Close(); }
     });
 
+    /// <summary>重复 Loaded 不能并发读取首页并跳过剩余历史。</summary>
+    [Fact]
+    public Task ItemHistory_RepeatedLoadedDoesNotSkipSecondPage() => RunSta(async () =>
+    {
+        var gate = new TaskCompletionSource<InventoryBatchIndexEntry[]>();
+        var calls = 0;
+        var entries = Enumerable.Range(0, 51).Select(i => new InventoryBatchIndexEntry
+            { Reference = new() { BatchId = "a", RecordId = i.ToString() } }).ToArray();
+        var vm = new AccountRecordsItemDetailsViewModel(new() { Name = "摩拉" }, new Dictionary<string, AccountRecordSource>(), true,
+            () => { calls++; return gate.Task; },
+            refs => Task.FromResult(refs.Select(reference => (InventoryBatchRecord?)new InventoryBatchRecord
+                { RecordId = reference.RecordId, Name = "摩拉", Kind = "Report", Outcome = "Accepted", Input = JObject.FromObject(new { Quantity = 10 }) }).ToArray()));
+        var dialog = new AccountRecordsItemDetailsDialog(vm);
+        try
+        {
+            dialog.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+            dialog.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+            Assert.Equal(1, calls);
+            var running = vm.LoadMoreCommand.ExecutionTask!;
+            gate.SetResult(entries);
+            await running;
+            Assert.Equal(50, vm.History.Count);
+            Assert.True(vm.HasMore);
+            await vm.LoadMoreCommand.ExecuteAsync(null);
+            Assert.Equal(51, vm.History.Count);
+            Assert.False(vm.HasMore);
+        }
+        finally { gate.TrySetResult(entries); dialog.Close(); }
+    });
+
     /// <summary>批次入口可实例化布局，异步返回不会覆盖后来选中事件的详情。</summary>
     [Fact]
     public Task BatchDetails_LayoutAndSelectionStayConsistent() => RunSta(async () =>

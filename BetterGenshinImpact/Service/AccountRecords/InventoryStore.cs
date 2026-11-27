@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Material;
 using BetterGenshinImpact.Service.AccountRecords.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -703,6 +704,11 @@ public sealed partial class InventoryStore
                 ValidateExchange(package);
                 var account = (JObject)((JObject)package["accounts"]!).Properties().Single().Value;
                 ((JObject)account["inventory"]!).Property(name)?.Remove();
+                // 删除库存后清除本项及同族的派生估算，目标本身仍然保留。
+                var affected = MaterialFamilyCatalog.Families
+                    .Where(family => family.Members.Contains(name)).SelectMany(family => family.Members).Append(name);
+                if (account["demandStates"] is JObject states)
+                    foreach (var member in affected) states.Property(member)?.Remove();
                 // 删除库存不删除需求，需求仍引用的补充分类必须随备份保留。
                 if (account["demands"]?["items"]?[name] == null)
                     ((JObject)package["itemDefinitions"]!).Property(name)?.Remove();
@@ -875,7 +881,7 @@ public sealed partial class InventoryStore
         if (day >= RecordDay(DateTimeOffset.UtcNow)) return;
         var directory = AccountDirectory(data.Uid);
         var path = Path.Combine(directory, "snapshots", day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ".json");
-        if (!File.Exists(path)) Write(path, CreateInventoryPackage(data));
+        if (!File.Exists(path)) Write(path, CreateInventoryPackage(data, allowIncompleteDemands: true));
         PruneSnapshots(directory, settings.SnapshotLimit);
     }
 

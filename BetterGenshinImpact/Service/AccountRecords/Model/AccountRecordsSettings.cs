@@ -61,6 +61,8 @@ public sealed class InventoryItemOverride
 /// <summary>一次读取所需的账号、来源和设置快照。</summary>
 public sealed class InventoryWorkspace
 {
+    /// <summary>快照中明确记录的备份缺失提示，空数组表示无已知缺失。</summary>
+    public string[] BackupWarnings { get; set; } = [];
     /// <summary>读取时总表文件的修改时间，仅用于判断是否复用展示快照。</summary>
     [JsonIgnore]
     public DateTime UpdatedAt { get; set; }

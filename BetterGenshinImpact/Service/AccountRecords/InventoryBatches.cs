@@ -107,15 +107,42 @@ public sealed partial class InventoryStore
     private string BatchPath(string uid, string batchId) => Path.Combine(AccountDirectory(uid), "batches", BatchHash(batchId) + ".json");
 
     /// <summary>读取并校验批次身份，损坏的历史不作为空批次覆盖。</summary>
-    private InventoryBatch ReadBatch(string uid, string batchId)
+    private InventoryBatch ReadBatch(string uid, string batchId, bool restoreBackup = true)
     {
         var path = BatchPath(uid, batchId);
         if (!File.Exists(path)) return new InventoryBatch { BatchId = batchId };
-        var batch = Read<InventoryBatch>(path);
+        InventoryBatch batch;
+        var recovered = false;
+        try
+        {
+            batch = JsonConvert.DeserializeObject<InventoryBatch>(File.ReadAllText(path),
+                new JsonSerializerSettings { DateParseHandling = DateParseHandling.None })
+                ?? throw new JsonSerializationException("批次文件为空。");
+        }
+        catch (JsonException)
+        {
+            batch = Read<InventoryBatch>(path, restoreBackup: false);
+            recovered = true;
+        }
         if (batch.SchemaVersion != 1 || batch.BatchId != batchId || batch.Records == null ||
             batch.Records.Any(item => item == null || item.Input == null || string.IsNullOrEmpty(item.RecordId)) ||
             batch.Records.Select(item => item.RecordId).Distinct(StringComparer.Ordinal).Count() != batch.Records.Count)
             throw new InvalidDataException("批次历史结构或身份不正确：" + path);
+        if (recovered)
+        {
+            // 旧备份不能推翻已经提交的接受凭证；缺失的最新结果只能报告不完整。
+            var receipts = Load(uid, includeHistory: false, restoreBackup: false).BatchReceipts.GetValueOrDefault(batchId);
+            var records = batch.Records.ToDictionary(item => item.RecordId, StringComparer.Ordinal);
+            if (receipts != null && receipts.Any(entry => entry.Value.Accepted &&
+                (!records.TryGetValue(entry.Key, out var record) || record.ContentHash != entry.Value.ContentHash ||
+                 record.Outcome is not ("Accepted" or "Duplicate"))))
+                throw new InvalidDataException("批次历史不完整：备份与已提交的接受凭证不一致。");
+            if (restoreBackup)
+            {
+                File.Copy(path, path + ".corrupt", true);
+                File.Copy(path + ".bak", path, true);
+            }
+        }
         return batch;
     }
 
@@ -198,7 +225,7 @@ public sealed partial class InventoryStore
     }
 
     /// <summary>缺失索引时从批次证据重建；日常按物品查询只读索引和命中的批次。</summary>
-    private List<InventoryBatchIndexEntry> BatchIndex(string uid)
+    private List<InventoryBatchIndexEntry> BatchIndex(string uid, bool readOnly = false)
     {
         var path = Path.Combine(AccountDirectory(uid), "batch-index.json");
         if (File.Exists(path))
@@ -206,31 +233,49 @@ public sealed partial class InventoryStore
             try
             {
                 var cached = JsonConvert.DeserializeObject<List<InventoryBatchIndexEntry>>(File.ReadAllText(path));
-                if (cached == null || cached.Any(item => item == null || item.Reference == null || item.Name == null))
+                if (cached == null || cached.Any(item => item == null || item.Reference == null || item.Name == null ||
+                    !IsBatchIdentifier(item.Reference.BatchId) || !IsBatchIdentifier(item.Reference.RecordId)))
                     throw new InvalidDataException("批次索引结构无效，将从历史重建。");
                 return cached;
             }
-            catch (Exception ex) when (ex is JsonException or InvalidDataException) { InvalidateBatchIndex(uid); }
+            catch (Exception ex) when (ex is JsonException or InvalidDataException) { if (!readOnly) InvalidateBatchIndex(uid); }
+            catch (IOException) when (readOnly)
+            {
+                // 索引被独占时仍可只读扫描批次；写入路径保留错误及发布重试。
+            }
         }
         var result = new List<InventoryBatchIndexEntry>();
         var directory = Path.Combine(AccountDirectory(uid), "batches");
         if (Directory.Exists(directory))
             foreach (var file in Directory.EnumerateFiles(directory, "*.json"))
             {
-                var batch = Read<InventoryBatch>(file);
-                batch = ReadBatch(uid, batch.BatchId);
-                result.AddRange(batch.Records.Select(record => new InventoryBatchIndexEntry { Name = record.Name,
-                    ProcessedAt = record.ProcessedAt, Reference = new() { BatchId = batch.BatchId, RecordId = record.RecordId } }));
+                try
+                {
+                    var batch = Read<InventoryBatch>(file, restoreBackup: false);
+                    if (!IsBatchIdentifier(batch.BatchId)) throw new InvalidDataException("批次标识无效。");
+                    batch = ReadBatch(uid, batch.BatchId, restoreBackup: !readOnly);
+                    result.AddRange(batch.Records.Select(record => new InventoryBatchIndexEntry { Name = record.Name,
+                        ProcessedAt = record.ProcessedAt, Reference = new() { BatchId = batch.BatchId, RecordId = record.RecordId } }));
+                }
+                catch (Exception ex) when (readOnly && ex is IOException or InvalidDataException or JsonException or ArgumentException)
+                {
+                    // 索引缺失时无法为损坏文件定位记录；有效批次仍可查询。
+                    Serilog.Log.Warning(ex, "狛荷屋历史索引重建跳过不可读批次 {File}", file);
+                }
             }
-        Write(path, result);
+        if (!readOnly) Write(path, result);
         return result;
     }
 
     /// <summary>一次取得物品的完整索引快照，供详情固定翻页范围，避免重试改变排序后漏记录。</summary>
     public Task<InventoryBatchIndexEntry[]> GetItemHistorySnapshotAsync(string uid, string name) => Locked(() =>
     {
-        _ = Load(uid, includeHistory: false);
-        return BatchIndex(uid).Where(item => item.Name == name).OrderByDescending(item => item.ProcessedAt)
+        var data = Load(uid, includeHistory: false, restoreBackup: false);
+        // 查询合并已提交但尚未发布的记录，不要求索引或批次文件当前可写。
+        var pending = data.PendingBatches.SelectMany(batch => batch.Records.Select(record => new InventoryBatchIndexEntry
+        { Name = record.Name, ProcessedAt = record.ProcessedAt, Reference = new() { BatchId = batch.BatchId, RecordId = record.RecordId } }));
+        return BatchIndex(uid, readOnly: true).Concat(pending)
+            .GroupBy(item => (item.Reference.BatchId, item.Reference.RecordId)).Select(group => group.Last()).Where(item => item.Name == name).OrderByDescending(item => item.ProcessedAt)
             .ThenBy(item => item.Reference.BatchId, StringComparer.Ordinal).ThenBy(item => item.Reference.RecordId, StringComparer.Ordinal).ToArray();
     });
 
@@ -241,9 +286,16 @@ public sealed partial class InventoryStore
         var page = references.ToArray();
         return Locked(() =>
         {
-            _ = Load(uid, includeHistory: false);
-            var batches = page.Select(item => item.BatchId).Distinct(StringComparer.Ordinal)
-                .ToDictionary(id => id, id => ReadBatch(uid, BatchIdentifier(id)).Records.ToDictionary(item => item.RecordId), StringComparer.Ordinal);
+            var data = Load(uid, includeHistory: false, restoreBackup: false);
+            var batches = new Dictionary<string, Dictionary<string, InventoryBatchRecord>>(StringComparer.Ordinal);
+            foreach (var id in page.Select(item => item.BatchId).Distinct(StringComparer.Ordinal))
+            {
+                InventoryBatch? batch = null;
+                try { batch = ReadHistoryBatch(data, BatchIdentifier(id)); }
+                catch (Exception ex) when (ex is IOException or InvalidDataException or JsonException or ArgumentException) { }
+                // 一批不可读不能阻断整页；null 由界面明确计入无法读取的条数。
+                batches[id] = batch?.Records.ToDictionary(item => item.RecordId, StringComparer.Ordinal) ?? new(StringComparer.Ordinal);
+            }
             return page.Select(item => batches[item.BatchId].GetValueOrDefault(item.RecordId)).ToArray();
         });
     }
@@ -252,8 +304,42 @@ public sealed partial class InventoryStore
     public Task<InventoryBatch?> GetBatchAsync(string uid, string batchId) => Locked<InventoryBatch?>(() =>
     {
         _ = BatchIdentifier(batchId);
-        _ = Load(uid, includeHistory: false);
-        return File.Exists(BatchPath(uid, batchId)) ? ReadBatch(uid, batchId) : null;
+        var data = Load(uid, includeHistory: false, restoreBackup: false);
+        return ReadHistoryBatch(data, batchId);
     });
+
+    /// <summary>验证持久索引中的标识，缺失或非法时重新建立索引。</summary>
+    private static bool IsBatchIdentifier(string? value) => value is { Length: > 0 and <= 128 } &&
+        value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
+
+    /// <summary>只读合并已发布历史与已提交待发布结果，后者代表最新提交。</summary>
+    private InventoryBatch? ReadHistoryBatch(InventoryDocument data, string batchId)
+    {
+        var pending = data.PendingBatches.Where(item => item.BatchId == batchId).ToArray();
+        InventoryBatch batch;
+        try { batch = ReadBatch(data.Uid, batchId, restoreBackup: false); }
+        catch (Exception ex) when (pending.Length > 0 && ex is IOException or InvalidDataException or JsonException)
+        {
+            // 仍可展示已提交原始输入；其余历史数量由凭证给出，不伪造旧结果。
+            batch = new InventoryBatch { BatchId = batchId };
+        }
+        if (batch.Records.Count == 0 && pending.Length == 0 && !File.Exists(BatchPath(data.Uid, batchId))) return null;
+        var records = batch.Records.ToDictionary(item => item.RecordId, StringComparer.Ordinal);
+        foreach (var update in pending)
+        {
+            if (batch.Kind.Length == 0) { batch.Kind = update.Kind; batch.ReceivedAt = update.ReceivedAt; }
+            else if (batch.Kind != update.Kind && !(batch.Kind == "Import" && update.Kind is "Report" or "Delta")) batch.Kind = "Mixed";
+            foreach (var record in update.Records)
+            {
+                if (records.TryGetValue(record.RecordId, out var previous) && previous.ContentHash != record.ContentHash)
+                    throw new InvalidDataException("待发布记录与批次历史内容冲突。");
+                records[record.RecordId] = record;
+            }
+        }
+        batch.Records = records.Values.ToList();
+        batch.OriginalCount = Math.Max(Math.Max(batch.OriginalCount, batch.Records.Count), data.BatchReceipts.GetValueOrDefault(batchId)?.Count ?? 0);
+        batch.RemovedCount = batch.OriginalCount - batch.Records.Count;
+        return batch;
+    }
 
 }

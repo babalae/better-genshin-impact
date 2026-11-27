@@ -14,15 +14,14 @@ namespace BetterGenshinImpact.Service.AccountRecords;
 /// <summary>单账号库存交换；导出当前库存，导入另支持经确认的开发测试增量，不交换错误和快照。</summary>
 public sealed partial class InventoryStore
 {
-    /// <summary>读取有限大小的交换文件；保留原始时间字符串，交由库存校验报告时间错误。</summary>
+    /// <summary>从流读取交换文件，容量与已保存库存一致；保留原始时间并限制 JSON 深度。</summary>
     public static async Task<JObject> ReadExchangeAsync(string path)
     {
         using var stream = File.OpenRead(path);
-        if (stream.Length > 8 * 1024 * 1024) throw new InvalidDataException("导入文件超过 8 MiB，未载入。");
         using var reader = new StreamReader(stream, Encoding.UTF8);
-        using var json = new JsonTextReader(new StringReader(await reader.ReadToEndAsync())) { DateParseHandling = DateParseHandling.None, MaxDepth = 16 };
-        var package = JObject.Load(json, new JsonLoadSettings { DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error });
-        if (json.Read()) throw new InvalidDataException("导入文件包含多个根对象或末尾多余内容，未载入。");
+        using var json = new JsonTextReader(reader) { DateParseHandling = DateParseHandling.None, MaxDepth = 16 };
+        var package = await JObject.LoadAsync(json, new JsonLoadSettings { DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error });
+        if (await json.ReadAsync()) throw new InvalidDataException("导入文件包含多个根对象或末尾多余内容，未载入。");
         ValidateExchange(package);
         return package;
     }
@@ -53,8 +52,6 @@ public sealed partial class InventoryStore
             throw new InvalidDataException($"导入 UID“{account.Name}”无效，须为首位非零的 9～10 位数字。");
         if (account.Value is not JObject body || body["inventory"] is not JObject inventory)
             throw new InvalidDataException($"UID {account.Name} 缺少有效库存对象。账户内容及 inventory 必须为 JSON 对象。");
-        if (inventory.Count > 5000)
-            throw new InvalidDataException($"UID {account.Name} 包含 {inventory.Count} 项库存，超过 5000 项上限。");
         if (body["demands"] != null) ValidateDemandBackup(body["demands"]!, sources);
         foreach (var item in inventory.Properties())
         {
@@ -177,7 +174,8 @@ public sealed partial class InventoryStore
                     var category = MergeDefinitionField(localCategory, ((string)item.Value["category"]!).Trim(), "分类", conflicts)!;
                     var localPage = pages.GetValueOrDefault(item.Name);
                     // 补充字典显式空 Page 表示用户选择未分类，不当作可自动填充的缺省值。
-                    var page = MergeDefinitionField(localPage, (string?)item.Value["page"], "背包页", conflicts, previous?.Page == "");
+                    var incomingPage = (string?)item.Value["page"];
+                    var page = incomingPage == "" ? "" : MergeDefinitionField(localPage, incomingPage, "背包页", conflicts, previous?.Page == "");
                     var incomingComment = (string?)item.Value["comment"];
                     var comment = string.IsNullOrWhiteSpace(previous?.Comment) ? incomingComment ?? "" : previous.Comment;
                     // 显式空值是持续覆盖 CSV 的意图，即使当前有效值相同也必须保存。

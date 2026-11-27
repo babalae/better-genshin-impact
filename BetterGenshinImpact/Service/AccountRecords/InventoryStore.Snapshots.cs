@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.AccountRecords.Model;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Service.AccountRecords;
 
@@ -34,10 +35,11 @@ public sealed partial class InventoryStore
         var json = Read<JObject>(path, restoreBackup: false);
         var workspace = new InventoryWorkspace
         {
-            Definitions = Definitions(false), Pages = PageDefinitions(false), Sources = Sources(false), Settings = Settings(false),
+            Definitions = Definitions(false), Pages = PageDefinitions(false), Settings = Settings(false),
             Inventory = new InventoryDocument { Uid = uid }
         };
         ValidateExchange(json);
+        workspace.BackupWarnings = json["backupWarnings"]?.ToObject<string[]>() ?? [];
         // 账号目录确定归属；UID 改名后仍保留快照当时的账号标识，不改写历史文件。
         var account = (JObject)((JObject)json["accounts"]!).Properties().Single().Value;
         workspace.Inventory.Items = account["inventory"]!.ToObject<Dictionary<string, List<InventoryRecord>>>()!;
@@ -52,7 +54,7 @@ public sealed partial class InventoryStore
     }, initialize: false);
 
     /// <summary>导出与日期快照共用可导入格式，保存确认库存、原时间、来源、需求及补充字典。</summary>
-    private JObject CreateInventoryPackage(InventoryDocument data)
+    private JObject CreateInventoryPackage(InventoryDocument data, bool allowIncompleteDemands = false)
     {
         var sources = Sources();
         var overrides = Read<Dictionary<string, InventoryItemOverride>>(Path.Combine(_root, "item-overrides.json"), restoreBackup: false);
@@ -80,7 +82,16 @@ public sealed partial class InventoryStore
             ["exportedAt"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
             ["sources"] = origins, ["itemDefinitions"] = definitions,
             ["accounts"] = new JObject { [data.Uid] = new JObject { ["inventory"] = inventory } } };
-        AddDemandBackup(package, data.Uid, data);
+        // 自动快照允许独立保存有效库存；显式导出仍严格要求完整需求。
+        try { AddDemandBackup(package, data.Uid, data); }
+        catch (Exception ex) when (allowIncompleteDemands && ex is IOException or InvalidDataException or JsonException or UnauthorizedAccessException)
+        {
+            var account = (JObject)package["accounts"]![data.Uid]!;
+            account.Remove("demands");
+            account.Remove("demandStates");
+            package["backupWarnings"] = new JArray("需求读取失败，本快照未备份需求；原需求文件未修改。");
+            Serilog.Log.Warning(ex, "狛荷屋自动快照已保存库存，但需求未备份");
+        }
         return package;
     }
 }

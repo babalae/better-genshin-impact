@@ -7,6 +7,20 @@ namespace BetterGenshinImpact.UnitTest.ServiceTests;
 /// <summary>家族覆盖、共享分配、未知基准与不同达成依据的纯计算验证。</summary>
 public sealed class MaterialFamilyTests
 {
+    /// <summary>多余的正增量不取消已有达标，但需要该增量或出现负增量时仍按实际可用数量判断。</summary>
+    [Theory]
+    [InlineData(12, 1, MaterialDemandState.Completed)]
+    [InlineData(11, 1, MaterialDemandState.Pending)]
+    [InlineData(12, -1, MaterialDemandState.Unmet)]
+    public void FamilyConfirmationDependsOnRequiredDelta(long quantity, long delta, MaterialDemandState state)
+    {
+        var workspace = Workspace(("史莱姆凝液", quantity));
+        workspace.Settings.DemandCraftingReservePercent = 0;
+        workspace.Inventory.Events.Add(Delta("史莱姆凝液", delta));
+        var progress = MaterialDemandPolicy.EvaluateAll(workspace, Demands(("史莱姆清", 4)))["史莱姆清"];
+        Assert.Equal(state, progress.State);
+        if (state == MaterialDemandState.Completed) Assert.Equal("Family", progress.ConfirmationMethod);
+    }
     /// <summary>目录覆盖审核过的全部升级链，成员唯一，特殊材料不靠名称推断。</summary>
     [Fact]
     public void CatalogContainsAuditedFamiliesWithoutConversionOnlyItems()

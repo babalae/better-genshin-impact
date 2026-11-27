@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.Pulonia.Services;
 internal sealed class PuloniaLocalNodeRunner
 {
     /// <summary>
-    /// 账户准备与核验；没有注册时不核验 UID，账户准备直接失败。
+    /// 账户准备与核验；没有注册时，需要账户准备或 UID 核验的任务直接失败。
     /// </summary>
     private readonly IPuloniaGenshinAccountSwitcher? _accountSwitcher;
 
@@ -126,12 +126,13 @@ internal sealed class PuloniaLocalNodeRunner
     }
 
     /// <summary>
-    /// 核验当前登录 UID；没有账户切换能力时跳过（纯任务服务）。
+    /// 核验当前登录 UID；缺少核验能力时拒绝执行，避免将预期 UID 当成已核验身份。
     /// </summary>
     private async Task VerifyAsync(GameRuntime runtime, string expectedUid, CancellationToken ct)
     {
-        if (_accountSwitcher is null) return;
-        try { await _accountSwitcher.VerifyAsync(runtime, expectedUid, ct).ConfigureAwait(false); }
+        var accountSwitcher = _accountSwitcher
+                              ?? throw new PuloniaGenshinAccountException("当前实例没有账户 UID 核验能力。", new InvalidOperationException());
+        try { await accountSwitcher.VerifyAsync(runtime, expectedUid, ct).ConfigureAwait(false); }
         catch (Exception ex) when (ex is not OperationCanceledException)
         { throw new PuloniaGenshinAccountException(ex.Message, ex); }
     }

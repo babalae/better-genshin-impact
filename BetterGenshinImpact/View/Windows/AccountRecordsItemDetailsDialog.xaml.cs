@@ -15,7 +15,7 @@ public partial class AccountRecordsItemDetailsDialog : FluentWindow
         InitializeComponent();
         Loaded += async (_, _) =>
         {
-            if (viewModel.History.Count == 0) await viewModel.LoadMoreCommand.ExecuteAsync(null);
+            if (viewModel.History.Count == 0 && viewModel.LoadMoreCommand.CanExecute(null)) await viewModel.LoadMoreCommand.ExecuteAsync(null);
         };
         SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
     }

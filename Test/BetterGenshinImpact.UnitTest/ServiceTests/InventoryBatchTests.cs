@@ -203,8 +203,10 @@ public sealed class InventoryBatchTests : IDisposable
         File.Delete(blocked);
         var reopened = new InventoryStore(_catalog, Path.Combine(_root, "records"));
         Assert.NotNull(await reopened.GetBatchAsync(Uid, "recover"));
-        Assert.Empty(JsonConvert.DeserializeObject<InventoryDocument>(File.ReadAllText(InventoryPath))!.PendingBatches);
+        // 查询只读已提交数据；真正的写入重试才补齐发布并清除恢复依据。
+        Assert.NotEmpty(JsonConvert.DeserializeObject<InventoryDocument>(File.ReadAllText(InventoryPath))!.PendingBatches);
         Assert.Equal(1, (await reopened.ReportAsync(Uid, _source, [Report("摩拉", 10)], batchId: "recover")).DuplicateCount);
+        Assert.Empty(JsonConvert.DeserializeObject<InventoryDocument>(File.ReadAllText(InventoryPath))!.PendingBatches);
     }
 
     /// <summary>索引丢失可重建，按物品查询只返回该物品，并支持分页。</summary>
@@ -283,6 +285,7 @@ public sealed class InventoryBatchTests : IDisposable
         File.Delete(blocked);
         var reopened = new InventoryStore(_catalog, Path.Combine(_root, "records"));
         Assert.NotNull(await reopened.GetBatchAsync(Uid, "archive"));
+        Assert.Equal(1, (await reopened.ReportAsync(Uid, _source, [Report("摩拉", 10)], batchId: "archive")).DuplicateCount);
         var data = (await reopened.ReadAsync(Uid)).Inventory;
         Assert.Equal("archive", Assert.Single(data.Events).RecordReference!.BatchId);
         Assert.Empty(data.PendingEventArchives);

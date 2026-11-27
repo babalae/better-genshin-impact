@@ -41,6 +41,13 @@ public static partial class MaterialDemandPolicy
                 : 0;
             var basic = MaterialFamilyCalculator.CalculateAvailable(inputs, 0);
             var estimated = reserve == 0 ? basic : MaterialFamilyCalculator.CalculateAvailable(inputs, reserve);
+            // 不依赖正增量的保守数量仍扣除负增量；只有确实需要正增量时才等待核实。
+            var conservativeInputs = levels.Select((name, index) => (
+                Stock: usable[index] ? Math.Max(0, (decimal)current[index]!.Quantity +
+                    pending[index].Where(entry => entry.Quantity < 0).Sum(entry => (decimal)entry.Quantity)) : 0,
+                Required: inputs[index].Required)).ToArray();
+            var conservativeBasic = MaterialFamilyCalculator.CalculateAvailable(conservativeInputs, 0);
+            var conservative = reserve == 0 ? conservativeBasic : MaterialFamilyCalculator.CalculateAvailable(conservativeInputs, reserve);
             InventoryRecord? evidence = null;
             var relevantPending = new List<InventoryEvent>();
             for (var index = 0; index < levels.Count; index++)
@@ -60,8 +67,8 @@ public static partial class MaterialDemandPolicy
                 var name = levels[index];
                 if (evidence == null || !demands.Items.TryGetValue(name, out var target) || result[name].State == MaterialDemandState.Completed ||
                     estimated[index] < target.TargetQuantity) continue;
-                var usesBonus = basic[index] < target.TargetQuantity;
-                var hasPending = relevantPending.Count > 0;
+                var hasPending = relevantPending.Count > 0 && conservative[index] < target.TargetQuantity;
+                var usesBonus = (hasPending ? basic[index] : conservativeBasic[index]) < target.TargetQuantity;
                 var confirmed = !hasPending || workspace.Settings.UseDeltaForDemands;
                 // 合成数量只作为达成依据，不生成实际库存；不同依据不混记为实测确认。
                 var message = !confirmed ? "同族材料数量可能达标，待核实"

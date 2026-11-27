@@ -149,6 +149,7 @@ public partial class AccountRecordsSnapshotsViewModel : ObservableObject
                     _catalog.Add(new(row.Name, row.Category));
                 Catalog.Refresh(); Items.Refresh();
                 Status = string.Format(I18nService.Instance.Translate("历史快照 · {0} · UID {1} · 只读确认库存，未还原状态灯"), date, _uid);
+                if (workspace.BackupWarnings.Length > 0) Status += "\n" + string.Join("\n", workspace.BackupWarnings.Select(message => I18nService.Instance.Translate(message)));
             }
             else if (Mode == 1 && SelectedItem is { } item)
             {
