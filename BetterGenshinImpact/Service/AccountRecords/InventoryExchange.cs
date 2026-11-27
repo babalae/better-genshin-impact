@@ -36,6 +36,11 @@ public sealed partial class InventoryStore
             package["sources"] is not JObject sources || package["itemDefinitions"] is not JObject definitions)
             throw new InvalidDataException("导入文件必须只包含一个账户，并提供 sources（来源字典）和 itemDefinitions（补充字典）对象；字典无内容时可使用空对象。");
         var account = accounts.Properties().Single();
+        if (package["batchId"] != null)
+        {
+            if (package["batchId"]!.Type != JTokenType.String) throw new InvalidDataException("batchId 必须是文本。");
+            _ = BatchIdentifier((string)package["batchId"]!);
+        }
         // 先检查全部来源，避免导入部分库存后才发现后续来源无法保存。
         foreach (var entry in sources.Properties())
         {
@@ -50,6 +55,7 @@ public sealed partial class InventoryStore
             throw new InvalidDataException($"UID {account.Name} 缺少有效库存对象。账户内容及 inventory 必须为 JSON 对象。");
         if (inventory.Count > 5000)
             throw new InvalidDataException($"UID {account.Name} 包含 {inventory.Count} 项库存，超过 5000 项上限。");
+        if (body["demands"] != null) ValidateDemandBackup(body["demands"]!, sources);
         foreach (var item in inventory.Properties())
         {
             if (string.IsNullOrWhiteSpace(item.Name) || item.Name != item.Name.Trim() || item.Name.Length > 128 ||
@@ -73,9 +79,16 @@ public sealed partial class InventoryStore
                 throw new InvalidDataException($"{item.Name}：source 未对应有效来源。source 须为 1～1024 字符且无首尾空白，并对应 sources 中 reference 一致、displayName 为文本的条目。");
         }
         foreach (var item in definitions.Properties())
-            if (inventory[item.Name] == null || item.Value is not JObject definition || definition["category"]?.Type != JTokenType.String ||
+        {
+            if (item.Value is JObject commentDefinition && commentDefinition["comment"] != null && commentDefinition["comment"]!.Type != JTokenType.String)
+                throw new InvalidDataException($"补充字典条目“{item.Name}”的 comment 须为文本。");
+            if (item.Value is JObject pageDefinition && pageDefinition["page"] is { Type: not JTokenType.Null } page &&
+                (page.Type != JTokenType.String || ((string)page).Length > 128))
+                throw new InvalidDataException($"补充字典条目“{item.Name}”的 page 须为最多 128 字符的文本或 null。");
+            if ((inventory[item.Name] == null && body["demands"]?["items"]?[item.Name] == null) || item.Value is not JObject definition || definition["category"]?.Type != JTokenType.String ||
                 string.IsNullOrWhiteSpace((string?)definition["category"]) || ((string)definition["category"]!).Length > 128)
-                throw new InvalidDataException($"补充字典条目“{item.Name}”无效：物品须存在于本文件库存中，且提供 1～128 字符的非空分类 category。");
+                throw new InvalidDataException($"补充字典条目“{item.Name}”无效：物品须存在于本文件库存或需求中，且提供 1～128 字符的非空分类 category。");
+        }
         if (body["deltas"] != null)
         {
             if (body["deltas"] is not JArray deltas || deltas.Count > 5000) throw new InvalidDataException("导入文件的 deltas 必须为数组且不超过 5000 项。");
@@ -100,37 +113,16 @@ public sealed partial class InventoryStore
         }
     }
 
-    /// <summary>导出当前项及所引用的来源和用户补充；不暴露本机路径、错误和缓存。</summary>
-    public Task<JObject> ExportInventoryAsync(string uid) => Locked(() =>
+    /// <summary>导出当前库存、需求及所引用的来源和用户补充；不暴露本机路径、错误和缓存。</summary>
+    public Task<JObject> ExportInventoryAsync(string uid) => Locked(() => CreateInventoryPackage(Load(uid)));
+
+    /// <summary>读取交换记录的可选身份；未传入时按文件内稳定顺序编号。</summary>
+    private static string ExchangeRecordId(JToken item, string fallback)
     {
-        var data = Load(uid);
-        var sources = Sources();
-        var overrides = Read<Dictionary<string, InventoryItemOverride>>(Path.Combine(_root, "item-overrides.json"));
-        var inventory = new JObject();
-        var origins = new JObject();
-        var definitions = new JObject();
-        foreach (var item in data.Items.Where(pair => pair.Value.Count > 0))
-        {
-            var record = item.Value[0];
-            inventory[item.Key] = new JArray(new JObject
-            {
-                ["quantity"] = record.Quantity, ["recordedAt"] = record.RecordedAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture), ["source"] = record.Source
-            });
-            if (record.Expirations != null)
-                inventory[item.Key]![0]!["expirations"] = new JArray(record.Expirations.Select(batch => new JObject
-                { ["quantity"] = batch.Quantity, ["expiresAt"] = batch.ExpiresAt }));
-            origins[record.Source] = new JObject { ["reference"] = record.Source,
-                ["displayName"] = sources.TryGetValue(record.Source, out var origin) ? origin.DisplayName : record.Source };
-            if (overrides.TryGetValue(item.Key, out var definition)) definitions[item.Key] = new JObject { ["category"] = definition.Category };
-        }
-        return new JObject
-        {
-            ["format"] = "BetterGI.AccountRecords", ["version"] = 1,
-            ["exportedAt"] = DateTimeOffset.UtcNow.UtcDateTime.ToString("O", CultureInfo.InvariantCulture),
-            ["sources"] = origins, ["itemDefinitions"] = definitions,
-            ["accounts"] = new JObject { [uid] = new JObject { ["inventory"] = inventory } }
-        };
-    });
+        if (item["recordId"] == null) return fallback;
+        if (item["recordId"]!.Type != JTokenType.String) throw new InvalidDataException("recordId 必须是文本。");
+        return BatchIdentifier((string)item["recordId"]!);
+    }
 
     /// <summary>按来源局部合并；每批复用库存的校验、冲突记录和原子保存，不清除未提及的物品。</summary>
     /// <remarks>字典补充和各来源分别提交；后续批次失败不会回滚已保存内容。</remarks>
@@ -142,32 +134,83 @@ public sealed partial class InventoryStore
         var deltas = body["deltas"] as JArray;
         if (deltas is { Count: > 0 } && !allowDeveloperDeltas) throw new InvalidOperationException("文件包含开发测试用库存增量，尚未获得导入确认。");
         _ = AccountDirectory(uid);
+        // 同一导入共享批次 ID；默认编号在按来源分组前分配，跨来源不会重复。
+        var importBatchId = BatchIdentifier((string?)package["batchId"]);
+        var inventory = (JObject)body["inventory"]!;
+        var inventoryIds = inventory.Properties().Select((item, index) => (item.Name,
+            Id: ExchangeRecordId(item.Value[0]!, "r" + (index + 1).ToString(CultureInfo.InvariantCulture))))
+            .ToDictionary(item => item.Name, item => item.Id, StringComparer.Ordinal);
+        var deltaIds = deltas?.Select((item, index) => ExchangeRecordId(item, "d" + (index + 1).ToString(CultureInfo.InvariantCulture))).ToArray() ?? [];
+        if (inventoryIds.Values.Concat(deltaIds).Distinct(StringComparer.Ordinal).Count() != inventoryIds.Count + deltaIds.Length)
+            throw new InvalidDataException("导入批次中的 recordId 必须唯一。");
+        // 在字典和任何来源提交前检查整批身份冲突；保留既有各来源分段提交的行为。
+        await Locked(() =>
+        {
+            var inputs = inventory.Properties().Select(item => BatchInput(inventoryIds[item.Name], item.Name,
+                NormalizeSource((string)item.Value[0]!["source"]!), "Report", new InventoryReport
+                {
+                    Name = item.Name, Quantity = (long)item.Value[0]!["quantity"]!, RecordedAt = (string)item.Value[0]!["recordedAt"]!,
+                    Category = (string?)package["itemDefinitions"]?[item.Name]?["category"], Comment = (string?)package["itemDefinitions"]?[item.Name]?["comment"],
+                    Expirations = item.Value[0]!["expirations"]?.ToObject<List<InventoryExpiration>>()
+                })).ToList();
+            if (deltas != null) inputs.AddRange(deltas.Select((item, index) => BatchInput(deltaIds[index], (string)item["name"]!,
+                NormalizeSource((string)item["source"]!), "Delta", new InventoryDeltaReport { Name = (string)item["name"]!, Delta = (long)item["delta"]!,
+                    RecordedAt = (string)item["recordedAt"]!, Expirations = item["expirations"]?.ToObject<List<InventoryExpiration>>() })));
+            _ = BeginBatch(Load(uid), importBatchId, "Import", inputs);
+            return true;
+        });
+        var result = new InventoryReportResult { BatchId = importBatchId };
+        var definitionWarnings = new Dictionary<string, string>(StringComparer.Ordinal);
         if (includeDefinitions)
             await Locked(() =>
             {
                 var definitions = Definitions();
+                var pages = PageDefinitions();
                 var path = Path.Combine(_root, "item-overrides.json");
                 var overrides = Read<Dictionary<string, InventoryItemOverride>>(path);
+                var changed = false;
                 foreach (var item in ((JObject)package["itemDefinitions"]!).Properties())
-                    if (!definitions.TryGetValue(item.Name, out var category) || string.IsNullOrEmpty(category))
-                        overrides[item.Name] = new InventoryItemOverride { Category = ((string)item.Value["category"]!).Trim() };
-                Write(path, overrides);
+                {
+                    overrides.TryGetValue(item.Name, out var previous);
+                    var conflicts = new List<string>();
+                    var localCategory = definitions.GetValueOrDefault(item.Name);
+                    var category = MergeDefinitionField(localCategory, ((string)item.Value["category"]!).Trim(), "分类", conflicts)!;
+                    var localPage = pages.GetValueOrDefault(item.Name);
+                    // 补充字典显式空 Page 表示用户选择未分类，不当作可自动填充的缺省值。
+                    var page = MergeDefinitionField(localPage, (string?)item.Value["page"], "背包页", conflicts, previous?.Page == "");
+                    var incomingComment = (string?)item.Value["comment"];
+                    var comment = string.IsNullOrWhiteSpace(previous?.Comment) ? incomingComment ?? "" : previous.Comment;
+                    // 显式空值是持续覆盖 CSV 的意图，即使当前有效值相同也必须保存。
+                    var explicitEmptyPage = (string?)item.Value["page"] == "" && page == "";
+                    if (category != localCategory || page != localPage || comment != (previous?.Comment ?? "") || explicitEmptyPage && previous?.Page != "")
+                    {
+                        overrides[item.Name] = new InventoryItemOverride
+                        {
+                            Category = category,
+                            Page = explicitEmptyPage ? "" : page != localPage ? page : previous?.Page,
+                            Comment = comment
+                        };
+                        changed = true;
+                    }
+                    if (conflicts.Count > 0) definitionWarnings[item.Name] = string.Join(Environment.NewLine, conflicts);
+                }
+                if (changed) Write(path, overrides);
                 return true;
             });
-        var inventory = (JObject)((JObject)package["accounts"]!).Properties().Single().Value["inventory"]!;
-        var result = new InventoryReportResult();
         foreach (var group in inventory.Properties().GroupBy(item => (string)item.Value[0]!["source"]!, StringComparer.Ordinal))
         {
             var descriptor = package["sources"]![group.Key]!;
             // 已有本地来源名称优先，外部文件不能改名影响其他账号的展示。
             var source = new AccountRecordSource
             { Reference = group.Key, DisplayName = (string)descriptor["displayName"]! };
-            var batch = group.Select(item => new InventoryReport { Name = item.Name,
+            var batch = group.Select(item => new InventoryReport { RecordId = inventoryIds[item.Name], Name = item.Name,
                 Category = (string?)package["itemDefinitions"]?[item.Name]?["category"],
+                Comment = (string?)package["itemDefinitions"]?[item.Name]?["comment"],
                 Expirations = item.Value[0]!["expirations"]?.ToObject<List<InventoryExpiration>>(),
                 Quantity = (long)item.Value[0]!["quantity"]!, RecordedAt = (string)item.Value[0]!["recordedAt"]! });
-            var imported = await ReportAsync(uid, source, batch, preserveSourceName: true);
+            var imported = await ReportAsync(uid, source, batch, preserveSourceName: true, supplementDefinitions: includeDefinitions, batchId: importBatchId);
             result.Accepted.AddRange(imported.Accepted);
+            result.Records.AddRange(imported.Records);
             foreach (var warning in imported.Warnings) result.Warnings[warning.Key] = warning.Value;
             result.DuplicateCount += imported.DuplicateCount;
             result.DuplicateErrorCount += imported.DuplicateErrorCount;
@@ -176,18 +219,35 @@ public sealed partial class InventoryStore
         if (inventory.Count == 0) await AddUidAsync(uid);
         if (deltas != null)
         {
-            var imported = await ReportDeltasAsync(uid, deltas.Select(item =>
+            var imported = await ReportDeltasAsync(uid, deltas.Select((item, index) =>
             {
                 var reference = (string)item["source"]!;
                 return (new AccountRecordSource { Reference = reference, DisplayName = (string)package["sources"]![reference]!["displayName"]! },
-                    new InventoryDeltaReport { Name = (string)item["name"]!, Delta = (long)item["delta"]!, RecordedAt = (string)item["recordedAt"]!,
+                    new InventoryDeltaReport { RecordId = deltaIds[index], Name = (string)item["name"]!, Delta = (long)item["delta"]!, RecordedAt = (string)item["recordedAt"]!,
                         Expirations = item["expirations"]?.ToObject<List<InventoryExpiration>>() });
-            }));
+            }), importBatchId);
             result.Accepted.AddRange(imported.Accepted);
+            result.Records.AddRange(imported.Records);
             result.DuplicateCount += imported.DuplicateCount;
             result.DuplicateErrorCount += imported.DuplicateErrorCount;
             foreach (var error in imported.Rejected) result.Rejected[error.Key] = error.Value;
         }
+        // 分类检查和字段合并的提醒都保留，背包页冲突不能被后续分类提醒覆盖。
+        // 需求子表作为完整备份恢复；普通库存文件没有该节点时保留现有需求。
+        if (body["demands"] != null)
+            await Locked(() =>
+            {
+                var demands = ValidateDemandBackup(body["demands"]!, (JObject)package["sources"]!);
+                var sources = Sources();
+                foreach (var source in ((JObject)package["sources"]!).Properties())
+                    sources.TryAdd(source.Name, source.Value.ToObject<AccountRecordSource>()!);
+                SaveSources();
+                Write(Path.Combine(AccountDirectory(uid), "demands.json"), demands);
+                return true;
+            });
+        foreach (var warning in definitionWarnings)
+            result.Warnings[warning.Key] = result.Warnings.TryGetValue(warning.Key, out var existing)
+                ? existing + Environment.NewLine + warning.Value : warning.Value;
         return result;
     }
 }

@@ -19,6 +19,37 @@ public partial class AccountRecordsEventsViewModel : ObservableObject
     private List<InventoryEvent> _allEvents = [];
     /// <summary>完整账号快照；列表筛选不能隐藏影响归档资格的错误或待处理事件。</summary>
     private InventoryDocument _inventory;
+    /// <summary>由页面固定账号后提供批次读取入口，界面不直接访问历史文件。</summary>
+    private readonly Func<string, Task<InventoryBatch?>>? _loadBatch;
+    /// <summary>按需加载的所属批次内容，不影响当前事件筛选和状态灯。</summary>
+    [ObservableProperty] private string _batchDetails = "";
+    /// <summary>选中事件具有可查询批次时提供查看入口。</summary>
+    public bool HasBatch => _loadBatch != null && Selected?.RecordReference != null;
+    /// <summary>切换事件后清除先前批次详情。</summary>
+    partial void OnSelectedChanged(InventoryEvent? value)
+    {
+        BatchDetails = "";
+        OnPropertyChanged(nameof(HasBatch));
+    }
+    /// <summary>显式加载所属批次，异步完成时确认用户仍选中原事件。</summary>
+    [RelayCommand]
+    private async Task ShowBatch()
+    {
+        if (_loadBatch == null || Selected?.RecordReference is not { } reference) return;
+        var selectedId = Selected.Id;
+        try
+        {
+            var batch = await _loadBatch(reference.BatchId);
+            if (Selected?.Id != selectedId) return;
+            BatchDetails = batch == null ? "该批次历史已不在保留范围内。" :
+                $"批次：{batch.BatchId}\n类型：{batch.Kind}    原有 {batch.OriginalCount} 条，已清理 {batch.RemovedCount} 条\n" +
+                string.Join("\n\n", batch.Records.Select(item => $"{item.RecordId} · {item.Name} · {item.Outcome}\n{item.Message}\n{item.Input}"));
+        }
+        catch (Exception ex)
+        {
+            if (Selected?.Id == selectedId) BatchDetails = AccountRecordsErrorMessages.Describe(ex);
+        }
+    }
     /// <summary>默认优先排查错误，关闭后查看全部事件。</summary>
     [ObservableProperty] private bool _errorsOnly = true;
     /// <summary>不区分大小写的关键词，空白表示不限制。</summary>
@@ -30,9 +61,11 @@ public partial class AccountRecordsEventsViewModel : ObservableObject
         item.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
         item.Source.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
         item.Message.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-        AccountRecordsErrorMessages.ForDisplay(item.Message).Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+        (item.Message).Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
         item.Id.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
         item.AttemptId.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+        item.RecordReference?.ToString().Contains(keyword, StringComparison.OrdinalIgnoreCase) == true ||
+        item.VerificationReference?.ToString().Contains(keyword, StringComparison.OrdinalIgnoreCase) == true ||
         item.VerificationSource.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
         item.History.Any(line => line.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     /// <summary>切换筛选时尽量保留当前定位。</summary>
@@ -94,14 +127,15 @@ public partial class AccountRecordsEventsViewModel : ObservableObject
             var lines = new List<string>
             {
                 $"事件 ID：{item.Id}",
-                $"上报批次：{item.AttemptId}",
-                AccountRecordsErrorMessages.ForDisplay(item.Message),
+                $"批次记录：{item.RecordReference?.ToString() ?? "系统检查事件"}",
+                (item.Message),
                 $"状态：{status}    {(item.Archived ? "已归档" : "未归档")}",
                 "",
                 $"物品：{item.Name}",
                 $"起止时间：{item.TimeRange}",
                 $"来源：{item.Source}"
             };
+            if (item.VerificationReference != null) lines.Add($"核实依据：{item.VerificationReference}");
             if (!string.IsNullOrWhiteSpace(item.VerificationSource)) lines.Add($"核实来源：{item.VerificationSource}");
             lines.Add($"记录时间：{item.RecordedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}");
             lines.Add($"{(item.Kind == "Delta" ? "增减数量" : "上报数量")}：{item.Quantity}");
@@ -112,8 +146,10 @@ public partial class AccountRecordsEventsViewModel : ObservableObject
     /// <summary>保留未经改写的完整历史，供溯源及复制。</summary>
     public string HistoryDetails => Selected == null ? "" : $"RepeatCount={Selected.RepeatCount}\nLastReceivedAt={Selected.LastReceivedAt:O}\n\n" + string.Join("\n\n", Selected.History);
     /// <summary>由调用者提供快照，可按初始关键词筛选并定位到指定事件。</summary>
-    public AccountRecordsEventsViewModel(InventoryDocument inventory, string? id, Func<string, IReadOnlyCollection<string>, Task<InventoryDocument>> archiveCompleted, string? searchText = null)
+    public AccountRecordsEventsViewModel(InventoryDocument inventory, string? id, Func<string, IReadOnlyCollection<string>, Task<InventoryDocument>> archiveCompleted, string? searchText = null,
+        Func<string, Task<InventoryBatch?>>? loadBatch = null)
     {
+        _loadBatch = loadBatch;
         _archiveCompleted = archiveCompleted;
         _inventory = inventory;
         _allEvents = inventory.Events.ToList();

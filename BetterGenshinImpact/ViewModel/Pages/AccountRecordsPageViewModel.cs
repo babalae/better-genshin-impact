@@ -20,11 +20,21 @@ using Wpf.Ui;
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 /// <summary>
-/// 管理账号记录分页、账户选择与库存服务；其他分页暂保留占位。
+/// 管理账号记录分页、账户选择、库存与需求；活动日历暂保留占位。
 /// UID 列表来自 Pulonia 账户目录中填写了 UID 的账户，新增、修改 UID 与删除账户都在 Pulonia 账户页进行。
 /// </summary>
 public partial class AccountRecordsPageViewModel : ViewModel
 {
+    /// <summary>当前分页提供分类范围；搜索和勾选不隐藏清理分类入口。</summary>
+    [RelayCommand]
+    private async Task ClearIconCache()
+    {
+        var rows = SelectedTabIndex == 1
+            ? Demands.Rows.Where(row => !Demands.OnlyDemands || row.HasDemand).Select(row => row.Item).ToArray()
+            : Inventory.Rows.ToArray();
+        await Inventory.ClearIconCacheAsync(rows);
+        if (SelectedTabIndex == 1) await Demands.ResumeAsync(SelectedUid);
+    }
     /// <summary>账号持久化服务。</summary>
     private readonly InventoryStore _store;
     /// <summary>Pulonia 账户服务：提供账户目录与本实例当前账户，导入时为不在目录中的 UID 新建账户。</summary>
@@ -37,10 +47,20 @@ public partial class AccountRecordsPageViewModel : ViewModel
     private bool _isActive;
     /// <summary>是否已经成功读取过账户目录；读取前不显示“没有账户”的提示。</summary>
     private bool _accountsLoaded;
+    /// <summary>将同一轮库存属性通知合并为一次需求读取。</summary>
+    private bool _demandRefreshQueued;
     /// <summary>账户页“打开狛荷屋”或导入完成后要选中的 UID，下次加载时应用；没有请求时为 null。</summary>
     private string? _requestedUid;
     /// <summary>库存子分页。</summary>
     public AccountRecordsInventoryViewModel Inventory { get; }
+
+    /// <summary>由容器注入的需求子分页，与库存分页共同构成页面。</summary>
+    public AccountRecordsDemandsViewModel Demands { get; }
+
+    /// <summary>当前页的分类筛选目标，两个分页各自保留筛选状态。</summary>
+    public object ActiveFilter => SelectedTabIndex == 1 ? Demands : Inventory;
+    /// <summary>需求专用筛选项仅在材料需求分页出现。</summary>
+    public bool IsDemandTab => SelectedTabIndex == 1;
 
     /// <summary>所有分页共享的列宽恢复信号，不影响排序和库存内容。</summary>
     [ObservableProperty] private int _columnWidthResetVersion;
@@ -69,6 +89,10 @@ public partial class AccountRecordsPageViewModel : ViewModel
             OnPropertyChanged(nameof(SearchText));
             Inventory.SearchText = "";
             Inventory.AllCategoriesSelected = true;
+            Demands.SearchText = "";
+            Demands.OnlyDemands = false;
+            Demands.AllCategoriesSelected = true;
+            await Demands.SelectUidAsync(null);
             ResetColumnWidths();
             // 先清空库存显示，Load 随之重新读取偏好并完整读取所选账户
             await Inventory.SelectUidAsync(null);
@@ -83,17 +107,29 @@ public partial class AccountRecordsPageViewModel : ViewModel
     /// <param name="inventory">库存子分页</param>
     /// <param name="accounts">Pulonia 账户服务</param>
     /// <param name="navigation">页面导航；测试直接构造时为空</param>
+    /// <param name="demands">需求子分页；应用中由依赖容器注入</param>
     public AccountRecordsPageViewModel(InventoryStore store, AccountRecordsInventoryViewModel inventory, IPuloniaAccountService accounts,
-        INavigationService? navigation = null)
+        AccountRecordsDemandsViewModel demands, INavigationService? navigation = null)
     {
         _store = store; Inventory = inventory;
+        Demands = demands;
+        // 公共显示偏好和增量判断在当前需求页立即生效；其余页切回需求时读取最新值。
+        Inventory.PropertyChanged += (_, args) =>
+        {
+            // 加载期间也接收偏好变化，由需求页加载版本校验丢弃旧结果。
+            if (SelectedTabIndex == 1 && args.PropertyName is
+                nameof(Inventory.UseDeltaForDemands) or nameof(Inventory.UseFamiliesForDemands) or
+                nameof(Inventory.DemandCraftingReservePercent) or nameof(Inventory.UseImageCache) or
+                nameof(Inventory.ShowMissingIconRowNumbers) or nameof(Inventory.PreferReadableSource))
+                _ = RefreshDemandPreferencesAsync();
+        };
         _accounts = accounts;
         _navigation = navigation;
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         // 页面视图模型为单例，订阅与应用同寿命，不需要退订
         _accounts.AccountsChanged += OnAccountsChanged;
     }
-    /// <summary>各分页独立保留搜索词；库存已接入过滤，其余分页等待实现。</summary>
+    /// <summary>各分页独立保留搜索词；库存与需求已接入过滤，活动日历等待实现。</summary>
     private readonly string[] _searchTexts = ["", "", ""];
 
     /// <summary>账户目录中填写了 UID 的账户，顺序与账户列表一致；选中值为 UID。</summary>
@@ -107,6 +143,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
     [NotifyPropertyChangedFor(nameof(CurrentTabTitle))]
     [NotifyPropertyChangedFor(nameof(SearchPlaceholder))]
     [NotifyPropertyChangedFor(nameof(SearchText))]
+    [NotifyPropertyChangedFor(nameof(IsDemandTab))]
     private int _selectedTabIndex;
 
     /// <summary>当前选择的 UID；尚无账户时保持空白。</summary>
@@ -134,13 +171,37 @@ public partial class AccountRecordsPageViewModel : ViewModel
         get => _searchTexts[Math.Clamp(SelectedTabIndex, 0, _searchTexts.Length - 1)];
         set
         {
-            if (SetProperty(ref _searchTexts[Math.Clamp(SelectedTabIndex, 0, _searchTexts.Length - 1)], value) && SelectedTabIndex == 0)
-                Inventory.SearchText = value;
+            if (SetProperty(ref _searchTexts[Math.Clamp(SelectedTabIndex, 0, _searchTexts.Length - 1)], value))
+            {
+                if (SelectedTabIndex == 0) Inventory.SearchText = value;
+                if (SelectedTabIndex == 1) Demands.SearchText = value;
+            }
         }
     }
 
     /// <summary>账号切换由子模型保证异步结果不会串号。</summary>
-    partial void OnSelectedUidChanged(string? value) => _ = Inventory.SelectUidAsync(value);
+    partial void OnSelectedUidChanged(string? value)
+    {
+        _ = Inventory.SelectUidAsync(value);
+        _ = Demands.SelectUidAsync(value, SelectedTabIndex == 1);
+    }
+    /// <summary>等待本轮属性通知结束，再读取最终偏好，避免一次库存更新重复读取需求。</summary>
+    private async Task RefreshDemandPreferencesAsync()
+    {
+        if (_demandRefreshQueued) return;
+        _demandRefreshQueued = true;
+        await Task.Yield();
+        _demandRefreshQueued = false;
+        if (SelectedTabIndex == 1) await Demands.ResumeAsync(SelectedUid);
+    }
+
+    /// <summary>切换页签时恢复独立筛选目标，并读取最新库存证据与公共显示设置。</summary>
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(ActiveFilter));
+        if (value == 0) _ = Inventory.ResumeAsync(SelectedUid);
+        if (value == 1) _ = Demands.ResumeAsync(SelectedUid);
+    }
 
     /// <summary>
     /// 记下要选中的 UID，供账户页“打开狛荷屋”在导航前调用；页面加载时应用，UID 不在账户目录中时按默认选择。
@@ -170,7 +231,11 @@ public partial class AccountRecordsPageViewModel : ViewModel
             var target = await ChooseUidAsync(options, selectedAccountId, selectedUid);
             _requestedUid = null;
             if (SelectedUid != target) SelectedUid = target;
-            else await Inventory.ResumeAsync(SelectedUid);
+            else
+            {
+                await Inventory.ResumeAsync(SelectedUid);
+                if (SelectedTabIndex == 1) await Demands.ResumeAsync(SelectedUid);
+            }
         }
         catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "读取狛荷屋记录", MessageBoxButton.OK); }
     }

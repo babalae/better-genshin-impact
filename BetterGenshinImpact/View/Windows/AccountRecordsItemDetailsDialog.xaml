@@ -35,7 +35,7 @@
   </Grid>
   <ScrollViewer Grid.Row="2" Margin="20,0,20,20" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
    <StackPanel>
-    <TextBlock Text="各来源最近一次确认记录，首条为当前库存；不包含待核实增量。" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,12" />
+    <TextBlock Text="当前库存为最近确认总量，不包含待核实增量。下方按处理时间倒序展示全部保留历史；“已接收”不代表增量已核实。" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,12" />
     <TextBlock Text="尚无有效库存记录。" Visibility="{Binding IsEmpty, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
     <ItemsControl ItemsSource="{Binding Records, Mode=OneWay}">
      <ItemsControl.ItemTemplate><DataTemplate>
@@ -50,6 +50,21 @@
       </Border>
      </DataTemplate></ItemsControl.ItemTemplate>
     </ItemsControl>
+    <TextBlock Text="历史记录" FontWeight="SemiBold" Margin="0,12,0,8" />
+    <ItemsControl ItemsSource="{Binding History, Mode=OneWay}">
+     <ItemsControl.ItemTemplate><DataTemplate>
+      <Border Background="{DynamicResource ControlFillColorSecondaryBrush}" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+       <StackPanel>
+        <TextBlock Text="{Binding Summary, Mode=OneWay}" TextWrapping="Wrap" />
+        <Expander Header="原始记录" Margin="0,8,0,0">
+         <TextBox Text="{Binding Evidence, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" />
+        </Expander>
+       </StackPanel>
+      </Border>
+     </DataTemplate></ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <TextBlock Text="{Binding HistoryStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,8" />
+    <ui:Button Content="加载更多" Command="{Binding LoadMoreCommand, Mode=OneWay}" Visibility="{Binding HasMore, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
    </StackPanel>
   </ScrollViewer>
  </Grid>

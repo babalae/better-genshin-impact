@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
@@ -7,11 +8,13 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Threading;
 using System.Diagnostics;
 using BetterGenshinImpact.Service.AccountRecords;
 using BetterGenshinImpact.Service.AccountRecords.Model;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -55,13 +58,88 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     /// <summary>库存与后续子表共用的图像缓存显示偏好。</summary>
     public bool UseImageCache => _workspace.Settings.UseImageCache;
 
+    /// <summary>需求是否使用增量推断，开关只影响需求表，不改变库存核实规则。</summary>
+    public bool UseDeltaForDemands => _workspace.Settings.UseDeltaForDemands;
+    /// <summary>需求家族合成判断开关。</summary>
+    public bool UseFamiliesForDemands => _workspace.Settings.UseFamiliesForDemands;
+    /// <summary>当前需求合成收益预留率。</summary>
+    public int DemandCraftingReservePercent => _workspace.Settings.DemandCraftingReservePercent;
+
+    /// <summary>切换可合成材料的家族判断。</summary>
+    [RelayCommand]
+    private Task ToggleFamiliesForDemands() => RunDisplayAsync(async () =>
+    {
+        await UpdateSettingsAsync(settings => settings.UseFamiliesForDemands = !settings.UseFamiliesForDemands);
+        OnPropertyChanged(nameof(UseFamiliesForDemands));
+    });
+
+    /// <summary>设置培养指南同款合成收益预留率；0 表示不依赖合成额外收益。</summary>
+    [RelayCommand]
+    private async Task SetDemandCraftingReserve()
+    {
+        // 仅限制此处的说明宽度，避免长文案撑宽窗口；高度随换行内容调整。
+        var input = new TextBox { VerticalAlignment = VerticalAlignment.Top };
+        var dialog = new PromptDialog(
+            I18nService.Instance.Translate("合成收益预留百分比（0～20）；0 表示不依赖额外收益。宝石固定为 0；含预留的达标属于估算，不改变实际库存。"),
+            I18nService.Instance.Translate("需求判断设置"), input,
+            DemandCraftingReservePercent.ToString(CultureInfo.InvariantCulture))
+        {
+            Width = 500,
+            SizeToContent = SizeToContent.Height
+        };
+        dialog.TxtQuestion.TextWrapping = TextWrapping.Wrap;
+        // 取消或关闭时不进入数值校验或保存。
+        if (dialog.ShowDialog() != true) return;
+        var text = dialog.ResponseText;
+        if (string.IsNullOrEmpty(text)) return;
+        if (!int.TryParse(text, out var value) || value is < 0 or > 20) { Status = I18nService.Instance.Translate("合成收益预留百分比须为 0～20。"); return; }
+        await RunDisplayAsync(async () =>
+        {
+            await UpdateSettingsAsync(settings => settings.DemandCraftingReservePercent = value);
+            OnPropertyChanged(nameof(DemandCraftingReservePercent));
+        });
+    }
+
+    /// <summary>保存需求判断选项，并通知需求分页重新计算。</summary>
+    [RelayCommand]
+    private Task ToggleDeltaForDemands() => RunDisplayAsync(async () =>
+    {
+        await UpdateSettingsAsync(settings => settings.UseDeltaForDemands = !settings.UseDeltaForDemands);
+        OnPropertyChanged(nameof(UseDeltaForDemands));
+    });
+
     /// <summary>切换后重建行模型以释放旧图片引用，不删除磁盘文件。</summary>
     [RelayCommand]
     private Task ToggleImageCache() => RunDisplayAsync(async () =>
     {
         await UpdateSettingsAsync(settings => settings.UseImageCache = !settings.UseImageCache);
         OnPropertyChanged(nameof(UseImageCache));
+        NotifyIconCacheSize();
     });
+    /// <summary>当前选中 36 像素缓存规格。</summary>
+    public bool IsIconCache36 => _workspace.Settings.IconCacheSize == 36;
+    /// <summary>当前选中 72 像素缓存规格。</summary>
+    public bool IsIconCache72 => _workspace.Settings.IconCacheSize == 72;
+    /// <summary>当前选中 128 像素缓存规格。</summary>
+    public bool IsIconCache128 => _workspace.Settings.IconCacheSize == 128;
+
+    /// <summary>选择后续采集或导入时使用的缓存规格，不放大已有缓存。</summary>
+    [RelayCommand]
+    private Task SetIconCacheSize(string value) => RunDisplayAsync(async () =>
+    {
+        if (!int.TryParse(value, out var size) || size is not (36 or 72 or 128)) return;
+        await UpdateSettingsAsync(settings => settings.IconCacheSize = size);
+        NotifyIconCacheSize();
+    });
+
+    /// <summary>加载、重置或选择规格后同步菜单勾选状态。</summary>
+    private void NotifyIconCacheSize()
+    {
+        OnPropertyChanged(nameof(IsIconCache36));
+        OnPropertyChanged(nameof(IsIconCache72));
+        OnPropertyChanged(nameof(IsIconCache128));
+    }
+
     /// <summary>无图标行的占位显示偏好。</summary>
     public bool ShowMissingIconRowNumbers => _workspace.Settings.ShowMissingIconRowNumbers;
     /// <summary>用户主动选择的过期时间列显示偏好。</summary>
@@ -114,21 +192,6 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         if (newValue != null) newValue.IsNoticeActive = true;
         if (newValue == null) RefreshNoticeCards();
     }
-    /// <summary>打开阈值规则配置，首次创建禁用的示例；保存后刷新或等候分钟检查生效。</summary>
-    [RelayCommand]
-    private async Task EditWarningRules()
-    {
-        try
-        {
-            await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(async () =>
-            {
-                var path = await _store.GetWarningRulesPathAsync();
-                using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
-            });
-        }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "打开 Warning 规则", MessageBoxButton.OK); }
-    }
-
     /// <summary>当前搜索词。</summary>
     [ObservableProperty] private string _searchText = "";
     /// <summary>完整字典中的分类，包含当前没有库存的分类。</summary>
@@ -136,7 +199,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     /// <summary>批量勾选时只刷新一次。</summary>
     private bool _updatingCategories;
     /// <summary>非全选时显示蓝色漏斗。</summary>
-    public bool HasCategoryFilter => Categories.Any(category => !category.IsSelected);
+    public bool HasCategoryFilter => Categories.Any(category => category.IsSelected != true);
     /// <summary>全部类型开关，可一键全选或取消全选。</summary>
     public bool AllCategoriesSelected
     {
@@ -160,8 +223,10 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         // 名称、类型及来源等文本列共用字典的中文排序规则，数值和时间列保持原有排序。
         Items.Culture = _catalog.TextSortCulture;
         Items.Filter = value => value is AccountRecordsInventoryRow row &&
-            (!HasCategoryFilter || Categories.Any(category => category.Name == row.Category && category.IsSelected)) &&
-            (row.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || row.Category.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+            (!HasCategoryFilter || Categories.SelectMany(category => category.Children).Any(category =>
+                category.Page == row.Page && category.Category == row.MaterialType && category.IsSelected == true)) &&
+            (row.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || row.Category.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                || row.Page.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
         Items.SortDescriptions.Add(new SortDescription("SortValues.Prior", ListSortDirection.Descending));
         Items.SortDescriptions.Add(new SortDescription("SortValues.RecordedAt", ListSortDirection.Descending));
         Items.CollectionChanged += (_, _) => UpdatePriorSeparator();
@@ -176,8 +241,8 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         var pinnedNumber = 0;
         var regularNumber = 0;
         foreach (var row in visible)
-            row.DisplayRowNumber = row.Prior ? $"{++pinnedNumber}" : $"{++regularNumber}.";
-        var boundary = visible.Any(row => !row.Prior) ? visible.LastOrDefault(row => row.Prior) : null;
+            row.DisplayRowNumber = row.SortValues.Prior ? $"{++pinnedNumber}" : $"{++regularNumber}.";
+        var boundary = visible.Any(row => !row.SortValues.Prior) ? visible.LastOrDefault(row => row.SortValues.Prior) : null;
         if (ReferenceEquals(_priorBoundary, boundary)) return;
         if (_priorBoundary != null) _priorBoundary.ShowPriorSeparator = false;
         if (boundary != null) boundary.ShowPriorSeparator = true;
@@ -217,21 +282,36 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         OnPropertyChanged(nameof(HasCategoryFilter)); OnPropertyChanged(nameof(AllCategoriesSelected));
         Filter();
     }
-    /// <summary>同步完整字典分类；原选中分类全部消失时恢复全选，主动取消全选则保持。</summary>
-    private void UpdateCategories(System.Collections.Generic.IEnumerable<string> categories)
+    /// <summary>仅列出当前库存行实际涉及的分类；原选中分类全部消失时恢复全选，主动取消全选则保持。</summary>
+    private void UpdateCategories(IEnumerable<AccountRecordsInventoryRow> rows)
     {
-        var names = categories.Select(value => string.IsNullOrEmpty(value) ? "未分类" : value).Append("未分类").Distinct().OrderBy(value => value, _catalog.TextComparer).ToArray();
-        if (names.SequenceEqual(Categories.Select(item => item.Name))) return;
-        var previous = Categories.ToDictionary(item => item.Name, item => item.IsSelected);
+        // 背包页和原始类型共同作为筛选键，同名小类在不同背包页独立筛选。
+        // 使用未过滤的完整行集合，包含零库存、错误和待核实增量，搜索和勾选不会反过来隐藏筛选入口。
+        var groups = rows.Select(row => (Page: row.Page, Category: row.MaterialType)).Distinct()
+            .OrderBy(item => InventoryCatalog.GetPageSortOrder(item.Page))
+            .ThenBy(item => item.Page, _catalog.TextComparer).ThenBy(item => item.Category, _catalog.TextComparer)
+            .GroupBy(item => item.Page).ToArray();
+        var previous = Categories.SelectMany(group => group.Children)
+            .ToDictionary(item => (item.Page, item.Category), item => item.IsSelected == true);
+        // 刷新分类时保留用户在本次页面会话中调整过的展开状态。
+        var previousExpansion = Categories.ToDictionary(group => group.Page, group => group.IsExpanded);
+        var keys = groups.SelectMany(group => group.Select(item => (item.Page, item.Category))).ToArray();
         var allSelected = AllCategoriesSelected;
-        var lostSelection = previous.Any(item => item.Value) && !names.Any(name => previous.TryGetValue(name, out var selected) && selected);
+        var lostSelection = previous.Any(item => item.Value) && !keys.Any(key => previous.TryGetValue(key, out var selected) && selected);
         _updatingCategories = true;
         try
         {
             Categories.Clear();
-            foreach (var name in names)
-                Categories.Add(new AccountRecordsCategoryOption(name, CategoriesChanged)
-                { IsSelected = allSelected || lostSelection || previous.TryGetValue(name, out var selected) && selected });
+            foreach (var group in groups)
+            {
+                var option = new AccountRecordsCategoryOption(group.Key, group.Select(item => item.Category), CategoriesChanged);
+                if (previousExpansion.TryGetValue(group.Key, out var expanded)) option.IsExpanded = expanded;
+                foreach (var child in option.Children)
+                {
+                    child.IsSelected = allSelected || lostSelection || previous.TryGetValue((child.Page, child.Category), out var selected) && selected;
+                }
+                Categories.Add(option);
+            }
         }
         finally { _updatingCategories = false; }
         CategoriesChanged();
@@ -245,21 +325,30 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     public async Task LoadPreferencesAsync()
     {
         _workspace.Settings = await _store.GetSettingsAsync();
+        OnPropertyChanged(nameof(UseDeltaForDemands));
+        OnPropertyChanged(nameof(UseFamiliesForDemands));
+        OnPropertyChanged(nameof(DemandCraftingReservePercent));
         OnPropertyChanged(nameof(ShowExpirationColumn));
         OnPropertyChanged(nameof(UseImageCache));
+        NotifyIconCacheSize();
         OnPropertyChanged(nameof(ShowMissingIconRowNumbers));
-        var categories = await Task.Run(() => _catalog.Items.Values.ToArray());
-        UpdateCategories(categories);
+        var classifications = await _store.GetItemClassificationsAsync();
+        _workspace.Pages = classifications.Pages;
+        UpdateCategories(Rows);
+        var dictionaryConflicts = await _store.GetDictionaryConflictsAsync();
+        if (dictionaryConflicts.Count > 0) Status = $"补充字典有 {dictionaryConflicts.Count} 项与 CSV 冲突，请在补充字典中查看。";
         OnPropertyChanged(nameof(PreferReadableSource)); OnPropertyChanged(nameof(SnapshotsEnabled));
     }
 
     /// <summary>区分并发的局部刷新，丢弃较早返回的快照。</summary>
     private int _refreshVersion;
+    /// <summary>当前行已应用的共享图标修订；图标单独上报时库存文件时间可以不变。</summary>
+    private long _iconCacheRevision;
 
     /// <summary>统一通知快照变更影响的显示属性和命令。</summary>
     private void NotifyWorkspaceChanged()
     {
-        foreach (var property in new[] { nameof(UseImageCache), nameof(ShowExpirationColumn), nameof(ShowMissingIconRowNumbers),
+        foreach (var property in new[] { nameof(IsIconCache36), nameof(IsIconCache72), nameof(IsIconCache128), nameof(UseImageCache), nameof(UseDeltaForDemands), nameof(UseFamiliesForDemands), nameof(DemandCraftingReservePercent), nameof(ShowExpirationColumn), nameof(ShowMissingIconRowNumbers),
             nameof(PreferReadableSource), nameof(SnapshotsEnabled), nameof(HasCompletedEvents), nameof(ShowBatchArchive),
             nameof(IsEmpty), nameof(ShowPlaceholder), nameof(ItemCountText) })
             OnPropertyChanged(property);
@@ -273,27 +362,30 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         if (uid == null || IsLoading) return;
         var version = _loadVersion;
         var refreshVersion = ++_refreshVersion;
+        var iconRevision = _icons.Revision;
+        var refreshIcons = refresh == AccountRecordsRefreshKind.Icons || iconRevision != _iconCacheRevision;
         var workspace = await _store.ReadAsync(uid, includeHistory: false);
         if (Uid != uid || version != _loadVersion || refreshVersion != _refreshVersion || IsLoading) return;
         var next = await _rowFactory.BuildAsync(workspace);
         if (Uid != uid || version != _loadVersion || refreshVersion != _refreshVersion || IsLoading) return;
         var existing = Rows.ToDictionary(row => row.Name, StringComparer.Ordinal);
         var names = next.Select(row => row.Name).ToHashSet(StringComparer.Ordinal);
-        var filterChanged = false;
+        var filterChanged = existing.Count != names.Count || existing.Keys.Any(name => !names.Contains(name));
         _workspace = workspace;
         foreach (var row in next)
         {
             if (existing.TryGetValue(row.Name, out var current))
             {
-                filterChanged |= current.Category != row.Category;
-                current.ApplySnapshot(row, refresh == AccountRecordsRefreshKind.Icons);
+                filterChanged |= current.Category != row.Category || current.Page != row.Page;
+                current.ApplySnapshot(row, refreshIcons);
             }
             else Rows.Add(row);
         }
         foreach (var row in existing.Values.Where(row => !names.Contains(row.Name))) Rows.Remove(row);
+        _iconCacheRevision = iconRevision;
         if (refresh == AccountRecordsRefreshKind.Prior)
             foreach (var row in Rows) row.SortValues.UpdatePrior(row.Prior);
-        UpdateCategories(workspace.Definitions.Values);
+        UpdateCategories(Rows);
         if (filterChanged || refresh == AccountRecordsRefreshKind.Prior) Items.Refresh();
         if (_selectedNoticeRow != null && (!Rows.Contains(_selectedNoticeRow) || !_selectedNoticeRow.HasStatusLight))
             _selectedNoticeRow = null;
@@ -306,7 +398,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         UpdatePriorSeparator();
     }
 
-    /// <summary>返回页面只检查总表修改时间；未变化则直接复用，不维护、不读取整表、不通知行刷新。</summary>
+    /// <summary>返回页面只检查总表修改时间与图标修订；未变化时直接复用现有行。</summary>
     public async Task ResumeAsync(string? uid)
     {
         if (IsLoading && uid == Uid) return;
@@ -320,7 +412,8 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         try
         {
             var updatedAt = await _store.GetInventoryUpdatedAtAsync(uid);
-            if (Uid == uid && version == _loadVersion && updatedAt != _workspace.UpdatedAt) await RefreshRowsAsync();
+            if (Uid == uid && version == _loadVersion &&
+                (updatedAt != _workspace.UpdatedAt || _icons.Revision != _iconCacheRevision)) await RefreshRowsAsync();
         }
         catch (Exception ex)
         {
@@ -332,7 +425,12 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     public async Task SelectUidAsync(string? uid)
     {
         var changedUid = Uid != uid;
-        if (changedUid) { Rows.Clear(); _workspace = new InventoryWorkspace { Settings = _workspace.Settings }; }
+        if (changedUid)
+        {
+            Rows.Clear();
+            _workspace = new InventoryWorkspace { Settings = _workspace.Settings };
+            UpdateCategories(Rows);
+        }
         Uid = uid; OnPropertyChanged(nameof(HasUid));
         OnPropertyChanged(nameof(HasCompletedEvents));
         OnPropertyChanged(nameof(ShowBatchArchive));
@@ -341,7 +439,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         IsLoading = uid != null;
         Status = "";
         NoticeRow = null; _noticeUid = null; _selectedNoticeRow = null;
-        if (uid == null) { Rows.Clear(); OnPropertyChanged(nameof(ShowPlaceholder)); return; }
+        if (uid == null) { Rows.Clear(); UpdateCategories(Rows); OnPropertyChanged(nameof(ShowPlaceholder)); return; }
         try
         {
             // 先让绑定、布局和输入完成，水印先于磁盘读取和建表出现。
@@ -349,11 +447,13 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
             if (version != _loadVersion) return;
             await _store.MaintainAsync(uid);
             if (version != _loadVersion) return;
+            var iconRevision = _icons.Revision;
             var workspace = await _store.ReadAsync(uid, includeHistory: false);
             var rows = await _rowFactory.BuildAsync(workspace);
             if (version != _loadVersion) return;
             _workspace = workspace;
-            UpdateCategories(workspace.Definitions.Values);
+            _iconCacheRevision = iconRevision;
+            UpdateCategories(rows);
             // 表体暂时隐藏；分时添加让输入持续得到处理，避免长时间占用 UI 线程。
             Rows.Clear();
             var slice = Stopwatch.StartNew();
@@ -365,11 +465,14 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
                 if (version != _loadVersion) return;
                 slice.Restart();
             }
+            Items.Refresh();
             _hasSnapshot = true;
             NotifyWorkspaceChanged();
             var errors = Rows.Count(row => row.StateRank == 0);
             Status = errors > 0 ? $"{errors} 项库存异常待处理，请点击状态灯查看。" : "";
-            if (workspace.WarningRuleError != null) Status = $"提醒规则无效：{workspace.WarningRuleError}";
+            var dictionaryConflicts = await _store.GetDictionaryConflictsAsync();
+            if (Uid == uid && version == _loadVersion && dictionaryConflicts.Count > 0)
+                Status += $" 补充字典有 {dictionaryConflicts.Count} 项与 CSV 冲突，请打开补充字典查看。";
             OnPropertyChanged(nameof(IsEmpty)); OnPropertyChanged(nameof(PreferReadableSource)); OnPropertyChanged(nameof(SnapshotsEnabled));
         }
         catch (Exception ex)
@@ -419,10 +522,20 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         var path = Global.Absolute(relativePath);
         var title = kind switch { "items" => "物品字典", "user" => "补充字典", _ => "来源字典" };
         new AccountRecordsDictionaryDialog(new AccountRecordsDictionaryViewModel(title, path, kind != "items", _catalog,
-            kind == "user", kind == "user" ? _store.RestorePresetCategoriesAsync : null))
+            kind == "user", kind == "user" ? _store.RestorePresetCategoriesAsync : null, _store))
         { Owner = Application.Current.MainWindow }.ShowDialog();
+        await LoadPreferencesAsync();
         await SelectUidAsync(Uid);
     }
+    /// <summary>查看当前账号的日期快照；浏览不写入当前库存。</summary>
+    [RelayCommand]
+    private void ViewSnapshots()
+    {
+        if (Uid == null) return;
+        new AccountRecordsSnapshotsDialog(new AccountRecordsSnapshotsViewModel(_store, _catalog, _icons, Uid))
+        { Owner = Application.Current.MainWindow }.ShowDialog();
+    }
+
     /// <summary>手动刷新当前账号。</summary>
     [RelayCommand] private Task Refresh() => SelectUidAsync(Uid);
 
@@ -464,7 +577,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     {
         if (IsLoading || !Rows.Contains(row)) return;
         NoticeRow = row; _noticeUid = Uid;
-        Status = AccountRecordsErrorMessages.ForDisplay(row.Event?.Message ?? row.Error?.Message ?? "");
+        Status = (row.Event?.Message ?? row.Error?.Message ?? "");
         RefreshNoticeCards();
     }
 
@@ -490,7 +603,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
                 await _store.ArchiveCompletedEventsAsync(uid, kind, ids);
                 if (Uid == uid) await RefreshRowsAsync();
                 return (await _store.ReadAsync(uid)).Inventory;
-            }, name))
+            }, name, batchId => _store.GetBatchAsync(uid, batchId)))
             { Owner = Application.Current.MainWindow }.ShowDialog();
         }
         catch (Exception ex) { Status = AccountRecordsErrorMessages.Describe(ex); }
@@ -542,12 +655,14 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         if (dialog.ShowDialog() == true && Uid == uid) await RefreshRowsAsync();
     }
 
-    /// <summary>展示各来源最后一次上报，不解释为获得量历史。</summary>
+    /// <summary>展示当前确认库存和该物品保留的全部批次历史。</summary>
     [RelayCommand]
     private void ShowRecent(AccountRecordsInventoryRow? row)
     {
-        if (row == null) return;
-        new AccountRecordsItemDetailsDialog(new AccountRecordsItemDetailsViewModel(row, _workspace.Sources, PreferReadableSource))
+        if (row == null || Uid == null) return;
+        var uid = Uid;
+        new AccountRecordsItemDetailsDialog(new AccountRecordsItemDetailsViewModel(row, _workspace.Sources, PreferReadableSource,
+            () => _store.GetItemHistorySnapshotAsync(uid, row.Name), references => _store.GetItemHistoryPageAsync(uid, references)))
         { Owner = Application.Current.MainWindow }.ShowDialog();
     }
     /// <summary>删除单项及其快照副本，防止日后恢复时重新出现。</summary>
@@ -577,44 +692,35 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         await UpdateSettingsAsync(settings => settings.SnapshotsEnabled = !settings.SnapshotsEnabled);
     });
 
-    /// <summary>编辑有明确上限的保存数量。</summary>
-    [RelayCommand] private async Task SetRetention(string kind)
+    /// <summary>调整日期快照数量；批次和事件历史暂时全部保留。</summary>
+    [RelayCommand] private async Task SetSnapshotLimit()
     {
-        var snapshots = kind == "snapshots";
-        var events = kind == "events";
-        int previous;
-        try { previous = InventoryStore.GetRetentionLimit(await _store.GetSettingsAsync(), kind); }
-        catch (Exception ex)
+        try
         {
-            await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "读取保存设置", MessageBoxButton.OK);
-            return;
-        }
-        var prompt = events ? "每个 UID 保留多少条事件？（1000～50000，默认 5000）超限清理最旧的已结束记录；未解决事件保留，实际数量可能超过上限。"
-            : snapshots ? "保留最近几个有记录的日期？（1～30）" : "每个物品保留几个最近来源？（1～10，含当前记录）";
-        var value = PromptDialog.Prompt(prompt, "保存设置", previous.ToString(CultureInfo.InvariantCulture));
-        if (string.IsNullOrEmpty(value)) return;
-        if (!int.TryParse(value, out var count) || count < (events ? 1000 : 1) || count > (events ? 50000 : snapshots ? 30 : 10))
-        { await ThemedMessageBox.ShowAsync($"保留数量须为 {(events ? "1000～50000" : snapshots ? "1～30" : "1～10")} 范围内的整数，设置尚未保存。", "保存设置", MessageBoxButton.OK); return; }
-        if (count < previous)
-        {
-            var records = events ? "已结束事件" : snapshots ? "日期快照" : "每个物品的来源记录";
-            if (await ThemedMessageBox.ShowAsync(
-                    $"将{records}保留数量从 {previous} 调小至 {count}，会立即清理所有 UID 中超出上限的旧记录。\n调大数量不会恢复已清理的记录。请先备份运行目录下的 User/AccountRecords 文件夹，再继续操作。\n\n是否继续？",
-                    "减少保留数量", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning) != MessageBoxResult.Yes)
+            var previous = (await _store.GetSettingsAsync()).SnapshotLimit;
+            var value = PromptDialog.Prompt("保留最近几个有记录的日期快照？（1～30）", "快照设置", previous.ToString(CultureInfo.InvariantCulture));
+            if (string.IsNullOrEmpty(value)) return;
+            if (!int.TryParse(value, out var count) || count is < 1 or > 30)
+            {
+                await ThemedMessageBox.ShowAsync("快照数量须为 1～30 的整数。", "快照设置", MessageBoxButton.OK);
                 return;
+            }
+            if (count < previous && await ThemedMessageBox.ShowAsync(
+                $"将日期快照保留数量从 {previous} 调小至 {count}，会清理各账号超出的旧快照；库存、批次和事件不受影响。是否继续？",
+                "减少快照数量", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            await RunManualAsync(async () => _workspace.Settings = await _store.SetSnapshotLimitAsync(count, previous));
         }
-        await RunManualAsync(async () =>
-        {
-            _workspace.Settings = await _store.SetRetentionAsync(kind, count, previous);
-        });
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "快照设置", MessageBoxButton.OK); }
     }
 
-    /// <summary>清理公共派生图片，不影响任何 UID 的库存。</summary>
-    [RelayCommand] private async Task ClearIconCache()
+    /// <summary>按当前表的分类选择清理共享图标，不影响库存和需求。</summary>
+    public async Task ClearIconCacheAsync(IEnumerable<AccountRecordsInventoryRow> rows)
     {
-        if (await ThemedMessageBox.ShowAsync("清理所有 UID 共用的物品图标？删除后需重新采集或手动上传，当前尚未接入图标自动重建。库存和事件记录不受影响。",
-            "清理所有图像缓存", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
-            await RunManualAsync(() => Task.Run(_icons.Clear), AccountRecordsRefreshKind.Icons);
+        var selection = new AccountRecordsIconCleanupViewModel(rows);
+        new AccountRecordsIconCleanupDialog(selection) { Owner = Application.Current.MainWindow }.ShowDialog();
+        if (!selection.Accepted) return;
+        var names = selection.SelectedNames;
+        await RunManualAsync(() => Task.Run(() => { foreach (var name in names) _icons.Delete(name); }), AccountRecordsRefreshKind.Icons);
     }
 
     /// <summary>按实际缓存文件判断删除入口；关闭图像显示或缓存损坏不影响清理。</summary>
@@ -646,7 +752,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
             if (stream.Length is <= 0 or > 4 * 1024 * 1024) throw new InvalidDataException("选择的图片为空或超过 4 MiB，未保存。");
             var bytes = new byte[(int)stream.Length];
             stream.ReadExactly(bytes);
-            _icons.Store(row.Name, bytes);
+            _icons.Store(row.Name, bytes, _workspace.Settings.IconCacheSize);
         }), AccountRecordsRefreshKind.Icons);
     }
 }

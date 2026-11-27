@@ -1,4 +1,5 @@
 using System;
+using BetterGenshinImpact.Service.AccountRecords;
 
 namespace BetterGenshinImpact.ViewModel.Controls;
 
@@ -11,8 +12,8 @@ public sealed class AccountRecordsSortValues(AccountRecordsInventoryRow row)
     public void UpdatePrior(bool prior) => Prior = prior;
     /// <summary>名称排序键。</summary>
     public string ItemNameSortKey { get; } = row.ItemNameSortKey;
-    /// <summary>分类排序键。</summary>
-    public string Category { get; } = row.Category;
+    /// <summary>类型排序先遵循背包页顺序，同页内再按材料类型排列。</summary>
+    public string Category { get; } = $"{InventoryCatalog.GetPageSortOrder(row.Page) + 1:D2}\t{row.Page}\t{row.Category}";
     /// <summary>数量排序键。</summary>
     public long? Quantity { get; } = row.Quantity;
     /// <summary>记录时间排序键。</summary>

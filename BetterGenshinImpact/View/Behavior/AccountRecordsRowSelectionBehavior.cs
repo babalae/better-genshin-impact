@@ -65,7 +65,7 @@ public sealed class AccountRecordsRowSelectionBehavior : Behavior<DataGrid>
     private void SortRows(object sender, DataGridSortingEventArgs e)
     {
         // 加载时保留表头及排序箭头，避免对尚未完整建立的行集合重复排序。
-        if (AssociatedObject.DataContext is AccountRecordsInventoryViewModel { IsLoading: true })
+        if (AssociatedObject.DataContext is AccountRecordsInventoryViewModel { IsLoading: true } or AccountRecordsDemandsViewModel { IsLoading: true })
         {
             e.Handled = true;
             return;
@@ -76,6 +76,19 @@ public sealed class AccountRecordsRowSelectionBehavior : Behavior<DataGrid>
         var direction = e.Column.SortDirection == ListSortDirection.Ascending
             ? ListSortDirection.Descending : ListSortDirection.Ascending;
         var view = CollectionViewSource.GetDefaultView(AssociatedObject.ItemsSource);
+        if (AssociatedObject.DataContext is AccountRecordsDemandsViewModel)
+        {
+            // 手动置顶及实际需求始终优先，其余顺序由玩家选择的列决定。
+            var appendDemandSort = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+            if (view is ListCollectionView demandView)
+            {
+                var comparer = demandView.CustomSort as AccountRecordsDemandComparer ?? new AccountRecordsDemandComparer();
+                demandView.CustomSort = comparer.WithSort(member, direction, appendDemandSort);
+            }
+            if (!appendDemandSort) foreach (var column in AssociatedObject.Columns) column.SortDirection = null;
+            e.Column.SortDirection = direction;
+            return;
+        }
         foreach (var row in view.SourceCollection.OfType<AccountRecordsInventoryRow>()) row.CaptureSortValues();
         var path = "SortValues." + member;
         var append = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);

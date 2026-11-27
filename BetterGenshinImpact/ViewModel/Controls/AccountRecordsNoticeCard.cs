@@ -75,7 +75,7 @@ public sealed class AccountRecordsNoticeCard : ObservableObject
                     EventIds = items.Select(item => item.Id).ToArray(), ErrorId = first.State == "Error" ? error?.Id : null,
                     EventVersions = items.ToDictionary(item => item.Id, item => item.ContentVersion),
                     Title = $"{name} · {label}（{items.Length} 条）",
-                    Message = string.Join("\n", items.Select(item => AccountRecordsErrorMessages.ForDisplay(item.Message)).Distinct()),
+                    Message = string.Join("\n", items.Select(item => (item.Message)).Distinct()),
                     Details = details,
                     CanArchive = first.State == "Warning" || first.State == "Error" && error == null ||
                         first.State == "Completed" && items.All(item => candidates.Contains(item.Id)),

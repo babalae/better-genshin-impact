@@ -78,7 +78,11 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
             ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat", null) : null;
 
         var project = new ScriptProject(relativeProjectPath, scriptRoot, repositoryResources);
-        await project.ExecuteAsync(runtime, settings, partyConfig, ct).ConfigureAwait(false);
+        // 同一节点尝试的所有库存提交共享批次，重复轮次由 TaskAddress 区分。
+        var inventoryContext = new ScriptInventoryContext(
+            task.Resource?.ScopeKey ?? "local/" + relativeProjectPath.Replace('\\', '/'),
+            project.Manifest.Name, context.VerifiedUid, context.RunId, context.TaskAddress, context.Attempt);
+        await project.ExecuteAsync(runtime, settings, partyConfig, ct, inventoryContext).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         return PuloniaTaskOutcome.ExecutedUnverified("JS 项目已执行完成，但旧脚本没有结构化副作用证据。",
             new JObject { ["resource_version"] = task.ResourceVersion });

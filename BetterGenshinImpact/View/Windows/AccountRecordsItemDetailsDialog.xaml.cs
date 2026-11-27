@@ -5,7 +5,7 @@ using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
 
-/// <summary>物品及最近来源记录的只读查看窗口。</summary>
+/// <summary>物品当前库存与保留历史的只读查看窗口。</summary>
 public partial class AccountRecordsItemDetailsDialog : FluentWindow
 {
     /// <summary>绑定快照并应用主题。</summary>
@@ -13,6 +13,10 @@ public partial class AccountRecordsItemDetailsDialog : FluentWindow
     {
         DataContext = viewModel;
         InitializeComponent();
+        Loaded += async (_, _) =>
+        {
+            if (viewModel.History.Count == 0) await viewModel.LoadMoreCommand.ExecuteAsync(null);
+        };
         SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
     }
     /// <summary>Esc 关闭窗口。</summary>

@@ -6,7 +6,9 @@
  Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
- <ui:FluentWindow.Resources><BooleanToVisibilityConverter x:Key="BoolVisibility" /></ui:FluentWindow.Resources>
+ <ui:FluentWindow.Resources>
+  <BooleanToVisibilityConverter x:Key="BoolVisibility" />
+ </ui:FluentWindow.Resources>
  <b:Interaction.Triggers><b:EventTrigger EventName="Loaded"><b:InvokeCommandAction Command="{Binding RefreshCommand, Mode=OneWay}" /></b:EventTrigger></b:Interaction.Triggers>
  <ui:FluentWindow.InputBindings><KeyBinding Key="Escape" Command="{x:Static ApplicationCommands.Close}" /></ui:FluentWindow.InputBindings>
  <ui:FluentWindow.CommandBindings><CommandBinding Command="{x:Static ApplicationCommands.Close}" Executed="CloseWindow" /></ui:FluentWindow.CommandBindings>
@@ -15,7 +17,7 @@
   <ui:TitleBar Title="{Binding Title, Mode=OneWay}" ShowMinimize="False" />
   <DockPanel Grid.Row="1" Margin="16,8,16,12">
    <ui:Button DockPanel.Dock="Right" Content="刷新" Command="{Binding RefreshCommand, Mode=OneWay}" Margin="8,0,0,0" />
-   <ui:TextBox PlaceholderText="搜索字典" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+   <ui:TextBox PlaceholderText="搜索名称、编号或字段内容" Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
   </DockPanel>
   <Grid Grid.Row="2" Margin="16,0">
    <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="3*"/></Grid.ColumnDefinitions>

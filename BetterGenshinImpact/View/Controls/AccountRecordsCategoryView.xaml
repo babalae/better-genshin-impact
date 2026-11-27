@@ -1,0 +1,34 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.AccountRecordsCategoryView"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+             ClipToBounds="True" MinWidth="36">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="AccountRecordsTableResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <controls:AccountRecordsCategoryTextVisibilityConverter x:Key="CategoryTextVisibility" />
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid ToolTip="{Binding Description, ElementName=Root, Mode=OneWay}">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="36" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+        <Image Width="36" Height="36" Source="{Binding Icon, ElementName=Root, Mode=OneWay}"
+               Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+        <!-- 保留布局宽度，避免隐藏文字后反复触发宽度计算；可容纳首字和省略号时即展示。 -->
+        <Grid x:Name="TextArea" Grid.Column="1" ClipToBounds="True">
+            <TextBlock x:Name="CategoryText" Text="{Binding Text, ElementName=Root, Mode=OneWay}" Style="{StaticResource InventoryText}">
+                <TextBlock.Visibility>
+                    <MultiBinding Converter="{StaticResource CategoryTextVisibility}" Mode="OneWay">
+                        <Binding Path="ActualWidth" ElementName="TextArea" Mode="OneWay" />
+                        <Binding Path="Text" ElementName="Root" Mode="OneWay" />
+                        <Binding Path="FontFamily" ElementName="CategoryText" Mode="OneWay" />
+                        <Binding Path="FontSize" ElementName="CategoryText" Mode="OneWay" />
+                    </MultiBinding>
+                </TextBlock.Visibility>
+            </TextBlock>
+        </Grid>
+    </Grid>
+</UserControl>

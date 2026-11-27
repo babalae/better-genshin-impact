@@ -25,6 +25,7 @@ public sealed partial class InventoryStore
         {
             error.VerificationSource = record.Source;
             error.VerificationId = record.AttemptId;
+            error.VerificationReference = record.RecordReference;
             Transition(error, "Error", "当前数量已由新的库存上报核实，原错误转为历史提醒。", true);
         }
         const string message = "该材料曾有一条或多条错误，当前库存数量已核实。原始错误已保留在历史记录中，请确认后归档此提醒。";
@@ -40,20 +41,12 @@ public sealed partial class InventoryStore
         }
         warning.VerificationSource = record.Source;
         warning.VerificationId = record.AttemptId;
+        warning.VerificationReference = record.RecordReference;
         warning.History.Add($"ConfirmedQuantity={record.Quantity}; RecordedAt={record.RecordedAt:O}; ErrorIds={string.Join(",", errors.Select(item => item.Id))}");
     }
 
     /// <summary>只有合法增量发生时间参与先后比较；缺失、非法或超前时间不能永久阻止重新核实。</summary>
-    private static bool HasReliableDeltaTime(InventoryEvent item)
-    {
-        if (item.HasValidRecordedAt is { } valid) return valid;
-        // 旧事件已有原始时间证据；解析结果必须与事件时间一致，不能误用失败时填入的接收时间。
-        var raw = item.History.FirstOrDefault(line => line.StartsWith("RecordedAt=", StringComparison.Ordinal));
-        if (raw == null) return false;
-        var parsed = Parse(new InventoryReport { Quantity = 0, RecordedAt = raw[11..] }, item.Source,
-            DateTimeOffset.UtcNow, out _);
-        return parsed != null && parsed.RecordedAt == item.RecordedAt;
-    }
+    private static bool HasReliableDeltaTime(InventoryEvent item) => item.HasValidRecordedAt;
 
     /// <summary>按物品和来源更新分类橘灯；分类冲突不修改字典、不参与数量拒绝或增量核实。</summary>
     private static void CheckReportedCategories(InventoryDocument data, string name, string source,
@@ -93,7 +86,7 @@ public sealed partial class InventoryStore
     {
         var data = Load(uid);
         // 到期等时间条件也可能在用户打开提示之后变化，需要先更新再确认资格。
-        var changed = RefreshThresholdWarnings(data);
+        var changed = RefreshExpirationChecks(data);
         var selected = eventIds.ToHashSet(StringComparer.Ordinal);
         var completed = InventoryEventPolicy.GetCompletedArchiveCandidates(data, kind).Where(item => selected.Contains(item.Id)).ToArray();
         foreach (var item in completed) Transition(item, item.State, "用户已批量归档。", true);
@@ -119,7 +112,7 @@ public sealed partial class InventoryStore
         if (state != "Completed" && data.Events.Count(value => !value.Archived && value.State != "Completed") >= 5000)
             throw new InvalidDataException("未归档且尚未完成的事件已达 5000 条，暂不能新增此类事件。请核实待确认变动、处理错误或归档可归档的提醒后重试；仅归档已完成事件不会释放此额度。");
         var item = new InventoryEvent { Name = name, Source = source, Kind = kind, State = state,
-            Quantity = quantity, RecordedAt = time, Message = message, Baseline = baseline };
+            Quantity = quantity, RecordedAt = time, Message = message, Baseline = baseline, RecordReference = data.ProcessingReference ?? data.Items.GetValueOrDefault(name)?.FirstOrDefault()?.RecordReference };
         item.History.Add($"{DateTimeOffset.UtcNow:O} EventCreated State={state}\nMessage={TraceMessage(message)}\nName={name}; Source={source}; Baseline={baseline}; Quantity={quantity}; RecordedAt={time:O}");
         data.Events.Add(item);
         return item;
@@ -159,6 +152,7 @@ public sealed partial class InventoryStore
         {
             item.VerificationSource = record.Source;
             item.VerificationId = verificationId;
+            item.VerificationReference = record.RecordReference;
             item.VerifiedCorrect = expected.HasValue ? expected.Value == record.Quantity : null;
             Transition(item, "Completed", "该材料曾有增减信息，已完成核实。");
             item.History.Add($"VerificationSource={record.Source}; Quantity={record.Quantity}; VerifiedCorrect={item.VerifiedCorrect}; RecordedAt={record.RecordedAt:O}");
@@ -166,14 +160,14 @@ public sealed partial class InventoryStore
     }
 
     /// <summary>增量写入入口；按账号、物品、来源和 UTC 时间去重，不允许人工编辑来源。</summary>
-    public Task<InventoryReportResult> ReportDeltaAsync(string uid, AccountRecordSource source, IEnumerable<InventoryDeltaReport> reports)
-        => ReportDeltasAsync(uid, reports.Select(report => (source, report)));
+    public Task<InventoryReportResult> ReportDeltaAsync(string uid, AccountRecordSource source, IEnumerable<InventoryDeltaReport> reports, string? batchId = null)
+        => ReportDeltasAsync(uid, reports.Select(report => (source, report)), batchId);
 
     /// <summary>跨来源增量按记录时间稳定排序，在同一次存储锁操作中处理并保存。</summary>
-    private Task<InventoryReportResult> ReportDeltasAsync(string uid, IEnumerable<(AccountRecordSource Source, InventoryDeltaReport Report)> reports)
+    private Task<InventoryReportResult> ReportDeltasAsync(string uid, IEnumerable<(AccountRecordSource Source, InventoryDeltaReport Report)> reports, string? batchId = null)
     {
-        var batch = reports.Select(item => (Source: ValidateSource(item.Source),
-            Report: new InventoryDeltaReport { Name = item.Report.Name, Delta = item.Report.Delta, RecordedAt = item.Report.RecordedAt,
+        var batch = reports.Select((item, index) => (Source: ValidateSource(item.Source),
+            Report: new InventoryDeltaReport { RecordId = item.Report.RecordId ?? (index + 1).ToString(CultureInfo.InvariantCulture), Name = item.Report.Name, Delta = item.Report.Delta, RecordedAt = item.Report.RecordedAt,
                 Expirations = item.Report.Expirations?.Select(value => value == null ? null! : new InventoryExpiration { Quantity = value.Quantity, ExpiresAt = value.ExpiresAt }).ToList() }))
             .OrderBy(item => DateTimeOffset.TryParse(item.Report.RecordedAt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time) ? time : DateTimeOffset.MaxValue).ToArray();
         // 与完整库存上报一致，空名称在持久化前拒绝，不能聚合成空名称错误行。
@@ -184,29 +178,34 @@ public sealed partial class InventoryStore
         return Locked(() =>
         {
             var origins = Sources();
-            var data = Load(uid); var settings = Settings(); Snapshot(data, settings);
+            var data = Load(uid);
+            var journal = BeginBatch(data, batchId, "Delta", batch.Select(item => BatchInput(item.Report.RecordId!, item.Report.Name, item.Source.Reference, "Delta", item.Report)));
+            var settings = Settings(); Snapshot(data, settings);
             var definitions = Definitions();
             var result = new InventoryReportResult();
             foreach (var entry in batch)
             {
                 var report = entry.Report;
+                // 重试已提交增量时也补齐来源名称；数量仍由接收凭证防止重复应用。
+                if (!origins.ContainsKey(entry.Source.Reference)) origins[entry.Source.Reference] = entry.Source;
+                if (SelectBatchRecord(data, journal, report.RecordId!))
+                {
+                    result.DuplicateCount++;
+                    CompleteBatchRecords(journal, [report.RecordId!], "Duplicate", "同一批次记录已处理。");
+                    continue;
+                }
                 var reference = entry.Source.Reference;
-                if (!origins.ContainsKey(reference)) origins[reference] = entry.Source;
                 var name = report.Name.Trim();
                 var attemptId = Convert.ToHexString(SHA256.HashData(
-                    Encoding.UTF8.GetBytes(uid + "\n" + reference + "\n" + JsonConvert.SerializeObject(report))));
+                    Encoding.UTF8.GetBytes(uid + "\n" + reference + "\n" + ObservationJson(report))));
                 var parsed = Parse(new InventoryReport { Quantity = 0, RecordedAt = report.RecordedAt }, reference, DateTimeOffset.UtcNow, out var reason);
                 if (string.IsNullOrWhiteSpace(report.RecordedAt)) reason = "库存变动缺少发生时间，本次增减未纳入推算。请来源补充带时区的发生时间后重新上报。";
                 // 只有已接收事件约束再次累加；失败事件必须重新校验，支持修正输入和补充字典后重试。
                 var related = data.Events.Where(item => !item.ItemDeleted && item.Kind == "Delta" && item.Name == name &&
                     item.Source == reference && (parsed != null ? item.RecordedAt == parsed.RecordedAt : item.AttemptId == attemptId)).ToArray();
                 var accepted = related.FirstOrDefault(item => item.State != "Error");
-                var receiptPrefix = parsed == null ? "" : DeltaReceiptPrefix(reference, parsed.RecordedAt);
-                var savedReceipt = parsed == null ? null : data.EventReceipts.GetValueOrDefault(name)?.FirstOrDefault(value => value.StartsWith(receiptPrefix, StringComparison.Ordinal));
-                var legacyReceipt = parsed != null && HasReceipt(data, name, DeltaReceipt(reference, parsed.RecordedAt));
                 var sameAccepted = accepted != null && accepted.Quantity == report.Delta && SameExpirations(accepted.Expirations, report.Expirations);
-                if (sameAccepted || savedReceipt == receiptPrefix + DeltaContentKey(report.Delta, report.Expirations) ||
-                    legacyReceipt && related.Length == 0 && savedReceipt == null)
+                if (sameAccepted)
                 {
                     result.DuplicateCount++;
                     if (accepted != null)
@@ -215,6 +214,7 @@ public sealed partial class InventoryStore
                         accepted.LastReceivedAt = DateTimeOffset.UtcNow;
                         accepted.ArchiveDirty = true;
                     }
+                    CompleteBatchRecords(journal, [report.RecordId!], "Duplicate", "该增量已接收。");
                     continue;
                 }
                 data.Items.TryGetValue(name, out var records);
@@ -224,12 +224,12 @@ public sealed partial class InventoryStore
                 else if (baseline != null && parsed != null && parsed.RecordedAt < baseline.RecordedAt) reason = "本次变动早于当前确认库存，可能已包含在该库存中，因此未纳入推算。请核对发生时间，勿重复累计；如数量存疑，请查看游戏后手动填写当前实际库存总数。";
                 var pending = Pending(data, name);
                 // 无确认库存时保留有符号变动，不创建零库存基准；范围校验仅适用于已有基准。
-                // TODO：需求验证可依据增量判断达标（如 +5）；涉及负数时应报错，留待需求模块实现。
+                // 需求模块只读取通过校验的增量；达标判断不反向修改库存或结束待核实事件。
                 if (reason == null && baseline != null && parsed != null &&
                     !HasValidDeltaSequence(baseline, pending, report, parsed.RecordedAt))
                     reason = "按发生时间累计变动后，数量超出有效库存范围（小于 0 或超过 64 位整数上限），本次增减未纳入推算。请核对变动记录，或查看游戏后手动填写当前实际库存总数。";
                 if (reason == null) reason = ValidateDeltaExpirations(report, baseline, pending);
-                if (accepted != null || savedReceipt != null)
+                if (accepted != null)
                     reason = "同一物品、来源和发生时间的增量已接收，但本次内容不同。请核对来源；如需修正库存，请上报新的实际库存总数，不能重复累加或覆盖已接收增量。";
                 // 完全相同的失败合并次数；成功重试只结束同一事件的错误，不清除其他库存异常。
                 var repeatedError = related.FirstOrDefault(item => item.State == "Error" && item.Quantity == report.Delta &&
@@ -243,11 +243,15 @@ public sealed partial class InventoryStore
                         Transition(repeatedError, "Error", reason);
                     result.DuplicateCount++;
                     if (!repeatedError.Archived) result.DuplicateErrorCount++;
+                    CompleteBatchRecords(journal, [report.RecordId!], "Rejected", reason);
                     continue;
                 }
                 if (reason == null)
                     foreach (var error in related.Where(item => item.State == "Error" && !item.Archived))
+                    {
+                        error.VerificationReference = data.ProcessingReference;
                         Transition(error, "Error", "同一增量已重新校验并接收，原错误已修正。", true);
+                    }
                 var item = AddEvent(data, name, reference, "Delta", reason == null ? "Pending" : "Error", report.Delta,
                     parsed?.RecordedAt ?? DateTimeOffset.UtcNow, reason ?? "当前增减仅为推算，待后续核实。", baseline?.Quantity);
                 // 增量也保存稳定的上报标识，不改变原有按来源和时间去重的规则。
@@ -257,7 +261,9 @@ public sealed partial class InventoryStore
                 item.Expirations = report.Expirations;
                 item.History.Add("Current=" + Newtonsoft.Json.JsonConvert.SerializeObject(baseline));
                 if (reason == null) result.Accepted.Add(name); else result.Rejected[name] = reason;
+                CompleteBatchRecords(journal, [report.RecordId!], reason == null ? "Accepted" : "Rejected", reason ?? "");
             }
+            QueueBatch(data, journal, result);
             Save(data); SaveSources(); return result;
         });
     }

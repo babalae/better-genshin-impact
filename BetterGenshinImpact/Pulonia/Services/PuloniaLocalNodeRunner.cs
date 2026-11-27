@@ -59,7 +59,7 @@ internal sealed class PuloniaLocalNodeRunner
         if (lease is not null && expectedUid is not null)
             await VerifyAsync(lease.Runtime, expectedUid, ct).ConfigureAwait(false);
         // 3. 游戏节点把租约记录的运行环境交给执行器，节点内的任务只使用它
-        var context = new PuloniaTaskExecutionContext(runId, snapshot, attempt, task.TaskAddress, lease?.Runtime, accountId);
+        var context = new PuloniaTaskExecutionContext(runId, snapshot, attempt, task.TaskAddress, lease?.Runtime, accountId, lease is null ? null : expectedUid);
         // 4. 持有任务锁期间标记会话，执行器内部不能再通过 TaskRunner 启动任务
         using (lease is not null ? GameTaskSessionScope.Enter() : null)
         {

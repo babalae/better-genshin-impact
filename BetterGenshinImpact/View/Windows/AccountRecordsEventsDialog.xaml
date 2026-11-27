@@ -8,7 +8,6 @@
  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <ui:FluentWindow.Resources>
   <BooleanToVisibilityConverter x:Key="BoolVisibility" />
-  <controls:AccountRecordsMessageConverter x:Key="EventMessage" />
  </ui:FluentWindow.Resources>
  <ui:FluentWindow.InputBindings><KeyBinding Key="Escape" Command="{x:Static ApplicationCommands.Close}" /></ui:FluentWindow.InputBindings>
  <ui:FluentWindow.CommandBindings><CommandBinding Command="{x:Static ApplicationCommands.Close}" Executed="CloseWindow" /></ui:FluentWindow.CommandBindings>
@@ -28,7 +27,7 @@
    </ListBox.ContextMenu>
    <ListBox.ItemTemplate><DataTemplate><StackPanel>
     <TextBlock TextWrapping="Wrap"><Run Text="{Binding Name, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding TimeRange, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" /></TextBlock>
-    <TextBlock Text="{Binding Message, Converter={StaticResource EventMessage}, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+    <TextBlock Text="{Binding Message, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
     <StackPanel Orientation="Horizontal"><TextBlock Margin="0,0,12,0"><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
 <!-- 普通状态显示原值；新增或未知状态不再误显示为 Planned。 -->
 <Setter Property="Text" Value="{Binding State, Mode=OneWay, StringFormat=状态：{0}}"/><Style.Triggers>
@@ -46,6 +45,10 @@
     <Expander Header="原始追溯记录" Margin="0,12,0,0" IsExpanded="False">
      <TextBox Text="{Binding HistoryDetails, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" />
     </Expander>
+    <StackPanel Margin="0,12,0,0" Visibility="{Binding HasBatch, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
+     <ui:Button Content="查看所属批次" HorizontalAlignment="Left" Command="{Binding ShowBatchCommand, Mode=OneWay}" />
+     <TextBox Text="{Binding BatchDetails, Mode=OneWay}" Margin="0,8,0,0" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" />
+    </StackPanel>
    </StackPanel>
   </ScrollViewer>
  </Grid>

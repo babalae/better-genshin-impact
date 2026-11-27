@@ -316,6 +316,7 @@ public partial class App : Application
                 // 图标需要重新扫描或上传才能补齐，独立登记并要求确认清理。
                 services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<InventoryIconCache>());
                 services.AddTransient<AccountRecordsInventoryViewModel>();
+                services.AddTransient<AccountRecordsDemandsViewModel>();
                 services.AddView<MusicPage, MusicPageViewModel>();
                 // 自动配音：入口为实时触发页卡片，设置在独立窗口；设置模型为单例以保留草稿。
                 services.AddSingleton<RoutingCatalogStore>();
