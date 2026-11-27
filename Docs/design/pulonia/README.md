@@ -142,7 +142,7 @@ flowchart TB
 - `PuloniaOneDragonViewModel.ImportLegacyAsync` 仍读取全局 `ConfigService.Config`。
 - `PuloniaTaskPlanViewModel.EditNodeConfiguration` 直接创建 `PuloniaTaskNodeSettingsDialog`。
 - `PuloniaGameTaskCoordinator` 与 `TaskRunner` 的会话代码仍各有一份，合并为 `GameTaskLease` 见 [task-contract.md](../task-contract.md) 步骤 D。
-- 服务与执行层的宿主依赖：`PuloniaTaskTriggerHost` 用 WPF `Dispatcher` 在 UI 线程注册热键，`PuloniaTaskHotkeyValidator` 引用 `System.Windows.Input`；`PuloniaGameTaskCoordinator` 引用 `BetterGenshinImpact.View`（任务模式的遮罩）；`PuloniaPathingTaskExecutor` 读取 `MapPathingViewModel.PathJsonPath` 作为路线逻辑路径的根。
+- 服务与执行层的宿主依赖：`PuloniaTaskTriggerHost` requires the WPF `Dispatcher` to register hotkeys on the UI thread. Scheduled triggers also run when no Dispatcher is available. `PuloniaTaskHotkeyValidator` 引用 `System.Windows.Input`；`PuloniaGameTaskCoordinator` 引用 `BetterGenshinImpact.View`（任务模式的遮罩）；`PuloniaPathingTaskExecutor` 读取 `MapPathingViewModel.PathJsonPath` 作为路线逻辑路径的根。
 
 ## 维护方式
 

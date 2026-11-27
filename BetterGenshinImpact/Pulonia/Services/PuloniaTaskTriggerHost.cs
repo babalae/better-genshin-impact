@@ -20,7 +20,7 @@ namespace BetterGenshinImpact.Pulonia.Services;
 /// 每个实例检查执行实例包含本实例的定时触发器（游标存在本实例的 state.json），两种计划热键只在主实例注册。
 /// </summary>
 public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskService tasks,
-    InstanceService instances,
+    InstanceContext instance,
     ILogger<PuloniaTaskTriggerHost> logger, TimeProvider clock, IConfigService? configService = null) : BackgroundService
 {
     /// <summary>检查计划文件修改标记、重试失败热键注册的周期。</summary>
@@ -52,21 +52,19 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // 子实例不注册计划热键：同一组合键只能被一个进程全局注册，键鼠监听也会在每个进程重复响应
-        var registersHotkeys = instances.Context.IsRoot;
         var dispatcher = _dispatcher;
-        if (dispatcher is null)
+        var hotkeyDispatcher = instance.IsRoot ? dispatcher : null;
+        if (dispatcher is not null)
         {
-            Status = "界面正在关闭，自动触发未启动。";
-            return;
-        }
-        // 关闭守卫只在这里挂接：界面开始关闭时由 ShutdownStarted 在所属线程释放热键并取消生命周期。
-        // 先挂接再检查，避免挂接前已开始关闭而错过回调。
-        dispatcher.ShutdownStarted += OnDispatcherShutdown;
-        if (dispatcher.HasShutdownStarted)
-        {
-            _lifetime.Cancel();
-            Status = "界面正在关闭，自动触发未启动。";
-            return;
+            // Subscribe before checking shutdown so the UI callback can always cancel scheduling.
+            dispatcher.ShutdownStarted += OnDispatcherShutdown;
+            if (dispatcher.HasShutdownStarted)
+            {
+                dispatcher.ShutdownStarted -= OnDispatcherShutdown;
+                _lifetime.Cancel();
+                Status = "界面正在关闭，自动触发未启动。";
+                return;
+            }
         }
         using var stopping = stoppingToken.Register(_lifetime.Cancel);
         var token = _lifetime.Token;
@@ -93,8 +91,8 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
                         // 上次有计划文件读取失败（可能只是被其他程序暂时独占）时，按这一周期重试，不必等到文件再被修改。
                         reload = store.GetPlanFilesStamp() != planStamp || planLoadError.Length > 0;
                         // 注册冲突可能已由用户在快捷键页解除，热键注册失败时随这一周期重试。
-                        if (!reload && _hotkeyError.Length > 0 && registersHotkeys)
-                            await RefreshHotkeysAsync(dispatcher, plans, token).ConfigureAwait(false);
+                        if (!reload && _hotkeyError.Length > 0 && hotkeyDispatcher is not null)
+                            await RefreshHotkeysAsync(hotkeyDispatcher, plans, token).ConfigureAwait(false);
                     }
                     if (reload)
                     {
@@ -114,16 +112,16 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
                                 logger.LogWarning("Pulonia 调度跳过无法读取的计划文件 {Path}：{Message}", failure.Path, failure.Message);
                         planLoadError = loadError;
                         lastPoll = now;
-                        if (registersHotkeys)
-                            await RefreshHotkeysAsync(dispatcher, plans, token).ConfigureAwait(false);
+                        if (hotkeyDispatcher is not null)
+                            await RefreshHotkeysAsync(hotkeyDispatcher, plans, token).ConfigureAwait(false);
                     }
                     // 任务服务只处理本实例负责的定时触发器
                     await tasks.CheckTriggersAsync(plans, unreadablePlanIds, token).ConfigureAwait(false);
                     Statuses = tasks.GetTriggerStatuses();
-                    Status = (registersHotkeys
-                                 ? "本实例调度运行中：检查本实例负责的定时，并注册计划热键（仅在程序运行时生效）。"
-                                 : "本实例调度运行中：检查执行实例包含本实例的定时；计划热键只在主实例生效。")
-                             + planLoadError + _hotkeyError;
+                    var hotkeyStatus = hotkeyDispatcher is not null
+                        ? "计划热键仅在程序运行时生效。"
+                        : "计划热键需要带界面的主实例。";
+                    Status = "本实例调度运行中：检查本实例负责的定时。" + hotkeyStatus + planLoadError + _hotkeyError;
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
