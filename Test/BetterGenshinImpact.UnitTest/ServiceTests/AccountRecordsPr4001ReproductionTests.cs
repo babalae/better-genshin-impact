@@ -198,6 +198,10 @@ public sealed class AccountRecordsPr4001ReproductionTests : IDisposable
         {
             // 只读降级也必须拒绝与已提交回执冲突的记录。
             await Assert.ThrowsAsync<InvalidDataException>(() => _store.GetBatchAsync(Uid, batchId));
+            // 分页将冲突批次标为不可读，不向界面返回冲突内容。
+            var page = await _store.GetItemHistoryPageAsync(Uid,
+                [new InventoryRecordReference { BatchId = batchId, RecordId = "one" }]);
+            Assert.Null(Assert.Single(page));
             await Assert.ThrowsAsync<InvalidDataException>(() => _store.ReportAsync(Uid, _source, [Report("摩拉")]));
             Assert.Equal("{broken", File.ReadAllText(path));
             return;

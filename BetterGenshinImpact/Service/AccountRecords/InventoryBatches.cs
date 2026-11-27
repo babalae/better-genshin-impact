@@ -150,7 +150,8 @@ public sealed partial class InventoryStore
                  record.Outcome is not ("Accepted" or "Duplicate"))))
                 throw new InvalidDataException("批次历史不完整：备份与已提交的接受凭证不一致。");
             batch.Records = records.Values.ToList();
-            batch.OriginalCount = Math.Max(batch.OriginalCount, receipts?.Count ?? 0);
+            // 恢复库存可能缺少旧历史的回执，总数不能小于实际合并后的记录数。
+            batch.OriginalCount = Math.Max(Math.Max(batch.OriginalCount, batch.Records.Count), receipts?.Count ?? 0);
             batch.RemovedCount = batch.OriginalCount - batch.Records.Count;
             if (restoreBackup)
             {
@@ -331,6 +332,12 @@ public sealed partial class InventoryStore
     private InventoryBatch? ReadHistoryBatch(InventoryDocument data, string batchId)
     {
         var pending = data.PendingBatches.Where(item => item.BatchId == batchId).ToArray();
+        // 降级前先验证待发布结果的提交凭证，不能因历史不可读而绕过身份与摘要校验。
+        var receipts = data.BatchReceipts.GetValueOrDefault(batchId);
+        foreach (var update in pending)
+            foreach (var record in update.Records)
+                if (receipts?.TryGetValue(record.RecordId, out var receipt) != true || receipt.ContentHash != record.ContentHash)
+                    throw new InvalidDataException("待发布记录与已提交回执内容冲突。");
         InventoryBatch batch;
         try { batch = ReadBatch(data.Uid, batchId, restoreBackup: false); }
         catch (Exception ex) when (pending.Length > 0 && ex is IOException or InvalidDataException or JsonException)

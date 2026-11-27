@@ -73,7 +73,9 @@ public static partial class MaterialDemandPolicy
                 if (evidence == null || !demands.Items.TryGetValue(name, out var target) || result[name].State == MaterialDemandState.Completed ||
                     estimated[index] < target.TargetQuantity) continue;
                 var hasPending = relevantPending.Count > 0 && conservative[index] < target.TargetQuantity;
-                var completionEvidence = hasPending ? evidence : conservativeEvidence!;
+                var completionEvidence = hasPending ? evidence : conservativeEvidence;
+                // 零目标也可能缺少保守库存证据，此时保留单项判断，不借用正增量路径的证据。
+                if (completionEvidence == null) continue;
                 var usesBonus = (hasPending ? basic[index] : conservativeBasic[index]) < target.TargetQuantity;
                 var confirmed = !hasPending || workspace.Settings.UseDeltaForDemands;
                 // 合成数量只作为达成依据，不生成实际库存；不同依据不混记为实测确认。
