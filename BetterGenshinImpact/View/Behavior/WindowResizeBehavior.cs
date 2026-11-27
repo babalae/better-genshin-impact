@@ -46,6 +46,17 @@ public sealed class WindowResizeBehavior : Behavior<FrameworkElement>
             typeof(WindowResizeBehavior),
             new PropertyMetadata(false));
 
+    /// <summary>
+    /// 暂停记录窗口位置。全屏时窗口会被挪到显示器原点，那个坐标不是「用户摆的位置」，
+    /// 记下来会让下次以普通窗口启动时跑到屏幕左上角。
+    /// </summary>
+    public static readonly DependencyProperty PauseSavingProperty =
+        DependencyProperty.Register(
+            nameof(PauseSaving),
+            typeof(bool),
+            typeof(WindowResizeBehavior),
+            new PropertyMetadata(false));
+
     public static readonly DependencyProperty NormalWindowPositionProperty =
         DependencyProperty.Register(
             nameof(NormalWindowPosition),
@@ -85,6 +96,12 @@ public sealed class WindowResizeBehavior : Behavior<FrameworkElement>
     {
         get => (bool)GetValue(IsSmallWindowModeProperty);
         set => SetValue(IsSmallWindowModeProperty, value);
+    }
+
+    public bool PauseSaving
+    {
+        get => (bool)GetValue(PauseSavingProperty);
+        set => SetValue(PauseSavingProperty, value);
     }
 
     public WindowPositionConfig? NormalWindowPosition
@@ -301,7 +318,8 @@ public sealed class WindowResizeBehavior : Behavior<FrameworkElement>
 
     private void SaveWindowPosition(bool isSmallWindowMode)
     {
-        if (_isApplyingPlacement ||
+        if (PauseSaving ||
+            _isApplyingPlacement ||
             _window?.WindowState != WindowState.Normal ||
             !TryGetWindowBounds(out var bounds))
         {

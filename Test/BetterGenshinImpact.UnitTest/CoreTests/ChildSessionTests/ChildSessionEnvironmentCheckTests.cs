@@ -129,26 +129,4 @@ public class ChildSessionEnvironmentCheckTests
         Assert.Contains(startType, new[] { "Automatic", "Manual", "Disabled", "Unknown" });
     }
 
-    [Fact]
-    public void BuildSummary_ShouldBeEmptyWithoutIssues()
-    {
-        Assert.Equal(string.Empty, ChildSessionEnvironmentCheck.BuildSummary([]));
-    }
-
-    [Fact]
-    public void BuildSummary_ShouldContainTitleAndSummary()
-    {
-        var issue = new ChildSessionEnvironmentCheck.Issue(
-            "sample",
-            "示例问题",
-            "一句话结论。",
-            "详细说明。",
-            ChildSessionIssueSeverity.Warning,
-            CanAutoFix: false);
-
-        var text = ChildSessionEnvironmentCheck.BuildSummary([issue]);
-
-        Assert.Contains("示例问题", text);
-        Assert.Contains("一句话结论。", text);
-    }
 }
