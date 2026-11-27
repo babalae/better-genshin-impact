@@ -78,6 +78,17 @@ public sealed class PuloniaAccountsPageTests : IDisposable
         Assert.Equal(["我的账户", "丙", "乙"], saved.Accounts.Select(account => account.Name));
         Assert.Equal("139****1111", saved.Accounts[1].ListText);
 
+        // “狛荷屋”页签：实际实例化并布局；测试没有导航时按钮不可用，说明文字随所选账户的 UID 变化
+        vm.SelectedDetailTabIndex = PuloniaAccountsPageViewModel.AccountRecordsTabIndex;
+        Layout(page, 1100, 720);
+        var open = Assert.Single(VisualChildren(page).OfType<Button>().Where(button => Equals(button.Content, "打开狛荷屋")));
+        Assert.Same(vm.OpenAccountRecordsCommand, open.Command);
+        Assert.False(open.IsEnabled);
+        Assert.Equal("打开狛荷屋，查看 UID 100000003 的库存记录。", vm.AccountRecordsHint);
+        vm.Accounts[1].Uid = "100000009";
+        Assert.Equal("UID 有未保存的修改，请先保存，再打开狛荷屋。", vm.AccountRecordsHint);
+        vm.SelectedAccount = vm.Accounts[0];
+        Assert.StartsWith("这个账户还没有保存 UID", vm.AccountRecordsHint);
     });
 
     /// <summary>只有一个账户时列表收起、直接显示该账户的详情，页首说明按设计文字。</summary>

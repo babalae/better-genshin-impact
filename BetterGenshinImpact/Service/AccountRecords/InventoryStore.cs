@@ -653,18 +653,18 @@ public sealed partial class InventoryStore
             throw new InvalidOperationException("快照上限已被其他操作修改，请重新打开设置确认。");
         if (count is < 1 or > 30) throw new ArgumentOutOfRangeException(nameof(count), "快照数量须为 1～30。");
         settings.SnapshotLimit = count;
-        Configure(settings);
+        Configure(settings, retrySnapshotCleanup: true);
         return settings;
     });
 
-    /// <summary>保存配置；降低日期快照上限时只清理快照，不清理批次和事件。</summary>
-    private void Configure(AccountRecordsSettings settings)
+    /// <summary>保存配置；降低上限或明确重试时清理快照，不清理批次和事件。</summary>
+    private void Configure(AccountRecordsSettings settings, bool retrySnapshotCleanup = false)
     {
         var previous = Settings();
         settings.SnapshotLimit = Math.Clamp(settings.SnapshotLimit, 1, 30);
         settings.DemandCraftingReservePercent = Math.Clamp(settings.DemandCraftingReservePercent, 0, 20);
         Write(Path.Combine(_root, "settings.json"), settings);
-        if (previous.SnapshotLimit <= settings.SnapshotLimit || !Directory.Exists(_root)) return;
+        if ((!retrySnapshotCleanup && previous.SnapshotLimit <= settings.SnapshotLimit) || !Directory.Exists(_root)) return;
         foreach (var directory in Directory.EnumerateDirectories(_root).Where(path => IsValidUid(Path.GetFileName(path))))
             PruneSnapshots(directory, settings.SnapshotLimit);
     }

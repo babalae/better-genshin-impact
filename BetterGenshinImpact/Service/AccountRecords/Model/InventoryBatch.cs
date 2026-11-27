@@ -20,6 +20,10 @@ public sealed class InventoryBatch
     public int OriginalCount { get; set; }
     /// <summary>因保留上限清理的记录数。</summary>
     public int RemovedCount { get; set; }
+    /// <summary>本次处理的记录索引；仅用于服务内查找，不参与持久化，记录顺序仍由列表维护。</summary>
+    [JsonIgnore]
+    internal Dictionary<string, InventoryBatchRecord> RecordIndex { get; set; } = new(StringComparer.Ordinal);
+
     /// <summary>当前保留的批次记录。</summary>
     public List<InventoryBatchRecord> Records { get; set; } = [];
 }

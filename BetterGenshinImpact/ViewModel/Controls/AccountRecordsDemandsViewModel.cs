@@ -260,7 +260,12 @@ public partial class AccountRecordsDemandsViewModel : ObservableObject
                 if (existing.TryGetValue(row.Item.Name, out var current))
                 {
                     refreshView |= current.HasDemand != row.HasDemand || current.Prior != row.Prior ||
-                        current.Item.Page != row.Item.Page || current.Item.MaterialType != row.Item.MaterialType;
+                        current.Item.Page != row.Item.Page || current.Item.MaterialType != row.Item.MaterialType ||
+                        // 原位更新不会触发实时排序；比较器读取的值变化时刷新视图。
+                        current.Item.Quantity != row.Item.Quantity || current.Item.RecordedAt != row.Item.RecordedAt ||
+                        current.TargetQuantity != row.TargetQuantity || current.CreatedAt != row.CreatedAt ||
+                        current.Source != row.Source || current.StateRank != row.StateRank ||
+                        current.Item.ItemNameSortKey != row.Item.ItemNameSortKey || current.CategorySortKey != row.CategorySortKey;
                     current.ApplySnapshot(row, iconRevision != _iconCacheRevision);
                 }
                 else { Rows.Add(row); refreshView = true; }

@@ -167,7 +167,10 @@ public sealed partial class InventoryStore
     /// <summary>独立保存需求页置顶，可置顶尚未创建目标的库存物品。</summary>
     public Task SetDemandPriorAsync(string uid, string name, bool prior) => Locked(() =>
     {
-        if (string.IsNullOrWhiteSpace(name) || name.Length > 128) throw new ArgumentException("物品名称无效。");
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("物品名称无效。");
+        // 添加和取消使用相同的名称规则，避免保存后无法读取需求文档。
+        name = name.Trim();
+        ValidateDemandName(name);
         var data = ReadDemands(uid);
         if (prior) data.Prior.Add(name); else data.Prior.Remove(name);
         Write(Path.Combine(AccountDirectory(uid), "demands.json"), data);

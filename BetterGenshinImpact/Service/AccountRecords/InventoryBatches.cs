@@ -42,15 +42,20 @@ public sealed partial class InventoryStore
     }
 
     /// <summary>预检整批身份冲突，在任何业务变更前执行；失败记录允许相同内容重新校验。</summary>
-    private static InventoryBatch BeginBatch(InventoryDocument data, string? batchId, string kind, IEnumerable<InventoryBatchRecord> records)
+    private InventoryBatch BeginBatch(InventoryDocument data, string? batchId, string kind, IEnumerable<InventoryBatchRecord> records)
     {
         var batch = new InventoryBatch { BatchId = BatchIdentifier(batchId), Kind = kind,
             ReceivedAt = DateTimeOffset.UtcNow, Records = records.ToList() };
         if (batch.Records.Select(item => item.RecordId).Distinct(StringComparer.Ordinal).Count() != batch.Records.Count)
             throw new ArgumentException("同一批次中的 RecordId 必须唯一，本批上报未保存。");
+        batch.RecordIndex = batch.Records.ToDictionary(item => item.RecordId, StringComparer.Ordinal);
         var receipts = data.BatchReceipts.GetValueOrDefault(batch.BatchId);
+        // 恢复的库存可能缺少已发布记录的回执，先核对历史身份，避免提交后才发现冲突。
+        Dictionary<string, InventoryBatchRecord>? published = null;
+        if (batch.Records.Any(record => receipts?.ContainsKey(record.RecordId) != true))
+            published = ReadBatch(data.Uid, batch.BatchId).Records.ToDictionary(item => item.RecordId, StringComparer.Ordinal);
         foreach (var record in batch.Records)
-            if (receipts?.TryGetValue(record.RecordId, out var receipt) == true && receipt.ContentHash != record.ContentHash)
+            if ((receipts?.GetValueOrDefault(record.RecordId)?.ContentHash ?? published?.GetValueOrDefault(record.RecordId)?.ContentHash) is { } hash && hash != record.ContentHash)
                 throw new InvalidOperationException($"记录 {batch.BatchId} / {record.RecordId} 已存在但内容不同。本批未接收，请为新的输入使用新记录标识。");
         batch.OriginalCount = batch.Records.Count;
         return batch;
@@ -61,7 +66,7 @@ public sealed partial class InventoryStore
     {
         data.ProcessingReference = new() { BatchId = batch.BatchId, RecordId = recordId };
         var accepted = data.BatchReceipts.GetValueOrDefault(batch.BatchId)?.GetValueOrDefault(recordId)?.Accepted == true;
-        batch.Records.Single(item => item.RecordId == recordId).AlreadyAccepted = accepted;
+        batch.RecordIndex[recordId].AlreadyAccepted = accepted;
         return accepted;
     }
 
@@ -69,8 +74,9 @@ public sealed partial class InventoryStore
     private static void CompleteBatchRecords(InventoryBatch batch, IEnumerable<string> ids, string outcome, string message = "")
     {
         var selected = ids.ToHashSet(StringComparer.Ordinal);
-        foreach (var record in batch.Records.Where(item => selected.Contains(item.RecordId)))
+        foreach (var id in selected)
         {
+            var record = batch.RecordIndex[id];
             // 组内新输入被拒绝时，已成功接收的旧输入仍按重复提交返回。
             var acceptedReplay = record.AlreadyAccepted && outcome == "Rejected";
             record.Outcome = acceptedReplay ? "Duplicate" : outcome;
@@ -144,20 +150,22 @@ public sealed partial class InventoryStore
             // 导入本身允许混合记录；其他批次追加不同操作时明确标识为 Mixed。
             else if (batch.Kind != pending.Kind && !(batch.Kind == "Import" && pending.Kind is "Report" or "Delta"))
                 batch.Kind = "Mixed";
+            // 每批仅建立一次位置索引，替换时保留历史顺序，新增记录追加到末尾。
+            var positions = batch.Records.Select((record, position) => (record.RecordId, position))
+                .ToDictionary(item => item.RecordId, item => item.position, StringComparer.Ordinal);
             foreach (var record in pending.Records)
             {
-                var previous = batch.Records.FindIndex(item => item.RecordId == record.RecordId);
-                if (previous >= 0)
+                if (positions.TryGetValue(record.RecordId, out var previous))
                 {
                     if (batch.Records[previous].ContentHash != record.ContentHash)
                         throw new InvalidDataException("待发布记录与批次历史内容冲突，已保留恢复依据。");
                     batch.Records[previous] = record;
                 }
-                else { batch.Records.Add(record); batch.OriginalCount++; }
+                else { positions.Add(record.RecordId, batch.Records.Count); batch.Records.Add(record); batch.OriginalCount++; }
                 index[(batch.BatchId, record.RecordId)] = new() { Name = record.Name, ProcessedAt = record.ProcessedAt,
                     Reference = new() { BatchId = batch.BatchId, RecordId = record.RecordId } };
             }
-            batch.OriginalCount = data.BatchReceipts.GetValueOrDefault(batch.BatchId)?.Count ?? batch.OriginalCount;
+            batch.OriginalCount = Math.Max(batch.OriginalCount, data.BatchReceipts.GetValueOrDefault(batch.BatchId)?.Count ?? 0);
             batch.RemovedCount = batch.OriginalCount - batch.Records.Count;
             Write(BatchPath(data.Uid, batch.BatchId), batch);
         }

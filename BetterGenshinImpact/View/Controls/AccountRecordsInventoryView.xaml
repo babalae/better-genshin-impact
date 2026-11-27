@@ -57,20 +57,20 @@
                             <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}, Mode=OneWay}">
                                 <MenuItem Header="{Binding PriorActionText, Mode=OneWay}" Command="{Binding Data.TogglePriorCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}"
                                           ToolTip="{i18n:T 仅置顶当前物品。}" />
-                                <MenuItem Header="查看物品详情…" ToolTip="双击物品行也可查看库存与历史记录" Command="{Binding Data.ShowRecentCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
-                                <MenuItem Header="修改数量 / 修订字典" Command="{Binding Data.EditCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <MenuItem Header="{i18n:T 查看物品详情…}" ToolTip="{i18n:T 双击物品行也可查看库存与历史记录}" Command="{Binding Data.ShowRecentCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <MenuItem Header="{i18n:T 修改数量 / 修订字典}" Command="{Binding Data.EditCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
                                 <MenuItem Header="{i18n:T 刷新}" Command="{Binding Data.RefreshCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" />
-                                <MenuItem Header="归档同类未受阻的完成事件" Command="{Binding Data.ArchiveCompletedEventsCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
-                                <MenuItem Header="查看异常" Command="{Binding Data.ShowStatusCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" IsEnabled="{Binding HasStatusLight, Mode=OneWay}" />
+                                <MenuItem Header="{i18n:T 归档同类未受阻的完成事件}" Command="{Binding Data.ArchiveCompletedEventsCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                                <MenuItem Header="{i18n:T 查看异常}" Command="{Binding Data.ShowStatusCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" IsEnabled="{Binding HasStatusLight, Mode=OneWay}" />
                                 <Separator />
-                                <MenuItem Header="显示过期时间" IsCheckable="True"
+                                <MenuItem Header="{i18n:T 显示过期时间}" IsCheckable="True"
                                           IsChecked="{Binding Data.ShowExpirationColumn, Source={StaticResource InventoryProxy}, Mode=OneWay}"
                                           Command="{Binding Data.ToggleExpirationColumnCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" />
                                 <Separator />
-                                <MenuItem Header="删除图像缓存" Command="{Binding Data.DeleteIconCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
-                                <MenuItem Header="上传图标…" Command="{Binding Data.UploadIconCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <MenuItem Header="{i18n:T 删除图像缓存}" Command="{Binding Data.DeleteIconCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <MenuItem Header="{i18n:T 上传图标…}" Command="{Binding Data.UploadIconCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
                                 <Separator />
-                                <MenuItem Header="删除此物品记录" Command="{Binding Data.DeleteCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <MenuItem Header="{i18n:T 删除此物品记录}" Command="{Binding Data.DeleteCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
                             </ContextMenu>
                         </Setter.Value>
                     </Setter>
@@ -79,8 +79,8 @@
             <DataGrid.Columns>
                 <DataGridTemplateColumn Width="36" MinWidth="36" MaxWidth="36" CanUserResize="False" CanUserSort="False" Header="" HeaderTemplate="{StaticResource AccountRecordsIconHeaderTemplate}" HeaderStyle="{StaticResource AccountRecordsIconHeader}" CellTemplate="{StaticResource AccountRecordsIconTemplate}" />
                 <!-- 固定默认宽度，不随窗口压缩；放不下时使用横向滚动。 -->
-                <DataGridTextColumn Header="名称" Binding="{Binding Name, Mode=OneWay}" SortMemberPath="ItemNameSortKey" ElementStyle="{StaticResource AccountRecordsNameText}" Width="156" MinWidth="44" />
-                <DataGridTemplateColumn Header="类型" SortMemberPath="Category" Width="156" MinWidth="48">
+                <DataGridTextColumn Header="{i18n:T 名称}" Binding="{Binding Name, Mode=OneWay}" SortMemberPath="ItemNameSortKey" ElementStyle="{StaticResource AccountRecordsNameText}" Width="156" MinWidth="44" />
+                <DataGridTemplateColumn Header="{i18n:T 类型}" SortMemberPath="Category" Width="156" MinWidth="48">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <!-- 保留原始类型文字，PNG 只表达所属背包页；窄列仅保留 36×36 图标。 -->
@@ -89,7 +89,7 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="库存" SortMemberPath="Quantity" HeaderStyle="{StaticResource InventoryQuantityHeader}" Width="120" MinWidth="44">
+                <DataGridTemplateColumn Header="{i18n:T 库存}" SortMemberPath="Quantity" HeaderStyle="{StaticResource InventoryQuantityHeader}" Width="120" MinWidth="44">
                     <DataGridTemplateColumn.CellTemplate><DataTemplate>
                         <Grid ClipToBounds="True">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -104,7 +104,7 @@
                         </Grid>
                     </DataTemplate></DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="记录时间" SortMemberPath="RecordedAt" Width="104" MinWidth="80">
+                <DataGridTemplateColumn Header="{i18n:T 记录时间}" SortMemberPath="RecordedAt" Width="104" MinWidth="80">
                     <DataGridTemplateColumn.CellTemplate><DataTemplate>
                         <TextBlock Style="{StaticResource InventoryText}" ToolTip="{Binding TimeText, Mode=OneWay}">
                             <TextBlock.Text>
@@ -116,18 +116,18 @@
                         </TextBlock>
                     </DataTemplate></DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="过期时间" Width="160" MinWidth="80" SortMemberPath="EarliestExpiration"
+                <DataGridTemplateColumn Header="{i18n:T 过期时间}" Width="160" MinWidth="80" SortMemberPath="EarliestExpiration"
                     Visibility="{Binding Data.ShowExpirationColumn, Source={StaticResource InventoryProxy}, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
                     <DataGridTemplateColumn.CellTemplate><DataTemplate>
                         <TextBlock Text="{Binding ExpirationText, Mode=OneWay}" ToolTip="{Binding ExpirationDetails, Mode=OneWay}" Style="{StaticResource InventoryText}" />
                     </DataTemplate></DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="来源" Width="*" MinWidth="160" CanUserResize="True" SortMemberPath="SourceName">
+                <DataGridTemplateColumn Header="{i18n:T 来源}" Width="*" MinWidth="160" CanUserResize="True" SortMemberPath="SourceName">
                     <DataGridTemplateColumn.CellTemplate><DataTemplate>
                         <TextBlock Text="{Binding SourceName, Mode=OneWay}" ToolTip="{Binding SourceReference, Mode=OneWay}" Style="{StaticResource InventoryText}" />
                     </DataTemplate></DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="状态" Width="44" MinWidth="44" MaxWidth="44" CanUserResize="False" CanUserReorder="False" SortMemberPath="StateRank">
+                <DataGridTemplateColumn Header="{i18n:T 状态}" Width="44" MinWidth="44" MaxWidth="44" CanUserResize="False" CanUserReorder="False" SortMemberPath="StateRank">
                     <DataGridTemplateColumn.CellTemplate><DataTemplate>
                         <Button Style="{StaticResource ErrorButton}" Visibility="{Binding HasStatusLight, Converter={StaticResource BoolVisibility}, Mode=OneWay}"
                                 AutomationProperties.Name="查看库存状态"
@@ -187,10 +187,10 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="{Binding Details, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,8,0" VerticalAlignment="Bottom" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                                            <ui:Button Padding="8,2" MinHeight="24" Content="打开 log" Margin="0,0,6,0" Command="{Binding Data.OpenNoticeCardEventsCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
-                                            <ui:Button Padding="8,2" MinHeight="24" Content="舍弃" Margin="0,0,6,0" Command="{Binding Data.ResolveNoticeCardCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanResolve, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
-                                            <ui:Button Padding="8,2" MinHeight="24" Content="归档" Margin="0,0,6,0" Command="{Binding Data.ArchiveNoticeCardCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
-                                            <ui:Button Padding="8,2" MinHeight="24" Content="批量归档" Command="{Binding Data.ArchiveNoticeCardBatchCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" ToolTip="归档本账户中未受阻的同类完成事件。" />
+                                            <ui:Button Padding="8,2" MinHeight="24" Content="{i18n:T 打开 log}" Margin="0,0,6,0" Command="{Binding Data.OpenNoticeCardEventsCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                            <ui:Button Padding="8,2" MinHeight="24" Content="{i18n:T 舍弃}" Margin="0,0,6,0" Command="{Binding Data.ResolveNoticeCardCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanResolve, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                                            <ui:Button Padding="8,2" MinHeight="24" Content="{i18n:T 归档}" Margin="0,0,6,0" Command="{Binding Data.ArchiveNoticeCardCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                                            <ui:Button Padding="8,2" MinHeight="24" Content="{i18n:T 批量归档}" Command="{Binding Data.ArchiveNoticeCardBatchCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" ToolTip="{i18n:T 归档本账户中未受阻的同类完成事件。}" />
                                             </WrapPanel>
                                         </Grid>
                                     </StackPanel>
@@ -201,7 +201,7 @@
                 </ScrollViewer>
                 </StackPanel>
                 <ui:Button HorizontalAlignment="Right" VerticalAlignment="Top" Width="24" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                           Icon="{ui:SymbolIcon Dismiss16}" Appearance="Transparent" ToolTip="收起全部提示，不归档事件"
+                           Icon="{ui:SymbolIcon Dismiss16}" Appearance="Transparent" ToolTip="{i18n:T 收起全部提示，不归档事件}"
                            AutomationProperties.Name="关闭通知" Command="{Binding CloseNoticeCommand, Mode=OneWay}">
                     <b:Interaction.Behaviors>
                         <behavior:AccountRecordsNoticeCloseGuardBehavior NoticeTarget="{Binding NoticeRow, Mode=OneWay}" />

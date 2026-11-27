@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
@@ -38,18 +39,22 @@ public sealed partial class InventoryStore
             Require(!string.IsNullOrWhiteSpace(key) && key == key.Trim() && key.Length <= (file == "sources.json" ? 1024 : 128), key,
                 $"键不能为空或包含首尾空白，最多 {(file == "sources.json" ? 1024 : 128)} 字符");
             Require(property.Value is JObject, key, "条目必须为 JSON 对象，不能为 null");
-            var item = (JObject)property.Value;
+            // 与 Json.NET 的属性匹配规则一致，并拒绝仅大小写不同的重复字段。
+            var fields = ((JObject)property.Value).Properties().ToArray();
+            Require(fields.Select(field => field.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() == fields.Length,
+                key, "字段名称不能以不同大小写重复出现");
+            var item = fields.ToDictionary(field => field.Name, field => field.Value, StringComparer.OrdinalIgnoreCase);
             if (file == "item-overrides.json")
             {
-                Require(item["Comment"] == null || item["Comment"]!.Type == JTokenType.String, key + ".Comment", "备注须为文本");
-                Require(item["Page"] == null || item["Page"]!.Type == JTokenType.Null ||
-                    item["Page"]!.Type == JTokenType.String && ((string)item["Page"]!).Length <= 128,
+                Require(item.GetValueOrDefault("Comment") == null || item.GetValueOrDefault("Comment")!.Type == JTokenType.String, key + ".Comment", "备注须为文本");
+                Require(item.GetValueOrDefault("Page") == null || item.GetValueOrDefault("Page")!.Type == JTokenType.Null ||
+                    item.GetValueOrDefault("Page")!.Type == JTokenType.String && ((string)item.GetValueOrDefault("Page")!).Length <= 128,
                     key + ".Page", "背包页须为最多 128 字符的文本或 null");
-                Require(item["Category"]?.Type == JTokenType.String && !string.IsNullOrWhiteSpace((string?)item["Category"]) && ((string)item["Category"]!).Length <= 128, key + ".Category", "分类须为 1～128 字符的非空文本");
+                Require(item.GetValueOrDefault("Category")?.Type == JTokenType.String && !string.IsNullOrWhiteSpace((string?)item.GetValueOrDefault("Category")) && ((string)item.GetValueOrDefault("Category")!).Length <= 128, key + ".Category", "分类须为 1～128 字符的非空文本");
                 continue;
             }
-            Require(item["Reference"]?.Type == JTokenType.String && (string?)item["Reference"] == key, key + ".Reference", "来源标识须为文本并与条目键完全一致");
-            Require(item["DisplayName"]?.Type == JTokenType.String && !string.IsNullOrWhiteSpace((string?)item["DisplayName"]) && ((string)item["DisplayName"]!).Length <= 1024, key + ".DisplayName", "显示名称须为 1～1024 字符的非空文本");
+            Require(item.GetValueOrDefault("Reference")?.Type == JTokenType.String && (string?)item.GetValueOrDefault("Reference") == key, key + ".Reference", "来源标识须为文本并与条目键完全一致");
+            Require(item.GetValueOrDefault("DisplayName")?.Type == JTokenType.String && !string.IsNullOrWhiteSpace((string?)item.GetValueOrDefault("DisplayName")) && ((string)item.GetValueOrDefault("DisplayName")!).Length <= 1024, key + ".DisplayName", "显示名称须为 1～1024 字符的非空文本");
         }
     }
 
