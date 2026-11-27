@@ -7,6 +7,18 @@ namespace BetterGenshinImpact.UnitTest.ServiceTests;
 /// <summary>家族覆盖、共享分配、未知基准与不同达成依据的纯计算验证。</summary>
 public sealed class MaterialFamilyTests
 {
+    /// <summary>缺少高阶库存时，零目标不得使整张需求表计算失败，正目标仍需核实增量。</summary>
+    [Theory]
+    [InlineData(0, MaterialDemandState.Unmet)]
+    [InlineData(1, MaterialDemandState.Pending)]
+    public void MissingConservativeEvidencePreservesDemandResult(long target, MaterialDemandState expected)
+    {
+        var workspace = Workspace(("史莱姆凝液", 0));
+        workspace.Inventory.Events.Add(Delta("史莱姆凝液", 3));
+        var progress = MaterialDemandPolicy.EvaluateAll(workspace, Demands(("史莱姆清", target)))["史莱姆清"];
+        Assert.Equal(expected, progress.State);
+    }
+
     /// <summary>不依赖正增量时，完成来源和时间应来自保守合成路径。</summary>
     [Fact]
     public void ConservativeCompletionUsesItsOwnEvidence()

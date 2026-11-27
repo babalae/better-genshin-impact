@@ -196,6 +196,8 @@ public sealed class AccountRecordsPr4001ReproductionTests : IDisposable
         File.WriteAllText(path, "{broken", new UTF8Encoding(false));
         if (conflictingHash)
         {
+            // 只读降级也必须拒绝与已提交回执冲突的记录。
+            await Assert.ThrowsAsync<InvalidDataException>(() => _store.GetBatchAsync(Uid, batchId));
             await Assert.ThrowsAsync<InvalidDataException>(() => _store.ReportAsync(Uid, _source, [Report("摩拉")]));
             Assert.Equal("{broken", File.ReadAllText(path));
             return;
@@ -207,6 +209,34 @@ public sealed class AccountRecordsPr4001ReproductionTests : IDisposable
         Assert.Equal("Accepted", JObject.Parse(File.ReadAllText(path))["Records"]![0]!["Outcome"]!.Value<string>());
         Assert.Empty(JsonConvert.DeserializeObject<InventoryDocument>(File.ReadAllText(InventoryPath))!.PendingBatches);
         Assert.Equal(1, (await _store.ReportDeltaAsync(Uid, _source, [delta], batchId)).DuplicateCount);
+    }
+
+    /// <summary>旧历史缺少回执时，恢复合并新增记录仍须保持有效的总数和删除数。</summary>
+    [Fact]
+    public async Task RecoveryCountIncludesHistoryWithoutReceipt()
+    {
+        const string batchId = "partial-receipts";
+        var first = Report("摩拉");
+        first.RecordId = "one";
+        await _store.ReportAsync(Uid, _source, [first], batchId: batchId);
+        var second = Report("摩拉", 15, 1);
+        second.RecordId = "two";
+        await _store.ReportAsync(Uid, _source, [second], batchId: batchId);
+        var path = Path.Combine(AccountDirectory, "batches", Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(batchId))) + ".json");
+        var batch = JsonConvert.DeserializeObject<InventoryBatch>(File.ReadAllText(path),
+            new JsonSerializerSettings { DateParseHandling = DateParseHandling.None })!;
+        var data = JsonConvert.DeserializeObject<InventoryDocument>(File.ReadAllText(InventoryPath))!;
+        data.BatchReceipts[batchId].Remove("one");
+        batch.Records.RemoveAll(record => record.RecordId == "one");
+        batch.OriginalCount = 1;
+        data.PendingBatches.Add(batch);
+        File.WriteAllText(InventoryPath, JsonConvert.SerializeObject(data), new UTF8Encoding(false));
+        File.WriteAllText(path, "{broken", new UTF8Encoding(false));
+        await _store.ReportAsync(Uid, _source, [Report("摩拉", 20, 2)]);
+        var restored = JsonConvert.DeserializeObject<InventoryBatch>(File.ReadAllText(path))!;
+        Assert.Equal(2, restored.Records.Count);
+        Assert.Equal(2, restored.OriginalCount);
+        Assert.Equal(0, restored.RemovedCount);
     }
 
     /// <summary>当前格式需求文件结构损坏时，自动快照不应阻断有效库存上报。</summary>
