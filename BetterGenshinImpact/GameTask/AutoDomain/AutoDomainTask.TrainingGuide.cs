@@ -209,7 +209,8 @@ public partial class AutoDomainTask
             noTargets = text.Contains("当前暂无可获取的培养素材", StringComparison.Ordinal);
             TrainingGuideDiagnostics.Detail("候选秘境测试：滚动前无目标提示 OCR【{Text}】，确认无目标 {NoTargets}", empty.Text, noTargets);
             if (!noTargets)
-                _runtime.GameRegion1080PPosMove((int)(initial.Width * .52), (int)(initial.Height * .45));
+                // 使用 1080P 基准坐标，由移动方法统一适配实际分辨率。
+                _runtime.GameRegion1080PPosMove(1000, 512);
         }
         if (noTargets)
         {
@@ -313,6 +314,9 @@ public partial class AutoDomainTask
                 await _runtime.Delay(800, _ct);
                 continue;
             }
+            // 每批滚动前将鼠标复位到秘境列表区域，坐标以 1080P 为基准。
+            _runtime.GameRegion1080PPosMove(1000, 512);
+
             // 首次滚动三次避开标题影响，之后每轮八次；每批完成后再 OCR。
             var scrollSteps = page == 0 ? 3 : 8;
             for (var step = 0; step < scrollSteps; step++)

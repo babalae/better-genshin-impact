@@ -1833,13 +1833,19 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 
     private async Task<bool> WaitForRewardResultReady()
     {
-        for (var i = 0; i < 20; i++)
+        // 原有 6 秒等待额外预留 10 秒动画时间，按 300ms 间隔向上取整。
+        for (var i = 0; i < 54; i++)
         {
             using var capture = _runtime.CaptureToRectArea();
             using var exitRegion = capture.Find(RecognitionAssets.Get("AutoFight", "Exit", capture));
             if (exitRegion.IsExist())
             {
                 return true;
+            }
+            // 含调用前固定等待的 1 秒，约第 8 秒提示一次，另计截图识别耗时。
+            if (i == 24)
+            {
+                Logger.LogWarning("自动秘境：领奖等待时间较长，疑似未开启“跳过领奖动画”，推荐任务结束后手动开启。");
             }
             await _runtime.Delay(300, _ct);
         }
