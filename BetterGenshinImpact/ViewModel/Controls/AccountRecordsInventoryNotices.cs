@@ -14,7 +14,7 @@ public partial class AccountRecordsInventoryViewModel
     /// <summary>是否正在展示事件卡片。</summary>
     public bool HasNoticeCards => NoticeCards.Count > 0;
     /// <summary>无卡片时显示一般状态，有卡片时仍显示独立操作错误或导入摘要。</summary>
-    public bool ShowStatusMessage => !HasNoticeCards || Status != AccountRecordsErrorMessages.ForDisplay(NoticeRow?.Event?.Message ?? NoticeRow?.Error?.Message ?? "");
+    public bool ShowStatusMessage => !HasNoticeCards || Status != (NoticeRow?.Event?.Message ?? NoticeRow?.Error?.Message ?? "");
 
     /// <summary>用当前快照替换卡片，同时刷新状态区的可见性。</summary>
     private void RefreshNoticeCards()
@@ -41,7 +41,7 @@ public partial class AccountRecordsInventoryViewModel
     private async Task ResolveNoticeCard(AccountRecordsNoticeCard? card)
     {
         if (!IsCurrentCard(card) || !card!.CanResolve) return;
-        await RunManualAsync(() => _store.ResolveAsync(card.Uid, card.Name, card.ErrorId!, false,
+        await RunManualAsync(() => _store.DiscardErrorAsync(card.Uid, card.Name, card.ErrorId!,
             card.EventVersions));
     }
 

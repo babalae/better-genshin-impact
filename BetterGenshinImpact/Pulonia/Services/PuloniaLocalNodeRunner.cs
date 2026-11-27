@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.Pulonia.Services;
 internal sealed class PuloniaLocalNodeRunner
 {
     /// <summary>
-    /// 账户准备与核验；没有注册时不核验 UID，账户准备直接失败。
+    /// 账户准备与核验；没有注册时，需要账户准备或 UID 核验的任务直接失败。
     /// </summary>
     private readonly IPuloniaGenshinAccountSwitcher? _accountSwitcher;
 
@@ -59,7 +59,7 @@ internal sealed class PuloniaLocalNodeRunner
         if (lease is not null && expectedUid is not null)
             await VerifyAsync(lease.Runtime, expectedUid, ct).ConfigureAwait(false);
         // 3. 游戏节点把租约记录的运行环境交给执行器，节点内的任务只使用它
-        var context = new PuloniaTaskExecutionContext(runId, snapshot, attempt, task.TaskAddress, lease?.Runtime, accountId);
+        var context = new PuloniaTaskExecutionContext(runId, snapshot, attempt, task.TaskAddress, lease?.Runtime, accountId, lease is null ? null : expectedUid);
         // 4. 持有任务锁期间标记会话，执行器内部不能再通过 TaskRunner 启动任务
         using (lease is not null ? GameTaskSessionScope.Enter() : null)
         {
@@ -126,12 +126,13 @@ internal sealed class PuloniaLocalNodeRunner
     }
 
     /// <summary>
-    /// 核验当前登录 UID；没有账户切换能力时跳过（纯任务服务）。
+    /// 核验当前登录 UID；缺少核验能力时拒绝执行，避免将预期 UID 当成已核验身份。
     /// </summary>
     private async Task VerifyAsync(GameRuntime runtime, string expectedUid, CancellationToken ct)
     {
-        if (_accountSwitcher is null) return;
-        try { await _accountSwitcher.VerifyAsync(runtime, expectedUid, ct).ConfigureAwait(false); }
+        var accountSwitcher = _accountSwitcher
+                              ?? throw new PuloniaGenshinAccountException("当前实例没有账户 UID 核验能力。", new InvalidOperationException());
+        try { await accountSwitcher.VerifyAsync(runtime, expectedUid, ct).ConfigureAwait(false); }
         catch (Exception ex) when (ex is not OperationCanceledException)
         { throw new PuloniaGenshinAccountException(ex.Message, ex); }
     }

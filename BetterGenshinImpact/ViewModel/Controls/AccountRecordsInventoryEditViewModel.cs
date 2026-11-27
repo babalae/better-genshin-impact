@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -14,6 +15,10 @@ namespace BetterGenshinImpact.ViewModel.Controls;
 /// <summary>数量编辑和补充字典维护，合法名称不允许就地重命名。</summary>
 public partial class AccountRecordsInventoryEditViewModel : ObservableObject
 {
+    /// <summary>同一编辑内容重试复用批次标识，内容改变才开始新的操作。</summary>
+    private string? _submissionContent;
+    /// <summary>当前人工提交的批次标识。</summary>
+    private string _submissionBatchId = Guid.NewGuid().ToString("N");
     /// <summary>保存入口。</summary>
     private readonly InventoryStore _store;
     /// <summary>内置目录。</summary>
@@ -24,10 +29,6 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
     private readonly string _uid;
     /// <summary>待修订的原行。</summary>
     private readonly AccountRecordsInventoryRow? _original;
-    /// <summary>用户明确反馈原上报错误，默认不选。</summary>
-    [ObservableProperty] private bool _markScanIncorrect;
-    /// <summary>仅有可追溯的核实记录时允许反馈。</summary>
-    public bool CanMarkScanIncorrect => _original?.LastScanAttemptId != null;
     /// <summary>保存成功后请求视图关闭。</summary>
     public event Action? Saved;
     /// <summary>名称字段仅新增或未知名称可编辑。</summary>
@@ -74,7 +75,7 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
         _store = store; _catalog = catalog; _uid = uid; _original = row; _definitions = definitions;
         CanEditName = row == null || !definitions.ContainsKey(row.Name);
         Name = row?.Name ?? "";
-        var quantity = row?.Quantity ?? (row?.Error?.Code == "ReadFailed" ? null : row?.Error?.Incoming.Quantity);
+        var quantity = row?.Quantity ?? (row?.Error?.Code == "ReadFailed" ? null : row?.Error?.IncomingQuantity);
         QuantityText = quantity?.ToString(CultureInfo.InvariantCulture) ?? "";
         // 优先使用当前展示的推算批次，仍要求用户按游戏实际情况核对。
         var batches = row?.Expirations ?? row?.Recent.FirstOrDefault()?.Expirations ??
@@ -121,14 +122,16 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
         // 在任何字典写入前复用服务层校验，避免到期输入无效时分类已部分保存。
         var expirationError = InventoryStore.ValidateExpirations(batches, quantity);
         if (expirationError != null) { Message = expirationError; return; }
+        var content = JsonConvert.SerializeObject(new { Name = name, Quantity = quantity, Expirations = batches });
+        if (_submissionContent != content) { _submissionContent = content; _submissionBatchId = Guid.NewGuid().ToString("N"); }
         try
         {
             await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(async () =>
             {
                 if (CanEditCategory && !string.IsNullOrWhiteSpace(Category)) await _store.DefineAsync(name, Category);
                 await _store.SetLocalQuantityAsync(_uid, name, quantity,
-                    MarkScanIncorrect && CanMarkScanIncorrect ? _original!.LastScanAttemptId : null,
-                    _original != null && _original.Name != name ? _original.Name : null, batches);
+                    originalName: _original != null && _original.Name != name ? _original.Name : null,
+                    expirations: batches, batchId: _submissionBatchId);
             });
             Saved?.Invoke();
         }

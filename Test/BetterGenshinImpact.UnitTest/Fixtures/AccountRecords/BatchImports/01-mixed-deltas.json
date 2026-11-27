@@ -1,0 +1,40 @@
+{
+  "format": "BetterGI.AccountRecords",
+  "version": 1,
+  "batchId": "inventory-demo-deltas",
+  "sources": {
+    "test/inventory-batches": {
+      "reference": "test/inventory-batches",
+      "displayName": "库存批次测试"
+    }
+  },
+  "itemDefinitions": {},
+  "accounts": {
+    "1999999999": {
+      "inventory": {},
+      "deltas": [
+        {
+          "recordId": "mora-delta",
+          "name": "摩拉",
+          "delta": 500,
+          "recordedAt": "2026-11-18T00:01:00Z",
+          "source": "test/inventory-batches"
+        },
+        {
+          "recordId": "primogems-error",
+          "name": "原石",
+          "delta": -999,
+          "recordedAt": "2026-11-18T00:01:00Z",
+          "source": "test/inventory-batches"
+        },
+        {
+          "recordId": "flower-delta",
+          "name": "甜甜花",
+          "delta": 5,
+          "recordedAt": "2026-11-18T00:01:00Z",
+          "source": "test/inventory-batches"
+        }
+      ]
+    }
+  }
+}

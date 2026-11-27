@@ -20,6 +20,211 @@ namespace BetterGenshinImpact.UnitTest.ServiceTests;
 /// <summary>用独立 STA 消息循环验证账号切换和原位刷新，不启动主程序或显示窗口。</summary>
 public sealed class InventoryViewRefreshTests
 {
+    /// <summary>需求页允许修订库存，切回库存页立即读取变化，不等待分钟刷新。</summary>
+    [Fact]
+    public Task ReturningFromDemandsRefreshesInventory() => RunSta(async () =>
+    {
+        var root = Path.Combine(Path.GetTempPath(), "InventoryViewRefreshTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var csv = Path.Combine(root, "items.csv");
+            await File.WriteAllTextAsync(csv, "item_name,material_type,page\n甜甜花,植物,材料\n");
+            var catalog = new InventoryCatalog(csv);
+            var store = new InventoryStore(catalog, Path.Combine(root, "records"));
+            var icons = new InventoryIconCache(Path.Combine(root, "icons"));
+            const string uid = "100000001";
+            await store.SetLocalQuantityAsync(uid, "甜甜花", 5);
+            var inventory = new AccountRecordsInventoryViewModel(store, catalog, icons);
+            var demands = new AccountRecordsDemandsViewModel(store, catalog, icons);
+            using var puloniaStore = new PuloniaTaskStore(Path.Combine(root, "pulonia"));
+            var page = new AccountRecordsPageViewModel(store, inventory, await CreateAccountsAsync(puloniaStore, uid), demands)
+                { SelectedUid = uid };
+            await inventory.SelectUidAsync(uid);
+            var row = Assert.Single(inventory.Rows);
+            page.SelectedTabIndex = 1;
+            await demands.ResumeAsync(uid);
+            await store.SetLocalQuantityAsync(uid, "甜甜花", 12);
+            Assert.Equal(5, row.Quantity);
+            var refreshed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            inventory.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(inventory.ItemCountText) && row.Quantity == 12) refreshed.TrySetResult();
+            };
+            page.SelectedTabIndex = 0;
+            await refreshed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Same(row, Assert.Single(inventory.Rows));
+            Assert.Equal(12, row.Quantity);
+        }
+        finally { Directory.Delete(root, true); }
+    });
+
+    /// <summary>库存只置顶选中的物品，不联动同族；名称采用普通字重。</summary>
+    [Fact]
+    public Task InventoryPinsOnlySelectedItem() => RunSta(async () =>
+    {
+        var root = Path.Combine(Path.GetTempPath(), "InventoryViewRefreshTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var csv = Path.Combine(root, "items.csv");
+            await File.WriteAllTextAsync(csv, "item_name,material_type,page\n史莱姆凝液,培养素材,材料\n史莱姆清,培养素材,材料\n史莱姆原浆,培养素材,材料\n");
+            var catalog = new InventoryCatalog(csv);
+            var store = new InventoryStore(catalog, Path.Combine(root, "records"));
+            const string uid = "100000001";
+            foreach (var name in new[] { "史莱姆凝液", "史莱姆清", "史莱姆原浆" })
+                await store.SetLocalQuantityAsync(uid, name, 1);
+            var vm = new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache(Path.Combine(root, "icons")));
+            await vm.SelectUidAsync(uid);
+            var selected = vm.Rows.Single(row => row.Name == "史莱姆清");
+            await vm.TogglePriorCommand.ExecuteAsync(selected);
+            Assert.Same(selected, vm.Items.Cast<AccountRecordsInventoryRow>().First());
+            Assert.Same(selected, Assert.Single(vm.Rows.Where(row => row.Prior)));
+            Assert.Same(selected, Assert.Single(vm.Rows.Where(row => row.ShowPriorSeparator)));
+            var view = new AccountRecordsInventoryView { DataContext = vm };
+            var label = new TextBlock { Style = (Style)view.FindResource("AccountRecordsNameText"), DataContext = selected };
+            Assert.Equal(FontWeights.Normal, label.FontWeight);
+        }
+        finally { Directory.Delete(root, true); }
+    });
+
+    /// <summary>分类来自完整库存行而非字典或搜索结果，包含零库存、无基准增量和未知物品错误。</summary>
+    [Fact]
+    public Task CategoryFilter_OnlyListsInventoryCategories() => RunSta(async () =>
+    {
+        var root = Path.Combine(Path.GetTempPath(), "InventoryCategoryFilterTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var csv = Path.Combine(root, "items.csv");
+            File.WriteAllText(csv, "item_name,material_type,page\n甜甜花,植物,材料\n铁块,矿物,材料\n苹果,食材,食物\n木材,木料,材料\n");
+            var catalog = new InventoryCatalog(csv);
+            var store = new InventoryStore(catalog, Path.Combine(root, "records"));
+            const string uid = "100000001";
+            var source = new AccountRecordSource { Reference = "scan", DisplayName = "scan" };
+            var time = DateTimeOffset.UtcNow.AddHours(-1).ToString("O");
+            await store.ReportAsync(uid, source, [new() { Name = "甜甜花", Quantity = 0, RecordedAt = time }]);
+            await store.ReportDeltaAsync(uid, source, [new() { Name = "铁块", Delta = 5, RecordedAt = time }]);
+            await store.ReportAsync(uid, source, [new() { Name = "未知物品", Quantity = -1, RecordedAt = time }]);
+            var vm = new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache(Path.Combine(root, "icons")));
+            await vm.SelectUidAsync(uid);
+            Assert.Equal(2, vm.Categories.Count);
+            var materials = Assert.Single(vm.Categories.Where(item => item.Page == "材料"));
+            Assert.Equal(new[] { "植物", "矿物" }, materials.Children.Select(item => item.Category).OrderBy(item => item, StringComparer.Ordinal));
+            Assert.Single(vm.Categories.Where(item => item.Page == ""));
+            vm.SearchText = "不存在";
+            Assert.Empty(vm.Items.Cast<object>());
+            Assert.Equal(2, vm.Categories.Count);
+            vm.SearchText = "";
+            materials.Children.Single(item => item.Category == "矿物").IsSelected = false;
+            await store.DeleteItemAsync(uid, "甜甜花");
+            await vm.RefreshTimeWarningsCommand.ExecuteAsync(null);
+            var remaining = Assert.Single(vm.Categories.Single(item => item.Page == "材料").Children);
+            Assert.Equal("矿物", remaining.Category);
+            Assert.False(remaining.IsSelected);
+            await vm.SelectUidAsync("100000002");
+            Assert.Empty(vm.Categories);
+            await vm.SelectUidAsync(null);
+            Assert.Empty(vm.Categories);
+        }
+        finally { Directory.Delete(root, true); }
+    });
+
+    /// <summary>物品历史分页不重复，每页合并批次读取，失败后可重试，并可独立布局。</summary>
+    [Fact]
+    public Task ItemHistory_PagesAndRetriesWithoutRepeatingCards() => RunSta(async () =>
+    {
+        var calls = 0;
+        var fail = false;
+        var batch = new InventoryBatch { BatchId = "a", Records = Enumerable.Range(0, 51)
+            .Select(i => new InventoryBatchRecord { RecordId = i.ToString(), Name = "摩拉", Kind = "Delta", Outcome = "Accepted", Input = JObject.FromObject(new { Delta = 5 }) }).ToList() };
+        var vm = new AccountRecordsItemDetailsViewModel(new() { Name = "摩拉" }, new Dictionary<string, AccountRecordSource>(), true,
+            () => Task.FromResult(Enumerable.Range(0, 51).Select(i => new InventoryBatchIndexEntry
+                { Reference = new() { BatchId = "a", RecordId = i.ToString() } }).ToArray()),
+            refs => { calls++; return fail ? Task.FromException<InventoryBatchRecord?[]>(new IOException("测试失败")) : Task.FromResult(refs.Select(reference => batch.Records.FirstOrDefault(record => record.RecordId == reference.RecordId)).ToArray()); });
+        await vm.LoadMoreCommand.ExecuteAsync(null);
+        Assert.Equal(50, vm.History.Count);
+        Assert.Equal(1, calls);
+        Assert.True(vm.HasMore);
+        Assert.Contains("变动数量：5", vm.History[0].Summary);
+        fail = true;
+        await vm.LoadMoreCommand.ExecuteAsync(null);
+        Assert.Contains("读取失败", vm.HistoryStatus);
+        Assert.Equal(50, vm.History.Count);
+        fail = false;
+        await vm.LoadMoreCommand.ExecuteAsync(null);
+        Assert.Equal(51, vm.History.Count);
+        Assert.False(vm.HasMore);
+        var dialog = new AccountRecordsItemDetailsDialog(vm);
+        try
+        {
+            var content = Assert.IsAssignableFrom<FrameworkElement>(dialog.Content);
+            content.Measure(new Size(620, 540));
+            content.Arrange(new Rect(0, 0, 620, 540));
+            content.UpdateLayout();
+            Assert.True(content.ActualHeight > 0);
+        }
+        finally { dialog.Close(); }
+    });
+
+    /// <summary>重复 Loaded 不能并发读取首页并跳过剩余历史。</summary>
+    [Fact]
+    public Task ItemHistory_RepeatedLoadedDoesNotSkipSecondPage() => RunSta(async () =>
+    {
+        var gate = new TaskCompletionSource<InventoryBatchIndexEntry[]>();
+        var calls = 0;
+        var entries = Enumerable.Range(0, 51).Select(i => new InventoryBatchIndexEntry
+            { Reference = new() { BatchId = "a", RecordId = i.ToString() } }).ToArray();
+        var vm = new AccountRecordsItemDetailsViewModel(new() { Name = "摩拉" }, new Dictionary<string, AccountRecordSource>(), true,
+            () => { calls++; return gate.Task; },
+            refs => Task.FromResult(refs.Select(reference => (InventoryBatchRecord?)new InventoryBatchRecord
+                { RecordId = reference.RecordId, Name = "摩拉", Kind = "Report", Outcome = "Accepted", Input = JObject.FromObject(new { Quantity = 10 }) }).ToArray()));
+        var dialog = new AccountRecordsItemDetailsDialog(vm);
+        try
+        {
+            dialog.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+            dialog.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+            Assert.Equal(1, calls);
+            var running = vm.LoadMoreCommand.ExecutionTask!;
+            gate.SetResult(entries);
+            await running;
+            Assert.Equal(50, vm.History.Count);
+            Assert.True(vm.HasMore);
+            await vm.LoadMoreCommand.ExecuteAsync(null);
+            Assert.Equal(51, vm.History.Count);
+            Assert.False(vm.HasMore);
+        }
+        finally { gate.TrySetResult(entries); dialog.Close(); }
+    });
+
+    /// <summary>批次入口可实例化布局，异步返回不会覆盖后来选中事件的详情。</summary>
+    [Fact]
+    public Task BatchDetails_LayoutAndSelectionStayConsistent() => RunSta(async () =>
+    {
+        var first = new InventoryEvent { Name = "摩拉", RecordReference = new() { BatchId = "a", RecordId = "1" } };
+        var second = new InventoryEvent { Name = "经验书", RecordReference = new() { BatchId = "b", RecordId = "1" } };
+        var inventory = new InventoryDocument { Events = [first, second] };
+        var response = new TaskCompletionSource<InventoryBatch?>();
+        var vm = new AccountRecordsEventsViewModel(inventory, first.Id, (_, _) => Task.FromResult(inventory),
+            loadBatch: _ => response.Task);
+        var dialog = new AccountRecordsEventsDialog(vm);
+        try
+        {
+            var content = Assert.IsAssignableFrom<FrameworkElement>(dialog.Content);
+            content.Measure(new Size(860, 640));
+            content.Arrange(new Rect(0, 0, 860, 640));
+            content.UpdateLayout();
+            Assert.True(content.ActualHeight > 0);
+            Assert.True(vm.HasBatch);
+            var loading = vm.ShowBatchCommand.ExecuteAsync(null);
+            vm.Selected = second;
+            response.SetResult(new() { BatchId = "a", Kind = "Report" });
+            await loading;
+            Assert.Empty(vm.BatchDetails);
+        }
+        finally { dialog.Close(); }
+    });
+
     /// <summary>切换加载中或读取失败后保存显示偏好，不得覆盖最新保留上限。</summary>
     [Theory]
     [InlineData(false)]
@@ -35,7 +240,7 @@ public sealed class InventoryViewRefreshTests
             var vm = new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache());
             await vm.LoadPreferencesAsync();
             // 模拟其他入口更新设置，使本页缓存也落后于磁盘。
-            await store.ConfigureAsync(new() { RecentLimit = 10, SnapshotLimit = 30, EventLimit = 50000 });
+            await store.ConfigureAsync(new() { SnapshotLimit = 30 });
             var loading = vm.SelectUidAsync("invalid-uid");
             if (!duringLoading) await loading;
             await vm.ToggleExpirationColumnCommand.ExecuteAsync(null);
@@ -45,9 +250,7 @@ public sealed class InventoryViewRefreshTests
             await vm.ToggleSourceNamesCommand.ExecuteAsync(null);
             await vm.ToggleSnapshotsCommand.ExecuteAsync(null);
             var settings = await store.GetSettingsAsync();
-            Assert.Equal(10, settings.RecentLimit);
             Assert.Equal(30, settings.SnapshotLimit);
-            Assert.Equal(50000, settings.EventLimit);
         }
         finally { Directory.Delete(root, true); }
     });
@@ -64,7 +267,7 @@ public sealed class InventoryViewRefreshTests
         try
         {
             var csv = Path.Combine(root, "items.csv");
-            File.WriteAllText(csv, "item_name,material_type\n摩拉,货币\n");
+            File.WriteAllText(csv, "item_name,material_type,page\n摩拉,货币\n");
             var catalog = new InventoryCatalog(csv);
             var store = new InventoryStore(catalog, Path.Combine(root, "records"));
             using var puloniaStore = new PuloniaTaskStore(Path.Combine(root, "pulonia"));
@@ -76,7 +279,9 @@ public sealed class InventoryViewRefreshTests
             settings.Accounts.Add(new PuloniaGenshinAccountProfile { Name = "丁", Uid = "100000004" });
             settings = (await accounts.SaveAccountsAsync(settings, new Dictionary<string, (string, string)>())).Settings;
             await accounts.SetCurrentAccountAsync(PuloniaInstanceKey.Primary, settings.Accounts[3].Id);
-            var page = new AccountRecordsPageViewModel(store, new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache()), accounts);
+            var icons = new InventoryIconCache(Path.Combine(root, "icons"));
+            var page = new AccountRecordsPageViewModel(store, new AccountRecordsInventoryViewModel(store, catalog, icons), accounts,
+                new AccountRecordsDemandsViewModel(store, catalog, icons));
 
             await page.LoadCommand.ExecuteAsync(null);
             Assert.Equal(["乙（100000002）", "丁（100000004）"], page.UidOptions.Select(option => option.DisplayText));
@@ -121,12 +326,14 @@ public sealed class InventoryViewRefreshTests
         try
         {
             var csv = Path.Combine(root, "items.csv");
-            File.WriteAllText(csv, "item_name,material_type\n摩拉,货币\n");
+            File.WriteAllText(csv, "item_name,material_type,page\n摩拉,货币\n");
             var catalog = new InventoryCatalog(csv);
             var store = new InventoryStore(catalog, Path.Combine(root, "records"));
             using var puloniaStore = new PuloniaTaskStore(Path.Combine(root, "pulonia"));
             var accounts = await CreateAccountsAsync(puloniaStore, "100000002");
-            var vm = new AccountRecordsPageViewModel(store, new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache()), accounts);
+            var icons = new InventoryIconCache(Path.Combine(root, "icons"));
+            var vm = new AccountRecordsPageViewModel(store, new AccountRecordsInventoryViewModel(store, catalog, icons), accounts,
+                new AccountRecordsDemandsViewModel(store, catalog, icons));
             await vm.LoadCommand.ExecuteAsync(null);
             var page = new AccountRecordsPage(vm);
             // 页签模板里的局部样式 BasedOn WPF-UI 默认样式，需要 App.xaml 合并的字典，测试中无法布局整页；
@@ -207,7 +414,7 @@ public sealed class InventoryViewRefreshTests
         try
         {
             var csv = Path.Combine(root, "items.csv");
-            File.WriteAllText(csv, "item_name,material_type\n摩拉,货币\n");
+            File.WriteAllText(csv, "item_name,material_type,page\n摩拉,货币\n");
             var catalog = new InventoryCatalog(csv);
             var store = new InventoryStore(catalog, Path.Combine(root, "records"));
             const string uid = "100000001";
@@ -216,7 +423,8 @@ public sealed class InventoryViewRefreshTests
             await store.ReportAsync(uid, source, [new() { Name = "摩拉", Quantity = 10, RecordedAt = time.ToString("O") }]);
             var inventory = new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache());
             using var puloniaStore = new PuloniaTaskStore(Path.Combine(root, "pulonia"));
-            var page = new AccountRecordsPageViewModel(store, inventory, await CreateAccountsAsync(puloniaStore, uid)) { SelectedUid = uid };
+            var page = new AccountRecordsPageViewModel(store, inventory, await CreateAccountsAsync(puloniaStore, uid),
+                new AccountRecordsDemandsViewModel(store, catalog, new InventoryIconCache(Path.Combine(root, "icons")))) { SelectedUid = uid };
             await inventory.SelectUidAsync(uid);
             var stamp = await store.GetInventoryUpdatedAtAsync(uid);
             var package = await store.ExportInventoryAsync(uid);
@@ -319,7 +527,7 @@ public sealed class InventoryViewRefreshTests
         try
         {
             var csv = Path.Combine(root, "items.csv");
-            File.WriteAllText(csv, "item_name,material_type\n摩拉,货币\n");
+            File.WriteAllText(csv, "item_name,material_type,page\n摩拉,货币\n");
             var catalog = new InventoryCatalog(csv);
             var store = new InventoryStore(catalog, Path.Combine(root, "records"));
             var time = DateTimeOffset.UtcNow.AddHours(-1);
@@ -328,7 +536,8 @@ public sealed class InventoryViewRefreshTests
             await store.ReportAsync(uid, scan, [new() { Name = "摩拉", Quantity = 10, RecordedAt = time.ToString("O") }]);
             var vm = new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache());
             using var puloniaStore = new PuloniaTaskStore(Path.Combine(root, "pulonia"));
-            var page = new AccountRecordsPageViewModel(store, vm, await CreateAccountsAsync(puloniaStore, uid)) { SelectedUid = uid };
+            var page = new AccountRecordsPageViewModel(store, vm, await CreateAccountsAsync(puloniaStore, uid),
+                new AccountRecordsDemandsViewModel(store, catalog, new InventoryIconCache(Path.Combine(root, "icons")))) { SelectedUid = uid };
             await vm.SelectUidAsync(uid);
             var row = Assert.Single(vm.Rows);
             var keys = row.SortValues;

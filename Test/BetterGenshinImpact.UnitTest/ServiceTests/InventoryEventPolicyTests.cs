@@ -15,7 +15,7 @@ public sealed class InventoryEventPolicyTests
         var workspace = new InventoryWorkspace();
         workspace.Inventory.Events = [Event("1", "甲"), Event("2", "甲", state: "Pending"),
             Event("3", "甲", kind: "ExpirationCheck", state: "Pending"),
-            Event("4", "甲", kind: "Threshold", state: "Warning"),
+            Event("4", "甲", kind: "CategoryWarning", state: "Warning"),
             Event("5", "甲", kind: "VerifiedErrorWarning", state: "Warning"),
             Event("6", "甲", state: "Error"), Event("7", "甲", state: "Error"),
             Event("8", "乙"), Event("9", "乙")];
@@ -41,11 +41,11 @@ public sealed class InventoryEventPolicyTests
             Events = [Event("a", "甲"), Event("b", "乙"), Event("c", "丙"), Event("d", "丁"),
                 Event("e", "戊"), Event("f", "己"), Event("g", "庚"),
                 Event("z1", "丙", state: "Error"), Event("z2", "丁", state: "Pending"),
-                Event("z3", "戊", state: "Warning"), Event("z4", "庚", kind: "Requirement")],
+                Event("z3", "戊", state: "Warning"), Event("z4", "庚", kind: "Report")],
             Errors = new() { ["己"] = new() }
         };
         Assert.Equal(new[] { "a", "b" }, InventoryEventPolicy.GetCompletedArchiveCandidates(inventory, "Delta").Select(item => item.Id));
-        Assert.Equal("z4", Assert.Single(InventoryEventPolicy.GetCompletedArchiveCandidates(inventory, "Requirement")).Id);
+        Assert.Equal("z4", Assert.Single(InventoryEventPolicy.GetCompletedArchiveCandidates(inventory, "Report")).Id);
         inventory.Events.Single(item => item.Id == "z1").Archived = true;
         Assert.Contains(inventory.Events[2], InventoryEventPolicy.GetCompletedArchiveCandidates(inventory, "Delta"));
     }
@@ -55,7 +55,7 @@ public sealed class InventoryEventPolicyTests
     public async Task Dialog_ArchivesOnlyVisibleEligibleEventsOfSelectedKind()
     {
         var inventory = new InventoryDocument { Events = [Event("a", "甲"), Event("b", "乙"), Event("c", "丙"),
-            Event("z", "丙", state: "Error"), Event("d", "丁", kind: "Requirement")] };
+            Event("z", "丙", state: "Error"), Event("d", "丁", kind: "Report")] };
         string? requestedKind = null;
         string[] requestedIds = [];
         var vm = new AccountRecordsEventsViewModel(inventory, "a", (kind, ids) =>

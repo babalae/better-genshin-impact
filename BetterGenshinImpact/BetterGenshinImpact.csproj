@@ -48,6 +48,11 @@
 		<EmbeddedResource Include="Resources\JavaScript\guide-bridge.js" LogicalName="BetterGenshinImpact.Resources.JavaScript.guide-bridge.js" />
 		<None Remove="Resources\TargetItem\target-item-data.json" />
 		<EmbeddedResource Include="Resources\TargetItem\target-item-data.json" LogicalName="BetterGenshinImpact.Resources.TargetItem.target-item-data.json" />
+		<!-- 家族关系独立维护；程序读取内嵌同版数据，同时分发 JSON 供独立任务使用。 -->
+		<None Remove="Resources\Material\material-families.json" />
+		<EmbeddedResource Include="Resources\Material\material-families.json"
+		                  LogicalName="BetterGenshinImpact.Resources.Material.material-families.json"
+		                  CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>
 
 	<ItemGroup>

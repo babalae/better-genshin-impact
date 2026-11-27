@@ -1,0 +1,266 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <!-- 库存和需求直接复用同一套表格视觉资源；独立合并，不依赖父页面资源。 -->
+    <SolidColorBrush x:Key="InventoryErrorBrush" Color="#EA4335" />
+    <SolidColorBrush x:Key="InventoryWarningBrush" Color="#F28C28" />
+        <Style x:Key="InventoryText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="6,0" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <!-- 两表名称保持普通字重，置顶状态由图标和分区表达。 -->
+        <Style x:Key="AccountRecordsNameText" TargetType="TextBlock" BasedOn="{StaticResource InventoryText}">
+            <Setter Property="FontWeight" Value="Normal" />
+        </Style>
+        <Style x:Key="InventoryQuantity" TargetType="TextBlock" BasedOn="{StaticResource InventoryText}">
+            <!-- 接入待核实增量后，仅该状态改为左对齐，显示确认库存及（+99）/（−99）；普通库存仍居中。 -->
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <!-- 保留标准列宽拖拽部件，仅移除系统表头的渐变和立体边框。 -->
+        <Style x:Key="InventoryHeaderGrip" TargetType="Thumb" BasedOn="{StaticResource {x:Type Thumb}}">
+            <Setter Property="Width" Value="6" />
+            <Setter Property="Cursor" Value="SizeWE" />
+            <Setter Property="Template">
+                <Setter.Value><ControlTemplate TargetType="Thumb"><Border Background="Transparent" /></ControlTemplate></Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="InventoryHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="Background" Value="{DynamicResource ApplicationBackgroundBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridColumnHeader">
+                        <Grid Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                            <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" RecognizesAccessKey="True" />
+                            <TextBlock x:Name="SortArrow" Text="↓" Visibility="Collapsed" FontSize="12" FontWeight="Normal"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" IsHitTestVisible="False" />
+                            <Thumb x:Name="PART_LeftHeaderGripper" HorizontalAlignment="Left" Style="{StaticResource InventoryHeaderGrip}" />
+                            <Thumb x:Name="PART_RightHeaderGripper" HorizontalAlignment="Right" Style="{StaticResource InventoryHeaderGrip}" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="SortDirection" Value="Ascending">
+                                <Setter TargetName="SortArrow" Property="Text" Value="↑" />
+                                <Setter TargetName="SortArrow" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="SortDirection" Value="Descending">
+                                <Setter TargetName="SortArrow" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="InventoryQuantityHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource InventoryHeader}">
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <!-- 状态灯颜色由 StateRank 决定；只在悬停或按压时反馈，避免持续闪烁。 -->
+        <Style x:Key="ErrorButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Width" Value="30" /><Setter Property="Height" Value="30" />
+            <Setter Property="HorizontalAlignment" Value="Center" /><Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="MinWidth" Value="0" /><Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid Background="Transparent">
+                            <Ellipse x:Name="Light" Width="10" Height="10" Fill="{StaticResource InventoryErrorBrush}"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <Ellipse.RenderTransform><ScaleTransform /></Ellipse.RenderTransform>
+                            </Ellipse>
+                        </Grid>
+                        <ControlTemplate.Triggers>                            <DataTrigger Binding="{Binding StateRank, Mode=OneWay}" Value="1"><Setter TargetName="Light" Property="Fill" Value="{StaticResource InventoryWarningBrush}" /></DataTrigger>
+                            <DataTrigger Binding="{Binding StateRank, Mode=OneWay}" Value="2"><Setter TargetName="Light" Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" /></DataTrigger>
+                            <DataTrigger Binding="{Binding StateRank, Mode=OneWay}" Value="3"><Setter TargetName="Light" Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" /></DataTrigger>
+                            <DataTrigger Binding="{Binding StateRank, Mode=OneWay}" Value="4"><Setter TargetName="Light" Property="Fill" Value="{DynamicResource TextFillColorSecondaryBrush}" /></DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions><BeginStoryboard><Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="Light" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)" To="1.35" Duration="0:0:0.12" />
+                                    <DoubleAnimation Storyboard.TargetName="Light" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)" To="1.35" Duration="0:0:0.12" />
+                                </Storyboard></BeginStoryboard></Trigger.EnterActions>
+                                <Trigger.ExitActions><BeginStoryboard><Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="Light" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.12" />
+                                    <DoubleAnimation Storyboard.TargetName="Light" Storyboard.TargetProperty="RenderTransform.(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.12" />
+                                </Storyboard></BeginStoryboard></Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Light" Property="Opacity" Value="0.55" /></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Light" Property="Stroke" Value="{DynamicResource TextFillColorPrimaryBrush}" /><Setter TargetName="Light" Property="StrokeThickness" Value="1" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+<Style x:Key="AccountRecordsCell" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="VerticalContentAlignment" Value="Center" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <!-- 选中反馈统一由整行提供，避免系统单元格的亮蓝覆盖。 -->
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="DataGridCell">
+                                <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+<Style x:Key="AccountRecordsRow" TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="DataGridRow">
+                                <!-- 行号由可见分区提供；行底色统一由主题提供，不继承交替或选中背景。 -->
+                                <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+                                    <Border x:Name="Highlight" Background="{DynamicResource AccentFillColorDefaultBrush}" Opacity="0" IsHitTestVisible="False" />
+                                    <DataGridCellsPresenter />
+                                    <Border x:Name="PriorSeparator" Height="1" VerticalAlignment="Bottom" Margin="8,0"
+                                            Background="{DynamicResource TextFillColorSecondaryBrush}" Opacity="0.35"
+                                            Visibility="Collapsed" IsHitTestVisible="False" />
+                                </Grid>
+                                <ControlTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding ShowPriorSeparator, Mode=OneWay}" Value="True">
+                                        <Setter TargetName="PriorSeparator" Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Highlight" Property="Opacity" Value="0.06" />
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="Highlight" Property="Opacity" Value="0.16" />
+                                    </Trigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsNoticeActive, Mode=OneWay}" Value="True" />
+                                            <Condition Binding="{Binding StateRank, Mode=OneWay}" Value="1" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter TargetName="Highlight" Property="Background" Value="{StaticResource InventoryWarningBrush}" />
+                                        <Setter TargetName="Highlight" Property="Opacity" Value="0.12" />
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsNoticeActive, Mode=OneWay}" Value="True" />
+                                            <Condition Binding="{Binding StateRank, Mode=OneWay}" Value="0" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter TargetName="Highlight" Property="Background" Value="{StaticResource InventoryErrorBrush}" />
+                                        <Setter TargetName="Highlight" Property="Opacity" Value="0.12" />
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsNoticeActive, Mode=OneWay}" Value="True" />
+                                            <Condition Binding="{Binding StateRank, Mode=OneWay}" Value="2" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter TargetName="Highlight" Property="Background" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                        <Setter TargetName="Highlight" Property="Opacity" Value="0.12" />
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsNoticeActive, Mode=OneWay}" Value="True" />
+                                            <Condition Binding="{Binding StateRank, Mode=OneWay}" Value="3" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter TargetName="Highlight" Property="Background" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                        <Setter TargetName="Highlight" Property="Opacity" Value="0.12" />
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsNoticeActive, Mode=OneWay}" Value="True" />
+                                            <Condition Binding="{Binding StateRank, Mode=OneWay}" Value="4" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter TargetName="Highlight" Property="Background" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        <Setter TargetName="Highlight" Property="Opacity" Value="0.12" />
+                                    </MultiDataTrigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+    <BooleanToVisibilityConverter x:Key="BoolVisibility" />
+    <Style x:Key="AccountRecordsIconHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource InventoryHeader}">
+        <Setter Property="Padding" Value="0" /><Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+<DataTemplate x:Key="AccountRecordsIconHeaderTemplate">
+<Grid Width="36" Height="36" ToolTip="物品图标">
+                        <Rectangle Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource TextFillColorPrimaryBrush}" Opacity="0.15">
+                            <Rectangle.OpacityMask>
+                                <ImageBrush ImageSource="pack://application:,,,/BetterGI;component/Resources/Images/account-records-watermark.png" Stretch="Uniform" />
+                            </Rectangle.OpacityMask>
+                        </Rectangle>
+                        </Grid>
+</DataTemplate>
+<DataTemplate x:Key="AccountRecordsIconTemplate">
+
+                        <Grid Width="36" Height="36">
+                            <Viewbox MaxWidth="30" MaxHeight="24" Stretch="Uniform" StretchDirection="DownOnly"
+                                     Opacity="0.14" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Viewbox.Style>
+                                    <Style TargetType="Viewbox">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding Icon, Mode=OneWay}" Value="{x:Null}" />
+                                                    <Condition Binding="{Binding DataContext.ShowMissingIconRowNumbers, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=OneWay}" Value="True" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Viewbox.Style>
+                                <!-- 与无行号占位共用 Star24，避免文本星号随字体改变外观。 -->
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Star24" FontSize="16" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   Visibility="{Binding Prior, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                                    <TextBlock FontSize="16" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               Text="{Binding DisplayRowNumber, Mode=OneWay}" />
+                                </StackPanel>
+                            </Viewbox>
+                            <ui:SymbolIcon Foreground="{DynamicResource TextFillColorPrimaryBrush}" Opacity="0.14"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <ui:SymbolIcon.Style>
+                                    <Style TargetType="ui:SymbolIcon">
+                                        <Setter Property="Symbol" Value="Box24" />
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Prior, Mode=OneWay}" Value="True">
+                                                <Setter Property="Symbol" Value="Star24" />
+                                            </DataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding Icon, Mode=OneWay}" Value="{x:Null}" />
+                                                    <Condition Binding="{Binding DataContext.ShowMissingIconRowNumbers, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=OneWay}" Value="False" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:SymbolIcon.Style>
+                            </ui:SymbolIcon>
+                            <Image Source="{Binding Icon, Mode=OneWay}" Width="36" Height="36" Stretch="Uniform" />
+                        </Grid>
+
+</DataTemplate>
+</ResourceDictionary>

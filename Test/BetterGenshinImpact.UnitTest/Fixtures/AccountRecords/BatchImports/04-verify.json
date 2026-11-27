@@ -1,0 +1,42 @@
+{
+  "format": "BetterGI.AccountRecords",
+  "version": 1,
+  "batchId": "inventory-demo-verify",
+  "sources": {
+    "test/inventory-batches": {
+      "reference": "test/inventory-batches",
+      "displayName": "库存批次测试"
+    }
+  },
+  "itemDefinitions": {},
+  "accounts": {
+    "1999999999": {
+      "inventory": {
+        "摩拉": [
+          {
+            "recordId": "mora-verify",
+            "quantity": 2500,
+            "recordedAt": "2026-11-18T00:03:00Z",
+            "source": "test/inventory-batches"
+          }
+        ],
+        "原石": [
+          {
+            "recordId": "primogems-verify",
+            "quantity": 160,
+            "recordedAt": "2026-11-18T00:03:00Z",
+            "source": "test/inventory-batches"
+          }
+        ],
+        "甜甜花": [
+          {
+            "recordId": "flower-verify",
+            "quantity": 5,
+            "recordedAt": "2026-11-18T00:03:00Z",
+            "source": "test/inventory-batches"
+          }
+        ]
+      }
+    }
+  }
+}

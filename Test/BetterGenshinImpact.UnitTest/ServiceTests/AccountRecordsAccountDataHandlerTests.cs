@@ -33,7 +33,7 @@ public sealed class AccountRecordsAccountDataHandlerTests : IDisposable
     {
         Directory.CreateDirectory(_root);
         var csv = Path.Combine(_root, "items.csv");
-        File.WriteAllText(csv, "item_name,material_type\n摩拉,货币\n");
+        File.WriteAllText(csv, "item_name,material_type,page\n摩拉,货币\n");
         _store = new InventoryStore(new InventoryCatalog(csv), Path.Combine(_root, "records"));
         _handler = new AccountRecordsAccountDataHandler(_store);
         _puloniaStore = new PuloniaTaskStore(Path.Combine(_root, "pulonia"));

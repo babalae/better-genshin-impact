@@ -25,7 +25,6 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
         _ = SortValues;
         var resetIcon = refreshIcon || (IconLoader == null) != (next.IconLoader == null);
         Prior = next.Prior;
-        LastScanAttemptId = next.LastScanAttemptId;
         Event = next.Event;
         ErrorCount = next.ErrorCount;
         CanBatchArchive = next.CanBatchArchive;
@@ -34,6 +33,8 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
         Name = next.Name;
         ItemNameSortKey = next.ItemNameSortKey;
         Category = next.Category;
+        Page = next.Page;
+        MaterialType = next.MaterialType;
         Quantity = next.Quantity;
         RecordedAt = next.RecordedAt;
         Expirations = next.Expirations;
@@ -67,8 +68,6 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     public int ErrorCount { get; set; }
     /// <summary>当前底部提示正在展示本行事件。</summary>
     [ObservableProperty] private bool _isNoticeActive;
-    /// <summary>最近一次可追溯上报批次，包括失败上报。</summary>
-    public string? LastScanAttemptId { get; set; }
     /// <summary>状态优先级：红、橘、黄、绿、灰、无灯。</summary>
     public int StateRank => HasError ? 0 : Event?.State switch { "Error" => 0, "Warning" => 1, "Pending" => 2, "Completed" => 3, "Planned" => 4, _ => 5 };
     /// <summary>是否显示状态灯。</summary>
@@ -86,13 +85,24 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     /// <summary>两行提示的来源及变动摘要。</summary>
     public string StatusDetails { get; set; } = "";
     /// <summary>悬停同样显示两行摘要。</summary>
-    public string StatusText => AccountRecordsErrorMessages.ForDisplay(Event?.Message ?? Error?.Message ?? "") + "\n" + StatusDetails;
+    public string StatusText => (Event?.Message ?? Error?.Message ?? "") + "\n" + StatusDetails;
     /// <summary>标准名称或待修订名称。</summary>
     public string Name { get; set; } = "";
     /// <summary>由物品字典生成的名称排序文本，不用于展示或存储关联。</summary>
     public string ItemNameSortKey { get; set; } = "";
     /// <summary>展示分类。</summary>
     public string Category { get; set; } = "";
+    /// <summary>筛选使用的原始材料类型，空值不替换为展示文本。</summary>
+    public string MaterialType { get; set; } = "";
+    /// <summary>物品字典提供的背包页，独立于材料类型。</summary>
+    public string Page { get; set; } = "";
+    /// <summary>背包页的共享 PNG 图像。</summary>
+    public ImageSource? PageIcon => AccountRecordsPageIcons.Get(Page);
+    /// <summary>背包页的默认说明。</summary>
+    public string PageDescription => string.IsNullOrEmpty(Page) ? "背包页未分类" : Page;
+    /// <summary>物品分类的默认提示。</summary>
+    public string CategoryDescription => PageDescription;
+
     /// <summary>当前有效数量，未知保持空值。</summary>
     public long? Quantity { get; set; }
     /// <summary>确认库存中已到期的批次数量，不混入待核实增量或实际扣减库存。</summary>
@@ -192,7 +202,7 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     /// <summary>只有错误才显示红灯，不混入需求状态。</summary>
     public bool HasError => Error != null;
     /// <summary>悬停说明包含下一步操作提示。</summary>
-    public string ErrorText => Error == null ? "" : $"{AccountRecordsErrorMessages.ForDisplay(Error.Message)}\n单击查看异常详情。如需核实数量，请查看游戏后，右键选择“修改数量 / 修订字典”填写当前实际库存总数；保存后将归档该物品已有异常，并终止尚未完成的库存核实。";
+    public string ErrorText => Error == null ? "" : $"{(Error.Message)}\n单击查看异常详情。如需核实数量，请查看游戏后，右键选择“修改数量 / 修订字典”填写当前实际库存总数；保存后将归档该物品已有异常，并终止尚未完成的库存核实。";
     /// <summary>有界最近来源记录。</summary>
     public IReadOnlyList<InventoryRecord> Recent { get; set; } = [];
 }

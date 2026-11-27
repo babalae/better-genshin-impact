@@ -40,11 +40,14 @@ public sealed class PuloniaTaskExecutionContext
     /// </summary>
     public string? AccountId { get; }
 
+    /// <summary>本节点进入执行前已核验的游戏 UID，不是运行账户 ID。</summary>
+    public string? VerifiedUid { get; }
+
     /// <summary>
     /// 建立一个节点执行上下文。
     /// </summary>
     internal PuloniaTaskExecutionContext(string runId, PuloniaTaskSnapshot snapshot, int attempt,
-        string taskAddress, GameRuntime? runtime, string? accountId = null)
+        string taskAddress, GameRuntime? runtime, string? accountId = null, string? verifiedUid = null)
     {
         RunId = runId;
         Snapshot = snapshot;
@@ -52,6 +55,7 @@ public sealed class PuloniaTaskExecutionContext
         TaskAddress = taskAddress;
         Runtime = runtime;
         AccountId = accountId;
+        VerifiedUid = verifiedUid;
     }
 
     /// <summary>

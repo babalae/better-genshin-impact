@@ -1,0 +1,175 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.AccountRecordsDemandsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="AccountRecordsTableResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <behavior:BindingProxy x:Key="DemandProxy" Data="{Binding Mode=OneWay}" />
+            <controls:AccountRecordsTimeConverter x:Key="DemandTime" />
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <DataGrid x:Name="DemandGrid" ItemsSource="{Binding Items, Mode=OneWay}"
+                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                  CanUserResizeRows="False" CanUserReorderColumns="False" RowHeight="36" MinRowHeight="36" ColumnHeaderHeight="36"
+                  FontSize="14" HeadersVisibility="Column" GridLinesVisibility="None" SelectionMode="Single"
+                  ColumnHeaderStyle="{StaticResource InventoryHeader}" CellStyle="{StaticResource AccountRecordsCell}"
+                  EnableRowVirtualization="True" EnableColumnVirtualization="True" BorderThickness="0"
+                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                  ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" behavior:NativeScrolling.IsEnabled="True"
+                  Background="Transparent" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                  RowBackground="{DynamicResource ApplicationBackgroundBrush}" AlternatingRowBackground="{DynamicResource ApplicationBackgroundBrush}">
+            <b:Interaction.Behaviors>
+                <behavior:AccountRecordsRowSelectionBehavior OpenDetailsCommand="{Binding EditCommand, Mode=OneWay}" />
+                <behavior:AccountRecordsTimeRefreshBehavior Command="{Binding RefreshTimeCommand, Mode=OneWay}" />
+                <behavior:AccountRecordsColumnWidthsBehavior ResetVersion="{Binding DataContext.ColumnWidthResetVersion, RelativeSource={RelativeSource AncestorType={x:Type pages:AccountRecordsPage}}, Mode=OneWay}" />
+            </b:Interaction.Behaviors>
+            <!-- 空白区域也能创建需求与刷新，空账号列表不再依赖顶部工具条。 -->
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="{i18n:T 显示目标登记时间}" IsCheckable="True" IsChecked="{Binding Data.ShowDemandCreatedAt, Source={StaticResource DemandProxy}, Mode=OneWay}" Command="{Binding Data.ToggleDemandCreatedAtCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" />
+                    <MenuItem Header="{i18n:T 创建需求}" Command="{Binding Data.AddCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" IsEnabled="{Binding Data.HasUid, Source={StaticResource DemandProxy}, Mode=OneWay}" />
+                    <MenuItem Header="{i18n:T 刷新}" Command="{Binding Data.RefreshCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" />
+                    <MenuItem Header="{i18n:T 归档本账号全部已完成需求}" Command="{Binding Data.ArchiveCompletedCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow" BasedOn="{StaticResource AccountRecordsRow}">
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}, Mode=OneWay}">
+                                <MenuItem Header="{Binding PriorActionText, Mode=OneWay}" Command="{Binding Data.TogglePriorCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}"
+                                          ToolTip="{i18n:T 仅置顶当前物品。}" />
+                                <MenuItem Header="{i18n:T 查看物品详情…}" Command="{Binding Data.ShowRecentCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <MenuItem Header="{i18n:T 修改数量 / 修订字典}" Command="{Binding Data.EditInventoryCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <Separator />
+                                <MenuItem Header="{i18n:T 创建或修改需求}" Command="{Binding Data.EditCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <MenuItem Header="{i18n:T 刷新}" Command="{Binding Data.RefreshCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" />
+                                <Separator />
+                                <MenuItem Header="{i18n:T 显示目标登记时间}" IsCheckable="True" IsChecked="{Binding Data.ShowDemandCreatedAt, Source={StaticResource DemandProxy}, Mode=OneWay}" Command="{Binding Data.ToggleDemandCreatedAtCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" />
+                                <Separator />
+                                <MenuItem Header="{i18n:T 人工确认达标}" Command="{Binding Data.ConfirmCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" IsEnabled="{Binding CanConfirm, Mode=OneWay}" />
+                                <MenuItem Header="{i18n:T 归档已完成需求}" Command="{Binding Data.ArchiveCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" IsEnabled="{Binding CanArchive, Mode=OneWay}" />
+                                <MenuItem Header="{i18n:T 归档本账号全部已完成需求}" Command="{Binding Data.ArchiveCompletedCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" />
+                                <Separator />
+                                <MenuItem Header="{i18n:T 删除需求}" Command="{Binding Data.DeleteCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" IsEnabled="{Binding HasDemand, Mode=OneWay}" />
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </DataGrid.RowStyle>
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Width="36" MinWidth="36" MaxWidth="36" CanUserResize="False" CanUserSort="False"
+                                        Header="" HeaderTemplate="{StaticResource AccountRecordsIconHeaderTemplate}" HeaderStyle="{StaticResource AccountRecordsIconHeader}">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                        <ContentPresenter Content="{Binding Item, Mode=OneWay}" ContentTemplate="{StaticResource AccountRecordsIconTemplate}" />
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="{i18n:T 名称}" Width="156" MinWidth="44" SortMemberPath="Item.ItemNameSortKey"
+                                    Binding="{Binding Item.Name, Mode=OneWay}" ElementStyle="{StaticResource AccountRecordsNameText}" />
+                <DataGridTemplateColumn Header="{i18n:T 类型}" Width="48" MinWidth="48" SortMemberPath="CategorySortKey">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                        <controls:AccountRecordsCategoryView Icon="{Binding Item.PageIcon, Mode=OneWay}"
+                            Text="{Binding Item.Category, Mode=OneWay}" Description="{Binding Item.CategoryDescription, Mode=OneWay}" />
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="{i18n:T 库存}" Width="120" MinWidth="44" SortMemberPath="Item.Quantity" HeaderStyle="{StaticResource InventoryQuantityHeader}">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                        <Grid ClipToBounds="True" DataContext="{Binding Item, Mode=OneWay}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="1" Text="{Binding QuantityText, Mode=OneWay}" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ExpiredQuantityText, Mode=OneWay}" FontSize="11" Margin="4,0,0,0"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" ToolTip="{Binding ExpiredQuantityDetails, Mode=OneWay}" />
+                                <TextBlock Text="{Binding AdditionalDeltaText, Mode=OneWay}" FontSize="11"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" ToolTip="{Binding DeltaText, Mode=OneWay}" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="{i18n:T 目标}" Width="120" MinWidth="44" SortMemberPath="TargetQuantity"
+                                    HeaderStyle="{StaticResource InventoryQuantityHeader}" Binding="{Binding TargetQuantityText, Mode=OneWay}" ElementStyle="{StaticResource InventoryQuantity}" />
+                <DataGridTemplateColumn Header="{i18n:T 目标登记时间}" Width="120" MinWidth="80" SortMemberPath="CreatedAt"
+                                        Visibility="{Binding Data.ShowDemandCreatedAt, Source={StaticResource DemandProxy}, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                        <TextBlock Style="{StaticResource InventoryText}" ToolTip="{Binding CreatedAtText, Mode=OneWay}"
+                                   Visibility="{Binding HasDemand, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
+                            <TextBlock.Text><MultiBinding Converter="{StaticResource DemandTime}" Mode="OneWay">
+                                <Binding Path="CreatedAt" Mode="OneWay" />
+                                <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=DataGridCell}" Mode="OneWay" />
+                            </MultiBinding></TextBlock.Text>
+                        </TextBlock>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="{i18n:T 目标来源}" Width="*" MinWidth="160" SortMemberPath="Source"
+                                    Binding="{Binding Source, Mode=OneWay}" ElementStyle="{StaticResource InventoryText}" />
+                <DataGridTemplateColumn Header="{i18n:T 状态}" Width="44" MinWidth="44" MaxWidth="44" CanUserResize="False" CanUserReorder="False" SortMemberPath="State">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                        <Button Style="{StaticResource ErrorButton}" Visibility="{Binding HasDemand, Converter={StaticResource BoolVisibility}, Mode=OneWay}"
+                                AutomationProperties.Name="{i18n:T 查看需求状态}"
+                                Command="{Binding Data.ShowStatusCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}">
+                            <b:Interaction.Triggers>
+                                <b:EventTrigger EventName="MouseEnter"><b:InvokeCommandAction Command="{Binding Data.PreviewStatusCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" /></b:EventTrigger>
+                                <b:EventTrigger EventName="MouseLeave"><b:InvokeCommandAction Command="{Binding Data.EndStatusPreviewCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" /></b:EventTrigger>
+                            </b:Interaction.Triggers>
+                        </Button>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+        <!-- 与库存共用表体遮罩和空状态水印，表头始终保持原位。 -->
+        <Grid Width="0" Height="0" HorizontalAlignment="Left" VerticalAlignment="Top" ClipToBounds="True"
+              Visibility="{Binding ShowPlaceholder, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
+            <b:Interaction.Behaviors><behavior:AccountRecordsViewportOverlayBehavior Target="{Binding ElementName=DemandGrid, Mode=OneWay}" /></b:Interaction.Behaviors>
+            <Border Background="{DynamicResource ApplicationBackgroundBrush}" Visibility="{Binding IsLoading, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+            <controls:AccountRecordsEmptyState IsHitTestVisible="False" IsLoading="{Binding IsLoading, Mode=OneWay}" />
+        </Grid>
+        <Border Grid.Row="1" Margin="0,4,0,0" Padding="10,4" CornerRadius="6" HorizontalAlignment="Left"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}" Visibility="{Binding HasStatus, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
+            <b:Interaction.Behaviors><behavior:AccountRecordsViewportOverlayBehavior Target="{Binding ElementName=DemandGrid, Mode=OneWay}" HorizontalOnly="True" /></b:Interaction.Behaviors>
+            <Grid>
+                <StackPanel Margin="0,0,28,0">
+                    <TextBlock Text="{Binding Status, Mode=OneWay}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,2,0,2"
+                               Visibility="{Binding ShowStatusMessage, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                    <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="{Binding HasNotice, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
+                        <b:Interaction.Behaviors><behavior:AccountRecordsNoticeHeightBehavior NoticeTarget="{Binding NoticeRow, Mode=OneWay}" /></b:Interaction.Behaviors>
+                        <Border DataContext="{Binding NoticeRow, Mode=OneWay}" BorderBrush="{Binding NoticeAccentColor, Mode=OneWay}" BorderThickness="3,0,0,0" Padding="8,2" Margin="0,0,4,4">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Item.Name, Mode=OneWay}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding StatusText, Mode=OneWay}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                <Grid Margin="0,3,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding NoticeDetails, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,8,0" VerticalAlignment="Bottom" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                                        <ui:Button Padding="8,2" MinHeight="24" Content="{i18n:T 人工确认达标}" Margin="0,0,6,0" Command="{Binding Data.ConfirmCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanConfirm, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                                        <ui:Button Padding="8,2" MinHeight="24" Content="{i18n:T 归档}" Margin="0,0,6,0" Command="{Binding Data.ArchiveCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                                        <ui:Button Padding="8,2" MinHeight="24" Content="{i18n:T 批量归档}" Command="{Binding Data.ArchiveCompletedCommand, Source={StaticResource DemandProxy}, Mode=OneWay}" Visibility="{Binding CanArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" ToolTip="{i18n:T 归档本账号全部已完成需求}" />
+                                    </WrapPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </StackPanel>
+                <ui:Button HorizontalAlignment="Right" VerticalAlignment="Top" Width="24" Height="24" MinWidth="0" MinHeight="0" Padding="0"
+                           Icon="{ui:SymbolIcon Dismiss16}" Appearance="Transparent" ToolTip="{i18n:T 收起全部提示，不归档需求}" AutomationProperties.Name="{i18n:T 关闭通知}" Command="{Binding CloseNoticeCommand, Mode=OneWay}">
+                    <b:Interaction.Behaviors>
+                        <behavior:AccountRecordsNoticeCloseGuardBehavior NoticeTarget="{Binding NoticeRow, Mode=OneWay}" />
+                    </b:Interaction.Behaviors>
+                </ui:Button>
+            </Grid>
+        </Border>
+        <TextBlock Grid.Row="2" Margin="4,6,4,0" FontSize="11" Text="{Binding ItemCountText, Mode=OneWay}"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Opacity="0.14" IsHitTestVisible="False" />
+    </Grid>
+</UserControl>

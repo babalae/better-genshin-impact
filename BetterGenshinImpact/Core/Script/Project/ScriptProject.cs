@@ -96,7 +96,8 @@ public class ScriptProject
     /// <param name="runtime">本次脚本运行使用的运行环境。</param>
     /// <param name="partyConfig">脚本使用的队伍配置。</param>
     /// <param name="ct">本次脚本执行的取消令牌。</param>
-    private V8ScriptEngine BuildScriptEngine(GameRuntime runtime, PathingPartyConfig? partyConfig, CancellationToken ct)
+    /// <param name="inventoryContext">宿主确定的库存会话。</param>
+    private V8ScriptEngine BuildScriptEngine(GameRuntime runtime, PathingPartyConfig? partyConfig, CancellationToken ct, ScriptInventoryContext inventoryContext)
     {
         V8ScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
         try
@@ -114,7 +115,7 @@ public class ScriptProject
 
             var libraryList = libraries.ToList();
 
-            EngineExtend.InitHost(engine, runtime, Config, ProjectPath, libraryList.ToArray(), partyConfig, ct, _repositoryResources);
+            EngineExtend.InitHost(engine, runtime, Config, ProjectPath, libraryList.ToArray(), partyConfig, ct, _repositoryResources, inventoryContext);
             return engine;
         }
         catch
@@ -132,13 +133,16 @@ public class ScriptProject
     /// <param name="context">脚本设置对象，作为 settings 暴露给脚本。</param>
     /// <param name="partyConfig">脚本使用的队伍配置。</param>
     /// <param name="ct">本次脚本执行的取消令牌。</param>
-    public async Task ExecuteAsync(GameRuntime runtime, dynamic? context, PathingPartyConfig? partyConfig, CancellationToken ct)
+    /// <param name="inventoryContext">调度入口传入执行身份；直接执行时自动建立独立库存会话。</param>
+    public async Task ExecuteAsync(GameRuntime runtime, dynamic? context, PathingPartyConfig? partyConfig, CancellationToken ct,
+        ScriptInventoryContext? inventoryContext = null)
     {
         ct.ThrowIfCancellationRequested();
         // 游戏尺寸默认值（1920x1080）由每个引擎新建的 GlobalMethod 实例自带，不再需要重置共享的静态状态
         // 加载代码
         var code = await LoadCode(ct);
-        await ScriptExecution.ExecuteAsync(token => BuildScriptEngine(runtime, partyConfig, token), engine =>
+        inventoryContext ??= new ScriptInventoryContext("local/" + FolderName.Replace('\\', '/'), Manifest.Name);
+        await ScriptExecution.ExecuteAsync(token => BuildScriptEngine(runtime, partyConfig, token, inventoryContext), engine =>
         {
             ct.ThrowIfCancellationRequested();
 

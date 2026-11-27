@@ -27,6 +27,10 @@ using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.AccountRecords;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using System.Globalization;
+using System.IO;
 using Region = BetterGenshinImpact.GameTask.Model.Area.Region;
 
 namespace BetterGenshinImpact.Core.Script;
@@ -114,9 +118,11 @@ public class EngineExtend
     /// <param name="config">当前脚本使用的可选配置。</param>
     /// <param name="ct">当前脚本执行的取消令牌。</param>
     /// <param name="repositoryResources">Pulonia 已确认来源；为空时保留传统用户目录语义。</param>
+    /// <param name="inventoryContext">当前脚本的库存账号、来源及批次身份。</param>
     public static void InitHost(IScriptEngine engine, GameRuntime runtime, AllConfig allConfig, string workDir,
         string[]? searchPaths, object? config,
-        CancellationToken ct, ScriptRepositoryResourceContext? repositoryResources = null)
+        CancellationToken ct, ScriptRepositoryResourceContext? repositoryResources = null,
+        ScriptInventoryContext? inventoryContext = null)
     {
         // engine.AddHostObject("xHost", new ExtendedHostFunctions());  // 有越权的安全风险
 
@@ -133,6 +139,13 @@ public class EngineExtend
         engine.AddHostObject("http", new Http()); // 限制网络访问
         engine.AddHostObject("yolo", new YoloPredictorFactory(runtime, workDir)); // YOLO ONNX 推理
         engine.AddHostObject("notification", new Notification(allConfig));
+
+        // 每个引擎独立绑定库存批次及账号；无调度上下文时首次使用才读取 UID。
+        inventoryContext ??= new ScriptInventoryContext("local/" + Path.GetFileName(workDir), Path.GetFileName(workDir));
+        ScriptInventory.Register(engine, new ScriptInventory(App.GetService<InventoryStore>()!, inventoryContext,
+            () => runtime.IsStopping ? null : Bv.Uid(runtime).ToString(CultureInfo.InvariantCulture), ct,
+            workDir, App.GetService<InventoryIconCache>()!,
+            new ScriptInventoryIconRecognizer(App.GetService<InventoryCatalog>()!, ct)));
 
         // 任务调度器
         engine.AddHostObject("dispatcher", new Dispatcher(runtime, allConfig, config, ct, screenshots));

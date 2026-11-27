@@ -24,6 +24,7 @@ internal sealed class AccountRecordsInventoryRowFactory(InventoryCatalog catalog
             var reference = current?.Source ?? error?.Source ?? "";
             workspace.Sources.TryGetValue(reference, out var source);
             workspace.Definitions.TryGetValue(name, out var category);
+            var page = workspace.Pages.GetValueOrDefault(name, catalog.GetPage(name));
             var events = eventsByName[name].ToArray();
             var active = InventoryEventPolicy.SelectActive(events);
             var pending = events.Where(item => item.Kind == "Delta" && item.State == "Pending").ToArray();
@@ -40,16 +41,13 @@ internal sealed class AccountRecordsInventoryRowFactory(InventoryCatalog catalog
                 details = $"上报来源：{Display(active.Source)}，分类采用本地值";
             if (active?.Kind == "ExpirationCheck")
                 details = "已过期库存待检查；请重新上报到期批次或手动修订数量。";
-            if (active?.Kind == "ThresholdWarning")
-                details = "满足自定义规则；归档后本轮条件解除前不再提醒。";
             return new AccountRecordsInventoryRow
             {
-                LastScanAttemptId = recent?.FirstOrDefault(record => !string.IsNullOrEmpty(record.AttemptId))?.AttemptId
-                    ?? events.LastOrDefault(item => !string.IsNullOrEmpty(item.AttemptId))?.AttemptId,
                 Event = active, PendingDelta = pending.Length > 0 ? pending.Sum(item => (decimal)item.Quantity) : null, StatusDetails = details,
                 ErrorCount = events.Count(item => item.State == "Error"),
                 Name = name, ItemNameSortKey = catalog.GetItemNameSortKey(name), Prior = workspace.Inventory.Prior.Contains(name),
                 Category = string.IsNullOrEmpty(category) ? "未分类" : category,
+                MaterialType = category ?? "", Page = page,
                 Quantity = current?.Quantity, RecordedAt = current?.RecordedAt,
                 // 无总库存时仍展示增量中已知的到期批次；空记录仅用于批次重放，不作为确认数量。
                 Expirations = InventoryStore.EstimateExpirations(current ?? new InventoryRecord(), pending),
