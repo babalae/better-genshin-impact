@@ -23,6 +23,7 @@ public sealed class TrainingGuidePopupRecognizer(GameRuntime runtime, ILogger lo
     {
         ArgumentNullException.ThrowIfNull(expectedMaterial);
         TrainingGuideMaterialReading? previous = null;
+        Rect? previousRect = null;
         var diagnostic = string.Empty;
         var parsedCount = 0;
         var hadIssue = false;
@@ -35,16 +36,23 @@ public sealed class TrainingGuidePopupRecognizer(GameRuntime runtime, ILogger lo
             var mode = attempt / 2;
             var debugPrefix = debugId == null ? null : $"{debugId}-attempt-{attempt + 1}-mode-{mode}";
             SaveDebugImage(capture.SrcMat, debugPrefix, "capture");
-            // 1080P 下 Y=830～1028，数量栏上下各预留约一行文字。
-            var footerTop = (int)Math.Floor(capture.Height * (830d / 1080));
-            var footerRect = new Rect(
-                (int)(capture.Width * .365), footerTop,
-                (int)(capture.Width * .27),
-                (int)Math.Ceiling(capture.Height * (1028d / 1080)) - footerTop);
-            var footer = ReadLines(capture, footerRect, mode, debugPrefix, "footer");
-            var current = TrainingGuidePopupParser.ParseQuantities(expectedMaterial, string.Join("\n", footer));
-            diagnostic = $"图标材料：{expectedMaterial.Name}；底部：{string.Join(" | ", footer)}";
-            var consistent = current != null && SameNumbers(current, previous);
+            // 常用区域优先；失败后从屏底向上补扫，重叠窗口避免截断数量标签。
+            TrainingGuideMaterialReading? current = null;
+            var footerRect = default(Rect);
+            diagnostic = $"图标材料：{expectedMaterial.Name}；所有数量区域均未解析成功";
+            var regionIndex = 0;
+            foreach (var region in GetQuantityRegions(capture.Width, capture.Height))
+            {
+                ct.ThrowIfCancellationRequested();
+                var footer = ReadLines(capture, region, mode, debugPrefix, $"footer-{regionIndex++}");
+                current = TrainingGuidePopupParser.ParseQuantities(expectedMaterial, string.Join("\n", footer));
+                if (current == null) continue;
+                footerRect = region;
+                diagnostic = $"图标材料：{expectedMaterial.Name}；数量：{string.Join(" | ", footer)}";
+                break;
+            }
+            // 不跨搜索区域拼接两帧结果，也不跨预处理方式复用上一帧。
+            var consistent = current != null && previousRect == footerRect && SameNumbers(current, previous);
             var issue = current == null || (previous != null && !consistent);
             hadIssue |= issue;
             TrainingGuideDiagnostics.LogEntryVerification(captureId,
@@ -59,12 +67,31 @@ public sealed class TrainingGuidePopupRecognizer(GameRuntime runtime, ILogger lo
             }
             // 更换预处理方式后重新取得两帧一致的结果。
             previous = attempt % 2 == 0 ? current : null;
+            previousRect = previous == null ? null : footerRect;
             await runtime.Delay(300, ct);
         }
         TrainingGuideDiagnostics.AppendOcrIssue(captureId,
             $"最终结果=重试耗尽；材料={expectedMaterial.Name}；有效解析次数={parsedCount}/6；未取得同一预处理方式下连续两帧一致结果");
         logger.LogWarning("培养浮窗OCR失败：6次尝试中 {ParsedCount} 次字段解析成功，未取得连续两次有效且一致的结果；最后一次：{Detail}", parsedCount, diagnostic);
         return null;
+    }
+
+    /// <summary>先检查常用数量栏，再从屏高 99% 向上逐级搜索到屏幕中心。</summary>
+    internal static IEnumerable<Rect> GetQuantityRegions(int width, int height)
+    {
+        // 保留原范围，正常弹窗无需增加 OCR 次数。
+        var left = (int)(width * .365);
+        var regionWidth = (int)(width * .27);
+        var usualTop = (int)Math.Floor(height * (830d / 1080));
+        yield return new Rect(left, usualTop, regionWidth,
+            (int)Math.Ceiling(height * (1028d / 1080)) - usualTop);
+        // 每段高 18%，向上移动 8%，重叠 10% 以容纳整行文字。
+        for (var step = 0; step < 5; step++)
+        {
+            var bottom = .99 - step * .08;
+            var top = (int)Math.Floor(height * Math.Max(.5, bottom - .18));
+            yield return new Rect(left, top, regionWidth, (int)Math.Ceiling(height * bottom) - top);
+        }
     }
 
     private static bool SameNumbers(TrainingGuideMaterialReading current, TrainingGuideMaterialReading? previous) =>
