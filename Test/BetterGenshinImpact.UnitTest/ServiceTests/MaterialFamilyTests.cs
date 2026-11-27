@@ -7,6 +7,24 @@ namespace BetterGenshinImpact.UnitTest.ServiceTests;
 /// <summary>家族覆盖、共享分配、未知基准与不同达成依据的纯计算验证。</summary>
 public sealed class MaterialFamilyTests
 {
+    /// <summary>不依赖正增量时，完成来源和时间应来自保守合成路径。</summary>
+    [Fact]
+    public void ConservativeCompletionUsesItsOwnEvidence()
+    {
+        var workspace = Workspace(("史莱姆凝液", 0), ("史莱姆清", 3));
+        var lower = workspace.Inventory.Items["史莱姆凝液"][0];
+        var higher = workspace.Inventory.Items["史莱姆清"][0];
+        lower.Source = "A";
+        higher.Source = "B";
+        lower.RecordedAt = higher.RecordedAt.AddHours(1);
+        workspace.Inventory.Events.Add(Delta("史莱姆凝液", 3));
+        var progress = MaterialDemandPolicy.EvaluateAll(workspace, Demands(("史莱姆原浆", 1)))["史莱姆原浆"];
+        Assert.Equal(MaterialDemandState.Completed, progress.State);
+        Assert.Equal("Family", progress.ConfirmationMethod);
+        Assert.Equal(higher.Source, progress.Source);
+        Assert.Equal(higher.RecordedAt, progress.CompletedAt);
+    }
+
     /// <summary>多余的正增量不取消已有达标，但需要该增量或出现负增量时仍按实际可用数量判断。</summary>
     [Theory]
     [InlineData(12, 1, MaterialDemandState.Completed)]

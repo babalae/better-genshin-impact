@@ -130,17 +130,32 @@ public sealed partial class InventoryStore
             throw new InvalidDataException("批次历史结构或身份不正确：" + path);
         if (recovered)
         {
-            // 旧备份不能推翻已经提交的接受凭证；缺失的最新结果只能报告不完整。
-            var receipts = Load(uid, includeHistory: false, restoreBackup: false).BatchReceipts.GetValueOrDefault(batchId);
+            // 先纳入库存中已提交的待发布结果，再核对接受凭证；旧备份不能推翻最新状态。
+            var committed = Load(uid, includeHistory: false, restoreBackup: false);
+            var receipts = committed.BatchReceipts.GetValueOrDefault(batchId);
             var records = batch.Records.ToDictionary(item => item.RecordId, StringComparer.Ordinal);
+            foreach (var pending in committed.PendingBatches.Where(item => item.BatchId == batchId))
+            {
+                foreach (var record in pending.Records)
+                {
+                    if (receipts?.TryGetValue(record.RecordId, out var receipt) != true ||
+                        receipt.ContentHash != record.ContentHash ||
+                        (records.TryGetValue(record.RecordId, out var previous) && previous.ContentHash != record.ContentHash))
+                        throw new InvalidDataException("待发布记录与批次历史内容冲突，已保留恢复依据。");
+                    records[record.RecordId] = record;
+                }
+            }
             if (receipts != null && receipts.Any(entry => entry.Value.Accepted &&
                 (!records.TryGetValue(entry.Key, out var record) || record.ContentHash != entry.Value.ContentHash ||
                  record.Outcome is not ("Accepted" or "Duplicate"))))
                 throw new InvalidDataException("批次历史不完整：备份与已提交的接受凭证不一致。");
+            batch.Records = records.Values.ToList();
+            batch.OriginalCount = Math.Max(batch.OriginalCount, receipts?.Count ?? 0);
+            batch.RemovedCount = batch.OriginalCount - batch.Records.Count;
             if (restoreBackup)
             {
                 File.Copy(path, path + ".corrupt", true);
-                File.Copy(path + ".bak", path, true);
+                Write(path, batch, retainPrevious: false);
             }
         }
         return batch;

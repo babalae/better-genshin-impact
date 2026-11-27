@@ -174,6 +174,41 @@ public sealed class AccountRecordsPr4001ReproductionTests : IDisposable
         Assert.Equal("Accepted", after.Records[0].Outcome);
     }
 
+    /// <summary>损坏主文件恢复时使用已提交的待发布结果，并继续完成发布与后续写入。</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RecoveryMergesCommittedPendingResult(bool conflictingHash)
+    {
+        const string batchId = "pending-recovery";
+        var delta = new InventoryDeltaReport { Name = "新材料", RecordId = "one", Delta = 2, RecordedAt = _time.ToString("O") };
+        await _store.ReportDeltaAsync(Uid, _source, [delta], batchId);
+        await _store.DefineAsync("新材料", "材料");
+        await _store.ReportDeltaAsync(Uid, _source, [delta], batchId);
+        var path = Path.Combine(AccountDirectory, "batches", Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(batchId))) + ".json");
+        var accepted = JsonConvert.DeserializeObject<InventoryBatch>(File.ReadAllText(path),
+            new JsonSerializerSettings { DateParseHandling = DateParseHandling.None })!;
+        var data = JsonConvert.DeserializeObject<InventoryDocument>(File.ReadAllText(InventoryPath))!;
+        // 模拟库存已经提交，但发布尚未清除恢复依据时主批次文件损坏。
+        if (conflictingHash) accepted.Records[0].ContentHash = "conflict";
+        data.PendingBatches.Add(accepted);
+        File.WriteAllText(InventoryPath, JsonConvert.SerializeObject(data), new UTF8Encoding(false));
+        File.WriteAllText(path, "{broken", new UTF8Encoding(false));
+        if (conflictingHash)
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() => _store.ReportAsync(Uid, _source, [Report("摩拉")]));
+            Assert.Equal("{broken", File.ReadAllText(path));
+            return;
+        }
+        Assert.Equal("Accepted", (await _store.GetBatchAsync(Uid, batchId))!.Records[0].Outcome);
+        // 只读查询不发布；后续写入完成恢复且不重复累计原增量。
+        Assert.Equal("{broken", File.ReadAllText(path));
+        await _store.ReportAsync(Uid, _source, [Report("摩拉")]);
+        Assert.Equal("Accepted", JObject.Parse(File.ReadAllText(path))["Records"]![0]!["Outcome"]!.Value<string>());
+        Assert.Empty(JsonConvert.DeserializeObject<InventoryDocument>(File.ReadAllText(InventoryPath))!.PendingBatches);
+        Assert.Equal(1, (await _store.ReportDeltaAsync(Uid, _source, [delta], batchId)).DuplicateCount);
+    }
+
     /// <summary>当前格式需求文件结构损坏时，自动快照不应阻断有效库存上报。</summary>
     [Theory]
     [InlineData(false)]

@@ -49,9 +49,12 @@ public static partial class MaterialDemandPolicy
             var conservativeBasic = MaterialFamilyCalculator.CalculateAvailable(conservativeInputs, 0);
             var conservative = reserve == 0 ? conservativeBasic : MaterialFamilyCalculator.CalculateAvailable(conservativeInputs, reserve);
             InventoryRecord? evidence = null;
+            // 保守路径独立追踪证据，不能借用仅由待核实正增量连接起来的低阶来源。
+            InventoryRecord? conservativeEvidence = null;
             var relevantPending = new List<InventoryEvent>();
             for (var index = 0; index < levels.Count; index++)
             {
+                if (conservative[index] == conservativeInputs[index].Stock) conservativeEvidence = null;
                 // 低阶没有产生可传递材料时，后续合成重新由本阶库存提供依据。
                 if (estimated[index] == inputs[index].Stock)
                 {
@@ -61,6 +64,8 @@ public static partial class MaterialDemandPolicy
                 // 升级只依赖当前及更低阶；无基准或更高阶增量不影响本项的完成状态和证据时间。
                 if (usable[index])
                 {
+                    if (conservativeEvidence == null || current[index]!.RecordedAt > conservativeEvidence.RecordedAt)
+                        conservativeEvidence = current[index];
                     if (evidence == null || current[index]!.RecordedAt > evidence.RecordedAt) evidence = current[index];
                     relevantPending.AddRange(pending[index]);
                 }
@@ -68,16 +73,17 @@ public static partial class MaterialDemandPolicy
                 if (evidence == null || !demands.Items.TryGetValue(name, out var target) || result[name].State == MaterialDemandState.Completed ||
                     estimated[index] < target.TargetQuantity) continue;
                 var hasPending = relevantPending.Count > 0 && conservative[index] < target.TargetQuantity;
+                var completionEvidence = hasPending ? evidence : conservativeEvidence!;
                 var usesBonus = (hasPending ? basic[index] : conservativeBasic[index]) < target.TargetQuantity;
                 var confirmed = !hasPending || workspace.Settings.UseDeltaForDemands;
                 // 合成数量只作为达成依据，不生成实际库存；不同依据不混记为实测确认。
                 var message = !confirmed ? "同族材料数量可能达标，待核实"
                     : usesBonus ? "同族材料数量估算已达标（含合成收益预留）"
                     : hasPending ? "同族材料增量推算已达标" : "同族材料数量可合成达标";
-                var completedAt = !hasPending ? evidence.RecordedAt
+                var completedAt = !hasPending ? completionEvidence.RecordedAt
                     : relevantPending.Select(item => item.RecordedAt).Append(evidence.RecordedAt).Max();
                 result[name] = new MaterialDemandProgress(confirmed ? MaterialDemandState.Completed : MaterialDemandState.Pending,
-                    message, evidence.Source, estimated[index], confirmed ? completedAt : null,
+                    message, completionEvidence.Source, estimated[index], confirmed ? completedAt : null,
                     !confirmed ? null : usesBonus ? "FamilyEstimate" : hasPending ? "FamilyDelta" : "Family", usesBonus ? reserve : 0);
             }
         }
