@@ -572,10 +572,14 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
-        _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
+        using var cancellationScope = CancellationContext.Instance.TryBeginScope();
+        if (cancellationScope == null)
+        {
+            _logger.LogWarning("当前存在正在执行的任务，请勿重复启动");
+            return;
+        }
 
-        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
-        CancellationContext.Instance.Set();
+        _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
 
         var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
 
