@@ -21,6 +21,7 @@ public sealed class InventoryIconCleanupTests
             // 主题助手依赖全局配置；只在内存中补齐测试上下文，结束后还原，不读取用户配置。
             var property = typeof(ConfigService).GetProperty(nameof(ConfigService.Config))!;
             var previous = ConfigService.Config;
+            Exception? failure = null;
             try
             {
                 property.SetValue(null, previous ?? new AllConfig());
@@ -44,10 +45,12 @@ public sealed class InventoryIconCleanupTests
                 Assert.Equal(2, model.SelectedNames.Length);
                 model.CancelCommand.Execute(null);
                 Assert.False(model.Accepted);
-                completion.SetResult();
             }
-            catch (Exception ex) { completion.SetException(ex); }
+            catch (Exception ex) { failure = ex; }
             finally { property.SetValue(null, previous); }
+            // 恢复共享配置后才通知测试结束，避免下一项测试与清理过程交错。
+            if (failure is null) completion.SetResult();
+            else completion.SetException(failure);
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
