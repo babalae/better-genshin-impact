@@ -1136,6 +1136,10 @@ public partial class ScriptControlViewModel : ViewModel
 
                     expander.IsExpanded = ShouldExpandNode(filter, nodeMatches, parentMatched, childContainsMatch, depth, isDeepSearch, GetParentFolderName(node));
                     expander.Visibility = Visibility.Visible;
+
+                    // 子节点筛选完成后，自底向上按当前筛选范围重算目录状态，保留隐藏文件的既有选择。
+                    if (expander.Header is CheckBox directoryCheckBox && expander.Content is StackPanel childPanel)
+                        UpdateDirectoryCheckBoxState(directoryCheckBox, GetChildCheckBoxes(childPanel));
                 }
                 else
                 {
@@ -1326,26 +1330,24 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     /// <summary>
-    /// 递归获取面板中所有的子复选框
+    /// 递归获取面板中当前筛选范围内的所有子复选框，包含折叠目录中的匹配项
     /// </summary>
     /// <param name="panel">获取的面板</param>
-    /// <returns>所有子复选框列表</returns>
-    private List<CheckBox> GetAllChildCheckBoxes(StackPanel panel)
+    /// <returns>当前筛选范围内的所有子复选框列表</returns>
+    private static List<CheckBox> GetAllChildCheckBoxes(StackPanel panel)
     {
         var checkBoxes = new List<CheckBox>();
 
         foreach (var child in panel.Children)
         {
-            if (child is CheckBox checkBox)
+            if (child is CheckBox { Visibility: Visibility.Visible } checkBox)
             {
                 checkBoxes.Add(checkBox);
             }
-            else if (child is Expander expander)
+            else if (child is Expander { Visibility: Visibility.Visible, Header: CheckBox { Visibility: Visibility.Visible } headerCheckBox } expander)
             {
-                if (expander.Header is CheckBox headerCheckBox)
-                {
-                    checkBoxes.Add(headerCheckBox);
-                }
+                // Visibility 表示筛选结果；不能使用 IsVisible，否则折叠目录内的匹配路线会被漏选。
+                checkBoxes.Add(headerCheckBox);
 
                 if (expander.Content is StackPanel nestedPanel)
                 {
@@ -1368,24 +1370,28 @@ public partial class ScriptControlViewModel : ViewModel
         if (parentCheckBox == null)
             return;
 
-        // 获取同级所有复选框
+        // 获取当前筛选范围内的同级复选框
         var siblingCheckBoxes = GetSiblingCheckBoxes(changedCheckBox);
 
-        // 计算状态
-        int checkedCount = siblingCheckBoxes.Count(cb => cb.IsChecked == true);
-        int uncheckedCount = siblingCheckBoxes.Count(cb => cb.IsChecked == false);
-        int indeterminateCount = siblingCheckBoxes.Count(cb => cb.IsChecked == null);
-
         // 设置父级复选框状态
-        if (checkedCount == siblingCheckBoxes.Count)
-            parentCheckBox.IsChecked = true;
-        else if (uncheckedCount == siblingCheckBoxes.Count)
-            parentCheckBox.IsChecked = false;
-        else
-            parentCheckBox.IsChecked = null;
+        UpdateDirectoryCheckBoxState(parentCheckBox, siblingCheckBoxes);
 
         // 递归更新上级父级
         UpdateParentCheckBoxState(parentCheckBox);
+    }
+
+    /// <summary>
+    /// 根据当前筛选范围内的直接子项计算目录三态；没有可选子项时保持未选中。
+    /// </summary>
+    private static void UpdateDirectoryCheckBoxState(CheckBox checkBox, List<CheckBox> childCheckBoxes)
+    {
+        // 计算状态，空集合不能作为全部选中处理。
+        if (childCheckBoxes.Count == 0 || childCheckBoxes.All(child => child.IsChecked == false))
+            checkBox.IsChecked = false;
+        else if (childCheckBoxes.All(child => child.IsChecked == true))
+            checkBox.IsChecked = true;
+        else
+            checkBox.IsChecked = null;
     }
 
     /// <summary>
@@ -1414,7 +1420,7 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     /// <summary>
-    /// 获取同级的所有复选框
+    /// 获取当前筛选范围内的同级复选框
     /// </summary>
     /// <param name="checkBox">当前复选框</param>
     /// <returns>同级复选框列表</returns>
@@ -1434,43 +1440,37 @@ public partial class ScriptControlViewModel : ViewModel
         }
 
         // 遍历同级元素
-        var siblings = new List<CheckBox>();
-        if (parent is StackPanel stackPanel)
-        {
-            foreach (var child in stackPanel.Children)
-            {
-                if (child is CheckBox siblingCheckBox)
-                    siblings.Add(siblingCheckBox);
-                else if (child is Expander childExpander && childExpander.Header is CheckBox expanderCheckBox)
-                    siblings.Add(expanderCheckBox);
-            }
-        }
-
-        return siblings;
+        return parent is StackPanel stackPanel ? GetChildCheckBoxes(stackPanel) : [];
     }
 
     /// <summary>
-    /// 递归设置子复选框状态
+    /// 获取当前筛选范围内的直接子项，用于目录三态统计，不受目录展开状态影响。
+    /// </summary>
+    private static List<CheckBox> GetChildCheckBoxes(StackPanel panel)
+    {
+        var checkBoxes = new List<CheckBox>();
+        foreach (var child in panel.Children)
+        {
+            if (child is CheckBox { Visibility: Visibility.Visible } checkBox)
+                checkBoxes.Add(checkBox);
+            else if (child is Expander { Visibility: Visibility.Visible, Header: CheckBox { Visibility: Visibility.Visible } headerCheckBox })
+                checkBoxes.Add(headerCheckBox);
+        }
+
+        return checkBoxes;
+    }
+
+    /// <summary>
+    /// 递归设置当前筛选范围内的子复选框状态，保留被筛选隐藏的既有选择
     /// </summary>
     /// <param name="childStackPanel">子面板</param>
     /// <param name="state">目标状态</param>
     private static void SetChildCheckBoxesState(StackPanel childStackPanel, bool state)
     {
-        foreach (var child in childStackPanel.Children)
+        // 与目录点击时的全选判断使用同一遍历范围，避免勾选到隐藏节点。
+        foreach (var checkBox in GetAllChildCheckBoxes(childStackPanel))
         {
-            if (child is CheckBox checkBox)
-            {
-                checkBox.IsChecked = state;
-            }
-            else if (child is Expander expander && expander.Content is StackPanel nestedStackPanel)
-            {
-                if (expander.Header is CheckBox headerCheckBox)
-                {
-                    headerCheckBox.IsChecked = state;
-                }
-
-                SetChildCheckBoxesState(nestedStackPanel, state);
-            }
+            checkBox.IsChecked = state;
         }
     }
 
