@@ -37,6 +37,18 @@ public class BitBltSession : IDisposable
     // Bitmap 内存池
     private readonly ConcurrentStack<IntPtr> _bufferPool = [];
 
+    /// <summary>
+    ///     保护 _bufferPool 与 _released 的短锁：入池判断和会话销毁必须互斥，
+    ///     否则晚归还的缓冲可能在清池之后入池，重新形成无人清理的废弃池。
+    /// </summary>
+    private readonly object _poolLock = new();
+
+    /// <summary>会话是否已释放；受 _poolLock 保护。</summary>
+    private bool _released;
+
+    /// <summary>ReleaseResources 的一次性执行标志。</summary>
+    private int _releasedOnce;
+
     // 窗口原宽高
     public int Width { get; }
     public int Height { get; }
@@ -191,7 +203,20 @@ public class BitBltSession : IDisposable
 
     public void ReleaseBuffer(IntPtr buffer)
     {
-        _bufferPool.Push(buffer);
+        // 与 ReleaseResources 互斥：判断与入池是同一个临界区，避免「读到未释放 → 清池完成 →
+        // 再入池」的交错，那样缓冲会进入一个再无人清理的废弃池。
+        // 临界区只含一次布尔判断与一次栈操作，20~50 fps 下的开销可忽略。
+        lock (_poolLock)
+        {
+            if (!_released)
+            {
+                _bufferPool.Push(buffer);
+                return;
+            }
+        }
+
+        // 会话已销毁：池内缓冲已被清空释放，此处必须直接还给系统。
+        Marshal.FreeHGlobal(buffer);
     }
 
     /// <summary>
@@ -199,40 +224,62 @@ public class BitBltSession : IDisposable
     /// </summary>
     private void ReleaseResources()
     {
-        Gdi32.GdiFlush();
-
-        if (!_oldBitmap.IsNull)
+        // Dispose 必须幂等：重复调用不能再对同一批非托管指针 FreeHGlobal 一次。
+        if (Interlocked.Exchange(ref _releasedOnce, 1) != 0)
         {
-            // 先选回资源再释放_hBitmap
-            Gdi32.SelectObject(_hdcDest, _oldBitmap);
-            _oldBitmap = Gdi32.SafeHBITMAP.Null;
+            return;
         }
 
-
-        if (!_hBitmap.IsNull)
+        // 先标记：此后归还的缓冲一律直接还给系统，不再入池。
+        lock (_poolLock)
         {
-            Gdi32.DeleteObject(_hBitmap);
-            _hBitmap = Gdi32.SafeHBITMAP.Null;
+            _released = true;
         }
 
-
-        if (!_hdcDest.IsNull)
+        try
         {
-            Gdi32.DeleteDC(_hdcDest);
-            _hdcDest = Gdi32.SafeHDC.Null;
+            Gdi32.GdiFlush();
+    
+            if (!_oldBitmap.IsNull)
+            {
+                // 先选回资源再释放_hBitmap
+                Gdi32.SelectObject(_hdcDest, _oldBitmap);
+                _oldBitmap = Gdi32.SafeHBITMAP.Null;
+            }
+    
+    
+            if (!_hBitmap.IsNull)
+            {
+                Gdi32.DeleteObject(_hBitmap);
+                _hBitmap = Gdi32.SafeHBITMAP.Null;
+            }
+    
+    
+            if (!_hdcDest.IsNull)
+            {
+                Gdi32.DeleteDC(_hdcDest);
+                _hdcDest = Gdi32.SafeHDC.Null;
+            }
+    
+            if (_hdcSrc != IntPtr.Zero)
+            {
+                User32.ReleaseDC(_hWnd, _hdcSrc);
+                _hdcSrc = User32.SafeReleaseHDC.Null;
+            }
+    
+            _bitsPtr = IntPtr.Zero;
         }
-
-        if (_hdcSrc != IntPtr.Zero)
+        finally
         {
-            User32.ReleaseDC(_hWnd, _hdcSrc);
-            _hdcSrc = User32.SafeReleaseHDC.Null;
-        }
-
-        _bitsPtr = IntPtr.Zero;
-
-        foreach (var buffer in _bufferPool)
-        {
-            Marshal.FreeHGlobal(buffer);
+            // 放在 finally：即使上面的 GDI 清理抛出异常，池内缓冲也一定会被释放，
+            // 避免 _releasedOnce 已置位、池却永远没人清理。
+            lock (_poolLock)
+            {
+                while (_bufferPool.TryPop(out var buffer))
+                {
+                    Marshal.FreeHGlobal(buffer);
+                }
+            }
         }
     }
 }
